@@ -42,6 +42,9 @@ npx ai-agent-skills browse
 npx ai-agent-skills install anthropics/skills
 npx ai-agent-skills install anthropics/skills/pdf    # specific skill
 
+# Install from any git URL (SSH or HTTPS)
+npx ai-agent-skills install git@github.com:anthropics/skills.git
+
 # Install from local path
 npx ai-agent-skills install ./my-custom-skill
 ```
@@ -135,6 +138,7 @@ npx ai-agent-skills list --installed --agent cursor
 npx ai-agent-skills install <name>                    # installs to ALL agents
 npx ai-agent-skills install <name> --agent cursor     # install to specific agent only
 npx ai-agent-skills install <owner/repo>              # from GitHub (all agents)
+npx ai-agent-skills install <git-url>                 # from any git URL (ssh/https)
 npx ai-agent-skills install ./path                    # from local path (all agents)
 npx ai-agent-skills install <name> --dry-run          # preview only
 

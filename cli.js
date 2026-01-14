@@ -620,6 +620,77 @@ function updateFromGitHub(meta, skillName, agent, destPath, dryRun) {
   }
 }
 
+function updateFromGitUrl(meta, skillName, agent, destPath, dryRun) {
+  const { execFileSync } = require('child_process');
+  const parsed = parseGitUrl(meta.url);
+  const url = parsed.url;
+  const ref = meta.ref || parsed.ref;
+
+  if (!url) {
+    error('Invalid git URL in metadata. Try reinstalling the skill.');
+    return false;
+  }
+
+  if (dryRun) {
+    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+    info(`Would update: ${skillName} (from git:${url}${ref ? `#${ref}` : ''})`);
+    info(`Agent: ${agent}`);
+    info(`Path: ${destPath}`);
+    return true;
+  }
+
+  const tempDir = path.join(os.tmpdir(), `ai-skills-update-${Date.now()}`);
+
+  try {
+    info(`Updating ${skillName} from ${url}${ref ? `#${ref}` : ''}...`);
+    const cloneArgs = ['clone', '--depth', '1'];
+    if (ref) {
+      cloneArgs.push('--branch', ref);
+    }
+    cloneArgs.push(url, tempDir);
+    execFileSync('git', cloneArgs, { stdio: 'pipe' });
+
+    let sourcePath;
+    if (meta.isRootSkill) {
+      sourcePath = tempDir;
+    } else if (meta.skillPath) {
+      const skillsSubdir = path.join(tempDir, 'skills', meta.skillPath);
+      const directPath = path.join(tempDir, meta.skillPath);
+      sourcePath = fs.existsSync(skillsSubdir) ? skillsSubdir : directPath;
+    } else {
+      sourcePath = tempDir;
+    }
+
+    if (!fs.existsSync(sourcePath) || !fs.existsSync(path.join(sourcePath, 'SKILL.md'))) {
+      error(`Skill not found in repository ${url}`);
+      fs.rmSync(tempDir, { recursive: true });
+      return false;
+    }
+
+    fs.rmSync(destPath, { recursive: true });
+    copyDir(sourcePath, destPath);
+
+    writeSkillMeta(destPath, {
+      ...meta,
+      source: 'git',
+      url,
+      ref: ref || null
+    });
+
+    fs.rmSync(tempDir, { recursive: true });
+
+    success(`\nUpdated: ${skillName}`);
+    info(`Source: git:${url}${ref ? `#${ref}` : ''}`);
+    info(`Agent: ${agent}`);
+    info(`Location: ${destPath}`);
+    return true;
+  } catch (e) {
+    error(`Failed to update from git: ${e.message}`);
+    try { fs.rmSync(tempDir, { recursive: true }); } catch {}
+    return false;
+  }
+}
+
 // Update from local path
 function updateFromLocalPath(meta, skillName, agent, destPath, dryRun) {
   const sourcePath = meta.path;
@@ -696,6 +767,8 @@ function updateSkill(skillName, agent = 'claude', dryRun = false) {
   switch (meta.source) {
     case 'github':
       return updateFromGitHub(meta, skillName, agent, destPath, dryRun);
+    case 'git':
+      return updateFromGitUrl(meta, skillName, agent, destPath, dryRun);
     case 'local':
       return updateFromLocalPath(meta, skillName, agent, destPath, dryRun);
     case 'registry':
@@ -991,6 +1064,33 @@ function isGitHubUrl(source) {
          !isWindowsPath(source);
 }
 
+function isGitUrl(source) {
+  if (!source || typeof source !== 'string') return false;
+
+  // Avoid treating local filesystem paths as git URLs
+  if (isLocalPath(source)) return false;
+
+  const sshLike = /^git@[^:]+:[^#\s]+\.git(?:#.+)?$/i;
+  const protocolLike = /^(https?|git|ssh|file):\/\/[^#\s]+/i;
+
+  return sshLike.test(source) || protocolLike.test(source);
+}
+
+function parseGitUrl(source) {
+  if (!source || typeof source !== 'string') return { url: source, ref: null };
+  const [url, ref] = source.split('#');
+  return { url, ref: ref || null };
+}
+
+function getRepoNameFromUrl(url) {
+  if (!url) return null;
+  const trimmed = url.replace(/\/+$/, '');
+  const lastSegment = trimmed.split('/').pop();
+  if (!lastSegment) return null;
+  const repoPart = lastSegment.includes(':') ? lastSegment.split(':').pop() : lastSegment;
+  return repoPart.replace(/\.git$/, '') || null;
+}
+
 function isWindowsPath(source) {
   // Match Windows absolute paths like C:\, D:\, etc.
   return /^[a-zA-Z]:[\\\/]/.test(source);
@@ -1184,6 +1284,124 @@ async function installFromGitHub(source, agent = 'claude', dryRun = false) {
   }
 }
 
+async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
+  const { execFileSync } = require('child_process');
+  const { url, ref } = parseGitUrl(source);
+
+  if (!url) {
+    error('Invalid git URL.');
+    return false;
+  }
+
+  const repoName = getRepoNameFromUrl(url);
+  if (!repoName) {
+    error('Could not determine repository name from git URL');
+    return false;
+  }
+
+  const tempDir = path.join(os.tmpdir(), `ai-skills-${Date.now()}`);
+
+  if (dryRun) {
+    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+    info(`Would clone: ${url}${ref ? `#${ref}` : ''}`);
+    info('Would install skills discovered in repository');
+    info(`Agent: ${agent}`);
+    return true;
+  }
+
+  try {
+    info(`Cloning ${url}${ref ? `#${ref}` : ''}...`);
+    const cloneArgs = ['clone', '--depth', '1'];
+    if (ref) {
+      cloneArgs.push('--branch', ref);
+    }
+    cloneArgs.push(url, tempDir);
+    execFileSync('git', cloneArgs, { stdio: 'pipe' });
+
+    const skillsDir = fs.existsSync(path.join(tempDir, 'skills'))
+      ? path.join(tempDir, 'skills')
+      : tempDir;
+
+    const isRootSkill = fs.existsSync(path.join(tempDir, 'SKILL.md'));
+
+    if (isRootSkill) {
+      const skillName = repoName.toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      try {
+        validateSkillName(skillName);
+      } catch (e) {
+        error(`Cannot install: repo name "${repoName}" cannot be converted to valid skill name`);
+        fs.rmSync(tempDir, { recursive: true });
+        return false;
+      }
+
+      const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+      const destPath = path.join(destDir, skillName);
+
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+
+      copyDir(tempDir, destPath);
+
+      writeSkillMeta(destPath, {
+        source: 'git',
+        url: source,
+        ref: ref || null,
+        isRootSkill: true
+      });
+
+      success(`\nInstalled: ${skillName} from ${url}`);
+      info(`Location: ${destPath}`);
+    } else {
+      const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
+      let installed = 0;
+
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const skillPath = path.join(skillsDir, entry.name);
+          if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
+            const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+            const destPath = path.join(destDir, entry.name);
+
+            if (!fs.existsSync(destDir)) {
+              fs.mkdirSync(destDir, { recursive: true });
+            }
+
+            copyDir(skillPath, destPath);
+
+            writeSkillMeta(destPath, {
+              source: 'git',
+              url: source,
+              ref: ref || null,
+              skillPath: entry.name
+            });
+
+            log(`  ${colors.green}✓${colors.reset} ${entry.name}`);
+            installed++;
+          }
+        }
+      }
+
+      if (installed > 0) {
+        success(`\nInstalled ${installed} skill(s) from ${url}`);
+      } else {
+        warn('No skills found in repository');
+      }
+    }
+
+    fs.rmSync(tempDir, { recursive: true });
+    return true;
+  } catch (e) {
+    error(`Failed to install from git: ${e.message}`);
+    try { fs.rmSync(tempDir, { recursive: true }); } catch {}
+    return false;
+  }
+}
+
 function installFromLocalPath(source, agent = 'claude', dryRun = false) {
   const sourcePath = expandPath(source);
 
@@ -1286,6 +1504,7 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}install <name>${colors.reset}                   Install to ALL agents (default)
   ${colors.green}install <name> --agent cursor${colors.reset}    Install to specific agent only
   ${colors.green}install <owner/repo>${colors.reset}             Install from GitHub repository
+  ${colors.green}install <git-url>${colors.reset}                Install from any git URL (ssh/https)
   ${colors.green}install ./path${colors.reset}                   Install from local path
   ${colors.green}install <name> --dry-run${colors.reset}         Preview installation without changes
   ${colors.green}uninstall <name>${colors.reset}                 Remove an installed skill
@@ -1323,13 +1542,14 @@ ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
 
 ${colors.bold}Examples:${colors.reset}
-  npx ai-agent-skills browse                              # Interactive browser
-  npx ai-agent-skills install frontend-design             # Install to ALL agents
-  npx ai-agent-skills install pdf --agent cursor          # Install to Cursor only
-  npx ai-agent-skills install pdf --agents claude,cursor  # Install to specific agents
-  npx ai-agent-skills install anthropics/skills           # Install from GitHub
-  npx ai-agent-skills install ./my-skill                  # Install from local path
-  npx ai-agent-skills install pdf --dry-run               # Preview install
+  npx ai-agent-skills browse                                # Interactive browser
+  npx ai-agent-skills install frontend-design               # Install to ALL agents
+  npx ai-agent-skills install pdf --agent cursor            # Install to Cursor only
+  npx ai-agent-skills install pdf --agents claude,cursor    # Install to specific agents
+  npx ai-agent-skills install anthropics/skills             # Install from GitHub
+  npx ai-agent-skills install git@example.com:user/repo.git # Install from any git URL (ssh/https)
+  npx ai-agent-skills install ./my-skill                    # Install from local path
+  npx ai-agent-skills install pdf --dry-run                 # Preview install
   npx ai-agent-skills list --category development
   npx ai-agent-skills search testing
   npx ai-agent-skills update --all
@@ -1488,6 +1708,8 @@ switch (command || 'help') {
     for (const agent of installTargets) {
       if (isLocalPath(param)) {
         installFromLocalPath(param, agent, dryRun);
+      } else if (isGitUrl(param)) {
+        installFromGitUrl(param, agent, dryRun);
       } else if (isGitHubUrl(param)) {
         installFromGitHub(param, agent, dryRun);
       } else {

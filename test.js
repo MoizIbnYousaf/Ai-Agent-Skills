@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 
 const colors = {
@@ -138,6 +139,40 @@ test('dry-run shows preview', () => {
   const output = run('install pdf --dry-run');
   assertContains(output, 'Dry Run');
   assertContains(output, 'Would install');
+});
+
+test('git url install works', () => {
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-work-'));
+  const skillFile = path.join(workDir, 'SKILL.md');
+  fs.writeFileSync(skillFile, '# Test Skill');
+
+  execSync('git init', { cwd: workDir, stdio: 'pipe' });
+  execSync('git add SKILL.md', { cwd: workDir, stdio: 'pipe' });
+  execSync('git -c user.email="test@example.com" -c user.name="Test User" commit -m "init"', { cwd: workDir, stdio: 'pipe' });
+
+  const bareRepo = path.join(os.tmpdir(), `skill-bare-${Date.now()}.git`);
+  execSync(`git clone --bare ${workDir} ${bareRepo}`, { stdio: 'pipe' });
+
+  const gitUrl = `file://${bareRepo}`;
+  const expectedSkillName = path.basename(bareRepo).replace(/\.git$/, '');
+  const installedPath = path.join(__dirname, '.skills', expectedSkillName);
+
+  // Ensure clean slate
+  fs.rmSync(installedPath, { recursive: true, force: true });
+
+  const output = run(`install ${gitUrl} --agent project`);
+  assertContains(output, 'Installed');
+
+  assert(fs.existsSync(path.join(installedPath, 'SKILL.md')), 'Skill should be installed from git url');
+  const metaPath = path.join(installedPath, '.skill-meta.json');
+  assert(fs.existsSync(metaPath), 'Metadata file should exist for git install');
+  const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+  assertEqual(meta.source, 'git');
+  assertContains(meta.url, 'file://');
+
+  fs.rmSync(installedPath, { recursive: true, force: true });
+  fs.rmSync(bareRepo, { recursive: true, force: true });
+  fs.rmSync(workDir, { recursive: true, force: true });
 });
 
 test('config command works', () => {
