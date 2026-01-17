@@ -142,6 +142,7 @@ test('dry-run shows preview', () => {
 });
 
 test('git url install works', () => {
+  // Use mkdtempSync for both temp directories
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-work-'));
   const skillFile = path.join(workDir, 'SKILL.md');
   fs.writeFileSync(skillFile, '# Test Skill');
@@ -150,7 +151,10 @@ test('git url install works', () => {
   execSync('git add SKILL.md', { cwd: workDir, stdio: 'pipe' });
   execSync('git -c user.email="test@example.com" -c user.name="Test User" commit -m "init"', { cwd: workDir, stdio: 'pipe' });
 
-  const bareRepo = path.join(os.tmpdir(), `skill-bare-${Date.now()}.git`);
+  // Use mkdtempSync for bare repo too (more secure than Date.now())
+  const bareRepoBase = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-bare-'));
+  const bareRepo = bareRepoBase + '.git';
+  fs.renameSync(bareRepoBase, bareRepo);
   execSync(`git clone --bare ${workDir} ${bareRepo}`, { stdio: 'pipe' });
 
   const gitUrl = `file://${bareRepo}`;
@@ -170,6 +174,7 @@ test('git url install works', () => {
   assertEqual(meta.source, 'git');
   assertContains(meta.url, 'file://');
 
+  // Cleanup
   fs.rmSync(installedPath, { recursive: true, force: true });
   fs.rmSync(bareRepo, { recursive: true, force: true });
   fs.rmSync(workDir, { recursive: true, force: true });

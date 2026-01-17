@@ -626,8 +626,11 @@ function updateFromGitUrl(meta, skillName, agent, destPath, dryRun) {
   const url = parsed.url;
   const ref = meta.ref || parsed.ref;
 
-  if (!url) {
-    error('Invalid git URL in metadata. Try reinstalling the skill.');
+  // Validate URL from metadata
+  try {
+    validateGitUrl(url);
+  } catch (e) {
+    error(`Invalid git URL in metadata: ${e.message}. Try reinstalling the skill.`);
     return false;
   }
 
@@ -639,7 +642,8 @@ function updateFromGitUrl(meta, skillName, agent, destPath, dryRun) {
     return true;
   }
 
-  const tempDir = path.join(os.tmpdir(), `ai-skills-update-${Date.now()}`);
+  // Use secure temp directory creation
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-update-'));
 
   try {
     info(`Updating ${skillName} from ${url}${ref ? `#${ref}` : ''}...`);
@@ -670,10 +674,13 @@ function updateFromGitUrl(meta, skillName, agent, destPath, dryRun) {
     fs.rmSync(destPath, { recursive: true });
     copyDir(sourcePath, destPath);
 
+    // Sanitize URL before storing
+    const sanitizedUrl = sanitizeGitUrl(url);
+
     writeSkillMeta(destPath, {
       ...meta,
       source: 'git',
-      url,
+      url: sanitizedUrl,
       ref: ref || null
     });
 
@@ -685,7 +692,16 @@ function updateFromGitUrl(meta, skillName, agent, destPath, dryRun) {
     info(`Location: ${destPath}`);
     return true;
   } catch (e) {
-    error(`Failed to update from git: ${e.message}`);
+    // Provide more helpful error messages for common git failures
+    let errorMsg = e.message;
+    if (e.message.includes('not found') || e.message.includes('Repository not found')) {
+      errorMsg = `Repository not found. The URL may have changed or been removed.`;
+    } else if (e.message.includes('Authentication failed') || e.message.includes('Permission denied')) {
+      errorMsg = `Authentication failed. Check your credentials or SSH key.`;
+    } else if (e.message.includes('Could not resolve host')) {
+      errorMsg = `Could not resolve host. Check your network connection.`;
+    }
+    error(`Failed to update from git: ${errorMsg}`);
     try { fs.rmSync(tempDir, { recursive: true }); } catch {}
     return false;
   }
@@ -1070,25 +1086,88 @@ function isGitUrl(source) {
   // Avoid treating local filesystem paths as git URLs
   if (isLocalPath(source)) return false;
 
-  const sshLike = /^git@[^:]+:[^#\s]+\.git(?:#.+)?$/i;
-  const protocolLike = /^(https?|git|ssh|file):\/\/[^#\s]+/i;
+  // SSH-style: git@host:path (with optional .git suffix and #ref)
+  const sshLike = /^git@[a-zA-Z0-9._-]+:[a-zA-Z0-9._\/-]+(?:\.git)?(?:#[a-zA-Z0-9._\/-]+)?$/;
+  // Protocol URLs: https://, git://, ssh://, file://
+  const protocolLike = /^(https?|git|ssh|file):\/\/[a-zA-Z0-9._\/-]+(?:#[a-zA-Z0-9._\/-]+)?$/;
 
   return sshLike.test(source) || protocolLike.test(source);
 }
 
 function parseGitUrl(source) {
-  if (!source || typeof source !== 'string') return { url: source, ref: null };
-  const [url, ref] = source.split('#');
-  return { url, ref: ref || null };
+  if (!source || typeof source !== 'string') return { url: null, ref: null };
+  // Split on first # only (ref might contain special chars)
+  const hashIndex = source.indexOf('#');
+  if (hashIndex === -1) {
+    return { url: source, ref: null };
+  }
+  return {
+    url: source.slice(0, hashIndex),
+    ref: source.slice(hashIndex + 1) || null
+  };
 }
 
 function getRepoNameFromUrl(url) {
-  if (!url) return null;
-  const trimmed = url.replace(/\/+$/, '');
-  const lastSegment = trimmed.split('/').pop();
-  if (!lastSegment) return null;
-  const repoPart = lastSegment.includes(':') ? lastSegment.split(':').pop() : lastSegment;
-  return repoPart.replace(/\.git$/, '') || null;
+  if (!url || typeof url !== 'string') return null;
+
+  // Remove trailing slashes and .git suffix
+  let cleaned = url.replace(/\/+$/, '').replace(/\.git$/, '');
+
+  // Handle SSH URLs: git@host:org/repo -> extract 'repo'
+  if (cleaned.includes('@') && cleaned.includes(':')) {
+    const colonIndex = cleaned.lastIndexOf(':');
+    const pathPart = cleaned.slice(colonIndex + 1);
+    const segments = pathPart.split('/').filter(Boolean);
+    return segments.length > 0 ? segments[segments.length - 1] : null;
+  }
+
+  // Handle protocol URLs: extract last path segment
+  const segments = cleaned.split('/').filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : null;
+}
+
+// Validate git URL to prevent malformed/malicious input
+function validateGitUrl(url) {
+  if (!url || typeof url !== 'string') {
+    throw new Error('Invalid git URL: empty or not a string');
+  }
+
+  // Max reasonable URL length
+  if (url.length > 2048) {
+    throw new Error('Git URL too long (max 2048 characters)');
+  }
+
+  // Check for dangerous characters that could cause issues
+  const dangerousChars = /[\x00-\x1f\x7f`$\\]/;
+  if (dangerousChars.test(url)) {
+    throw new Error('Git URL contains invalid characters');
+  }
+
+  // Must match expected patterns
+  if (!isGitUrl(url)) {
+    throw new Error('Invalid git URL format');
+  }
+
+  return true;
+}
+
+// Sanitize URL for storage (remove credentials if present)
+function sanitizeGitUrl(url) {
+  if (!url) return url;
+  try {
+    // Handle protocol URLs
+    if (url.includes('://')) {
+      const parsed = new URL(url);
+      // Remove any embedded credentials
+      parsed.username = '';
+      parsed.password = '';
+      return parsed.toString();
+    }
+    // SSH URLs don't typically have credentials embedded
+    return url;
+  } catch {
+    return url;
+  }
 }
 
 function isWindowsPath(source) {
@@ -1288,8 +1367,14 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
   const { execFileSync } = require('child_process');
   const { url, ref } = parseGitUrl(source);
 
-  if (!url) {
-    error('Invalid git URL.');
+  // Validate URL format and safety
+  try {
+    validateGitUrl(url);
+    if (ref && !/^[a-zA-Z0-9._\/-]+$/.test(ref)) {
+      throw new Error('Invalid ref format');
+    }
+  } catch (e) {
+    error(`Invalid git URL: ${e.message}`);
     return false;
   }
 
@@ -1299,7 +1384,8 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
     return false;
   }
 
-  const tempDir = path.join(os.tmpdir(), `ai-skills-${Date.now()}`);
+  // Use secure temp directory creation
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-'));
 
   if (dryRun) {
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
@@ -1347,9 +1433,12 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
 
       copyDir(tempDir, destPath);
 
+      // Sanitize URL before storing in metadata
+      const sanitizedUrl = sanitizeGitUrl(url);
+
       writeSkillMeta(destPath, {
         source: 'git',
-        url: source,
+        url: sanitizedUrl,
         ref: ref || null,
         isRootSkill: true
       });
@@ -1359,6 +1448,9 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
     } else {
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       let installed = 0;
+
+      // Sanitize URL before storing in metadata
+      const sanitizedUrl = sanitizeGitUrl(url);
 
       for (const entry of entries) {
         if (entry.isDirectory()) {
@@ -1375,7 +1467,7 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
 
             writeSkillMeta(destPath, {
               source: 'git',
-              url: source,
+              url: sanitizedUrl,
               ref: ref || null,
               skillPath: entry.name
             });
@@ -1396,7 +1488,18 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
     fs.rmSync(tempDir, { recursive: true });
     return true;
   } catch (e) {
-    error(`Failed to install from git: ${e.message}`);
+    // Provide more helpful error messages for common git failures
+    let errorMsg = e.message;
+    if (e.message.includes('not found') || e.message.includes('Repository not found')) {
+      errorMsg = `Repository not found. Check the URL is correct and you have access.`;
+    } else if (e.message.includes('Authentication failed') || e.message.includes('Permission denied')) {
+      errorMsg = `Authentication failed. For SSH URLs, ensure your SSH key is configured. For HTTPS, check credentials.`;
+    } else if (e.message.includes('Could not resolve host')) {
+      errorMsg = `Could not resolve host. Check your network connection and the URL.`;
+    } else if (e.message.includes('Connection refused') || e.message.includes('Connection timed out')) {
+      errorMsg = `Connection failed. Check your network connection.`;
+    }
+    error(`Failed to install from git: ${errorMsg}`);
     try { fs.rmSync(tempDir, { recursive: true }); } catch {}
     return false;
   }
