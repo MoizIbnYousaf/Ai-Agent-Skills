@@ -47,6 +47,10 @@ npx ai-agent-skills install git@github.com:anthropics/skills.git
 
 # Install from local path
 npx ai-agent-skills install ./my-custom-skill
+
+# Install to a custom path (for custom agents, projects, orgs, etc.)
+npx ai-agent-skills install frontend-design --path ~/.my-agent/skills
+npx ai-agent-skills install frontend-design --path ./project-skills
 ```
 
 **One command. Every agent.** By default, skills install to Claude Code, Cursor, Codex, Amp, VS Code, Copilot, Gemini CLI, Goose, Letta, and OpenCode simultaneously.
