@@ -146,6 +146,12 @@ npx ai-agent-skills install <git-url>                 # from any git URL (ssh/ht
 npx ai-agent-skills install ./path                    # from local path (all agents)
 npx ai-agent-skills install <name> --dry-run          # preview only
 
+# Custom path (for custom agents, project/org-level skills, pipelines)
+npx ai-agent-skills install <name> --path <dir>       # install to custom directory
+npx ai-agent-skills list --installed --path <dir>     # list skills in custom path
+npx ai-agent-skills update <name> --path <dir>        # update skill in custom path
+npx ai-agent-skills uninstall <name> --path <dir>     # remove from custom path
+
 # Manage installed skills
 npx ai-agent-skills uninstall <name>
 npx ai-agent-skills update <name>
@@ -175,6 +181,31 @@ By default, `install` targets **all agents**. Use `--agent <name>` to install to
 | OpenCode | `--agent opencode` | `~/.opencode/skill/` |
 | Letta | `--agent letta` | `~/.letta/skills/` |
 | Portable | `--agent project` | `.skills/` (works with any agent) |
+
+### Custom Path Installation
+
+Use `--path` to install skills to any directory, bypassing agent-specific paths. This is useful for:
+
+- **Custom agents** with their own skills folders
+- **Project-level skills** shared across a team
+- **Organization-level skills** in centralized locations
+- **CI/CD pipelines** with custom deployment targets
+- **Multi-tenant setups** where different contexts need isolated skills
+
+```bash
+# Install to a custom agent's directory
+npx ai-agent-skills install pdf --path ~/.my-custom-agent/skills
+
+# Project-level skills (committed to repo)
+npx ai-agent-skills install code-review --path ./team-skills
+
+# Organization shared skills
+npx ai-agent-skills install brand-guidelines --path /shared/org-skills
+
+# Manage skills in custom path
+npx ai-agent-skills list --installed --path ~/.my-custom-agent/skills
+npx ai-agent-skills update --all --path ~/.my-custom-agent/skills
+```
 
 ## Manual Install
 
