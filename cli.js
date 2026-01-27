@@ -383,7 +383,7 @@ function installSkill(skillName, agent = 'claude', dryRun = false, customPath = 
     return false;
   }
 
-  const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+  const destDir = getSkillsDir(agent, customPath);
   const destPath = path.join(destDir, skillName);
   const skillSize = getDirectorySize(sourcePath);
 
@@ -464,7 +464,7 @@ function uninstallSkill(skillName, agent = 'claude', dryRun = false, customPath 
     return false;
   }
 
-  const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+  const destDir = getSkillsDir(agent, customPath);
   const skillPath = path.join(destDir, skillName);
 
   if (!fs.existsSync(skillPath)) {
@@ -505,7 +505,7 @@ function uninstallSkill(skillName, agent = 'claude', dryRun = false, customPath 
 }
 
 function getInstalledSkills(agent = 'claude', customPath = null) {
-  const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+  const destDir = getSkillsDir(agent, customPath);
 
   if (!fs.existsSync(destDir)) return [];
 
@@ -522,7 +522,7 @@ function getInstalledSkills(agent = 'claude', customPath = null) {
 
 function listInstalledSkills(agent = 'claude', customPath = null) {
   const installed = getInstalledSkills(agent, customPath);
-  const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+  const destDir = getSkillsDir(agent, customPath);
 
   if (installed.length === 0) {
     if (customPath) {
@@ -799,7 +799,7 @@ function updateSkill(skillName, agent = 'claude', dryRun = false, customPath = n
     return false;
   }
 
-  const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+  const destDir = getSkillsDir(agent, customPath);
   const destPath = path.join(destDir, skillName);
 
   if (!fs.existsSync(destPath)) {
@@ -1229,6 +1229,10 @@ function expandPath(p) {
   return path.resolve(p);
 }
 
+function getSkillsDir(agent = 'claude', customPath = null) {
+  return customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+}
+
 // Validate GitHub owner/repo names (alphanumeric, hyphens, underscores, dots)
 function validateGitHubName(name, type = 'name') {
   if (!name || typeof name !== 'string') {
@@ -1304,7 +1308,7 @@ async function installFromGitHub(source, agent = 'claude', dryRun = false, custo
         return false;
       }
 
-      const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+      const destDir = getSkillsDir(agent, customPath);
       const destPath = path.join(destDir, skillName);
 
       if (!fs.existsSync(destDir)) {
@@ -1335,7 +1339,7 @@ async function installFromGitHub(source, agent = 'claude', dryRun = false, custo
         return false;
       }
 
-      const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+      const destDir = getSkillsDir(agent, customPath);
       const destPath = path.join(destDir, skillName);
 
       if (!fs.existsSync(destDir)) {
@@ -1362,7 +1366,7 @@ async function installFromGitHub(source, agent = 'claude', dryRun = false, custo
         if (entry.isDirectory()) {
           const skillPath = path.join(skillsDir, entry.name);
           if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-            const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+            const destDir = getSkillsDir(agent, customPath);
             const destPath = path.join(destDir, entry.name);
 
             if (!fs.existsSync(destDir)) {
@@ -1463,7 +1467,7 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false, custo
         return false;
       }
 
-      const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+      const destDir = getSkillsDir(agent, customPath);
       const destPath = path.join(destDir, skillName);
 
       if (!fs.existsSync(destDir)) {
@@ -1495,7 +1499,7 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false, custo
         if (entry.isDirectory()) {
           const skillPath = path.join(skillsDir, entry.name);
           if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-            const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+            const destDir = getSkillsDir(agent, customPath);
             const destPath = path.join(destDir, entry.name);
 
             if (!fs.existsSync(destDir)) {
@@ -1572,7 +1576,7 @@ function installFromLocalPath(source, agent = 'claude', dryRun = false, customPa
   if (hasSkillMd) {
     // Single skill
     const skillName = path.basename(sourcePath);
-    const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+    const destDir = getSkillsDir(agent, customPath);
     const destPath = path.join(destDir, skillName);
 
     if (!fs.existsSync(destDir)) {
@@ -1598,7 +1602,7 @@ function installFromLocalPath(source, agent = 'claude', dryRun = false, customPa
       if (entry.isDirectory()) {
         const skillPath = path.join(sourcePath, entry.name);
         if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-          const destDir = customPath ? expandPath(customPath) : (AGENT_PATHS[agent] || AGENT_PATHS.claude);
+          const destDir = getSkillsDir(agent, customPath);
           const destPath = path.join(destDir, entry.name);
 
           if (!fs.existsSync(destDir)) {
