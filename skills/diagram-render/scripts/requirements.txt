@@ -1,0 +1,5 @@
+# Required dependencies for render_diagram.py
+requests>=2.28.0
+
+# Optional: for local Graphviz rendering (alternative to system graphviz)
+# graphviz>=0.20.0
