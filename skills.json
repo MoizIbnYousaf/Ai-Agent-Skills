@@ -1,7 +1,7 @@
 {
   "version": "1.3.0",
-  "updated": "2026-01-16T00:00:00Z",
-  "total": 47,
+  "updated": "2026-02-18T00:00:00Z",
+  "total": 52,
   "skills": [
     {
       "name": "react-best-practices",
@@ -631,6 +631,76 @@
       "downloads": 0,
       "featured": false,
       "verified": false
+    },
+    {
+      "name": "vincent-wallet",
+      "description": "Create a policy-limited wallet for agents (EVM + Solana) without exposing private keys.",
+      "category": "business",
+      "author": "heyvincent-ai",
+      "source": "HeyVincent-ai/agent-skills",
+      "license": "MIT",
+      "path": "skills/vincent-wallet",
+      "tags": ["wallet", "crypto", "defi", "evm", "solana"],
+      "stars": 0,
+      "downloads": 0,
+      "featured": false,
+      "verified": false
+    },
+    {
+      "name": "vincent-polymarket",
+      "description": "Trade Polymarket markets via Vincent wallets without exposing private keys.",
+      "category": "business",
+      "author": "heyvincent-ai",
+      "source": "HeyVincent-ai/agent-skills",
+      "license": "MIT",
+      "path": "skills/vincent-polymarket",
+      "tags": ["polymarket", "prediction-markets", "trading", "crypto"],
+      "stars": 0,
+      "downloads": 0,
+      "featured": false,
+      "verified": false
+    },
+    {
+      "name": "vincent-trade-manager",
+      "description": "Automate stop-loss, take-profit, and trailing stops for Polymarket positions.",
+      "category": "business",
+      "author": "heyvincent-ai",
+      "source": "HeyVincent-ai/agent-skills",
+      "license": "MIT",
+      "path": "skills/vincent-trade-manager",
+      "tags": ["trading", "automation", "stop-loss", "polymarket"],
+      "stars": 0,
+      "downloads": 0,
+      "featured": false,
+      "verified": false
+    },
+    {
+      "name": "vincent-brave-search",
+      "description": "Search the web and news via Vincent's Brave Search proxy (no API keys required).",
+      "category": "productivity",
+      "author": "heyvincent-ai",
+      "source": "HeyVincent-ai/agent-skills",
+      "license": "MIT",
+      "path": "skills/vincent-brave-search",
+      "tags": ["search", "brave", "web", "news"],
+      "stars": 0,
+      "downloads": 0,
+      "featured": false,
+      "verified": false
+    },
+    {
+      "name": "vincent-twitter",
+      "description": "Search tweets, look up profiles, and fetch recent tweets via Vincent's X/Twitter proxy.",
+      "category": "productivity",
+      "author": "heyvincent-ai",
+      "source": "HeyVincent-ai/agent-skills",
+      "license": "MIT",
+      "path": "skills/vincent-twitter",
+      "tags": ["twitter", "x", "social", "search"],
+      "stars": 0,
+      "downloads": 0,
+      "featured": false,
+      "verified": false
     }
   ],
   "categories": [
@@ -656,13 +726,13 @@
       "id": "business",
       "name": "Business",
       "description": "Business and communication skills",
-      "count": 5
+      "count": 8
     },
     {
       "id": "productivity",
       "name": "Productivity",
       "description": "Productivity and workflow skills",
-      "count": 13
+      "count": 15
     }
   ]
 }
