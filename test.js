@@ -149,7 +149,7 @@ test('git url install works', () => {
 
   execSync('git init', { cwd: workDir, stdio: 'pipe' });
   execSync('git add SKILL.md', { cwd: workDir, stdio: 'pipe' });
-  execSync('git -c user.email="test@example.com" -c user.name="Test User" commit -m "init"', { cwd: workDir, stdio: 'pipe' });
+  execSync('git -c user.email="test@example.com" -c user.name="Test User" -c commit.gpgsign=false commit -m "init"', { cwd: workDir, stdio: 'pipe' });
 
   // Use mkdtempSync for bare repo too (more secure than Date.now())
   const bareRepoBase = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-bare-'));
@@ -158,7 +158,7 @@ test('git url install works', () => {
   execSync(`git clone --bare ${workDir} ${bareRepo}`, { stdio: 'pipe' });
 
   const gitUrl = `file://${bareRepo}`;
-  const expectedSkillName = path.basename(bareRepo).replace(/\.git$/, '');
+  const expectedSkillName = path.basename(bareRepo).replace(/\.git$/, '').toLowerCase();
   const installedPath = path.join(__dirname, '.skills', expectedSkillName);
 
   // Ensure clean slate
