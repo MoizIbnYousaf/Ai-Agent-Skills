@@ -1,7 +1,7 @@
 {
   "version": "1.3.0",
   "updated": "2026-01-16T00:00:00Z",
-  "total": 47,
+  "total": 48,
   "skills": [
     {
       "name": "react-best-practices",
@@ -628,6 +628,20 @@
       "license": "Apache-2.0",
       "path": "skills/video-downloader",
       "stars": 500,
+      "downloads": 0,
+      "featured": false,
+      "verified": false
+    },
+    {
+      "name": "clawdvault",
+      "description": "Free ERC-20 token launches on Base for AI agents. Deploy via API or social post, earn 80% of LP trading fees in WETH. No API key needed.",
+      "category": "development",
+      "author": "inavhq",
+      "source": "inavhq/clawdvault-skill",
+      "license": "MIT",
+      "path": "skills/clawdvault",
+      "tags": ["token", "erc20", "base", "crypto", "defi", "web3", "clanker", "uniswap"],
+      "stars": 0,
       "downloads": 0,
       "featured": false,
       "verified": false
