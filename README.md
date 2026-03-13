@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>There are a lot of agent skills now. These are the ones I keep around.</strong><br>
-  Some are mine. Some come from other great repos. All of them earned their spot.
+  Some are mine. Some come from other great repos.
 </p>
 
 <p align="center">
@@ -30,13 +30,11 @@
 
 I launched this on December 17, 2025, the day after Agent Skills became an open standard, and before `skills.sh` launched on January 14, 2026.
 
-I built it as a universal installer. That still works, but it is not the center of the project anymore.
+I built it as a universal installer. That still works, but it is not the center of the project. 
 
-If you just want the default universal installer, use `skills.sh`.
+If you just want the default universal installer now just use `skills.sh`.
 
 This repo is my library of agent skills: the ones I use, adapt, or recommend.
-
-I only support the major agents.
 
 ## Quick Start
 
