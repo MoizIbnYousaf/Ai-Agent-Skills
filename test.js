@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 const colors = {
   reset: '\x1b[0m',
@@ -48,6 +48,14 @@ function assertContains(str, substr, message) {
 function run(cmd) {
   try {
     return execSync(`node cli.js ${cmd}`, { encoding: 'utf8', cwd: __dirname });
+  } catch (e) {
+    return e.stdout || e.message;
+  }
+}
+
+function runArgs(args) {
+  try {
+    return execFileSync(process.execPath, ['cli.js', ...args], { encoding: 'utf8', cwd: __dirname });
   } catch (e) {
     return e.stdout || e.message;
   }
@@ -201,10 +209,13 @@ test('git url install works', () => {
   // Ensure clean slate
   fs.rmSync(installedPath, { recursive: true, force: true });
 
-  const output = run(`install ${gitUrl} --agent project`);
+  const output = runArgs(['install', gitUrl, '--agent', 'project']);
   assertContains(output, 'Installed');
 
-  assert(fs.existsSync(path.join(installedPath, 'SKILL.md')), 'Skill should be installed from git url');
+  assert(
+    fs.existsSync(path.join(installedPath, 'SKILL.md')),
+    `Skill should be installed from git url. Expected ${installedPath}, got output: ${output}`
+  );
   const metaPath = path.join(installedPath, '.skill-meta.json');
   assert(fs.existsSync(metaPath), 'Metadata file should exist for git install');
   const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));

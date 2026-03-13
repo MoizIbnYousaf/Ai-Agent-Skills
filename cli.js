@@ -1647,7 +1647,10 @@ async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
 
   try {
     info(`Cloning ${url}${ref ? `#${ref}` : ''}...`);
-    const cloneArgs = ['clone', '--depth', '1'];
+    const cloneArgs = ['clone'];
+    if (!url.startsWith('file://')) {
+      cloneArgs.push('--depth', '1');
+    }
     if (ref) {
       cloneArgs.push('--branch', ref);
     }
