@@ -3,11 +3,12 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { pathToFileURL } = require('url');
 
 // Version check
-const NODE_VERSION = process.versions.node.split('.')[0];
-if (parseInt(NODE_VERSION) < 14) {
-  console.error(`Error: Node.js 14+ required (you have ${process.versions.node})`);
+const [NODE_MAJOR, NODE_MINOR] = process.versions.node.split('.').map(Number);
+if (NODE_MAJOR < 14 || (NODE_MAJOR === 14 && NODE_MINOR < 16)) {
+  console.error(`Error: Node.js 14.16+ required (you have ${process.versions.node})`);
   process.exit(1);
 }
 
@@ -1259,6 +1260,41 @@ function showCollections() {
   });
 }
 
+function getSkillFilePath(skillName) {
+  try {
+    validateSkillName(skillName);
+  } catch (e) {
+    error(e.message);
+    return null;
+  }
+
+  const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md');
+  if (!fs.existsSync(skillPath)) {
+    error(`Skill "${skillName}" not found.`);
+    return null;
+  }
+
+  return skillPath;
+}
+
+function showPreview(skillName) {
+  const skillPath = getSkillFilePath(skillName);
+  if (!skillPath) return;
+
+  log(`\n${colors.bold}Preview:${colors.reset} ${skillName}\n`);
+  log(fs.readFileSync(skillPath, 'utf8'));
+}
+
+function isInteractiveTerminal() {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+async function launchBrowser(agent = 'claude') {
+  const tuiUrl = pathToFileURL(path.join(__dirname, 'tui', 'index.mjs')).href;
+  const tuiModule = await import(tuiUrl);
+  return tuiModule.launchTui({ agent });
+}
+
 // Simple Levenshtein distance for "did you mean" suggestions
 function levenshteinDistance(a, b) {
   if (!a.length) return b.length;
@@ -1287,117 +1323,6 @@ function levenshteinDistance(a, b) {
   }
 
   return matrix[b.length][a.length];
-}
-
-// ============ INTERACTIVE BROWSE ============
-
-async function browseSkills(agent = 'claude') {
-  const readline = require('readline');
-  const data = loadSkillsJson();
-  const skills = data.skills || [];
-
-  if (skills.length === 0) {
-    warn('No skills available');
-    return;
-  }
-
-  const getSkillsInArea = (area) => skills.filter(s => getSkillWorkArea(s) === area);
-  const workAreas = [
-    ...getWorkAreas(data).map(area => area.id),
-    ...[...new Set(skills.map(skill => getSkillWorkArea(skill)).filter(Boolean))]
-      .filter(area => !getWorkAreaMeta(data, area))
-      .sort()
-  ].filter((area, index, array) =>
-    array.indexOf(area) === index && getSkillsInArea(area).length > 0
-  );
-  let currentWorkArea = 0;
-  let currentSkill = 0;
-  let mode = 'area'; // 'area' or 'skill'
-
-  const render = () => {
-    console.clear();
-    log(`\n${colors.bold}🔧 AI Agent Skills Browser${colors.reset}`);
-    log(`${colors.dim}Use ↑↓ to navigate, Enter to select, q to quit${colors.reset}\n`);
-
-    if (mode === 'area') {
-      log(`${colors.bold}Work Areas:${colors.reset}\n`);
-      workAreas.forEach((area, i) => {
-        const count = getSkillsInArea(area).length;
-        const prefix = i === currentWorkArea ? `${colors.cyan}▶ ` : '  ';
-        const suffix = i === currentWorkArea ? colors.reset : '';
-        log(`${prefix}${formatWorkAreaTitle(area).toUpperCase()} (${count})${suffix}`);
-      });
-      log(`\n${colors.dim}Press Enter to browse skills in this work area${colors.reset}`);
-    } else {
-      const area = workAreas[currentWorkArea];
-      const areaSkills = getSkillsInArea(area);
-      log(`${colors.bold}${formatWorkAreaTitle(area).toUpperCase()}${colors.reset} ${colors.dim}(← Backspace to go back)${colors.reset}\n`);
-
-      areaSkills.forEach((skill, i) => {
-        const prefix = i === currentSkill ? `${colors.green}▶ ` : '  ';
-        const suffix = i === currentSkill ? colors.reset : '';
-        const featured = skill.featured ? ` ${colors.yellow}★${colors.reset}` : '';
-        log(`${prefix}${skill.name}${featured}${suffix}`);
-        if (i === currentSkill) {
-          log(`    ${colors.dim}${skill.description.slice(0, 60)}...${colors.reset}`);
-        }
-      });
-      log(`\n${colors.dim}Press Enter to install, i for info${colors.reset}`);
-    }
-  };
-
-  return new Promise((resolve) => {
-    readline.emitKeypressEvents(process.stdin);
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-
-    render();
-
-    process.stdin.on('keypress', (str, key) => {
-      if (key.name === 'q' || (key.ctrl && key.name === 'c')) {
-        console.clear();
-        log('Goodbye!');
-        process.stdin.setRawMode(false);
-        process.exit(0);
-      }
-
-      if (mode === 'area') {
-        if (key.name === 'up') {
-          currentWorkArea = Math.max(0, currentWorkArea - 1);
-        } else if (key.name === 'down') {
-          currentWorkArea = Math.min(workAreas.length - 1, currentWorkArea + 1);
-        } else if (key.name === 'return') {
-          mode = 'skill';
-          currentSkill = 0;
-        }
-      } else {
-        const areaSkills = getSkillsInArea(workAreas[currentWorkArea]);
-        if (key.name === 'up') {
-          currentSkill = Math.max(0, currentSkill - 1);
-        } else if (key.name === 'down') {
-          currentSkill = Math.min(areaSkills.length - 1, currentSkill + 1);
-        } else if (key.name === 'backspace' || key.name === 'escape') {
-          mode = 'area';
-        } else if (key.name === 'return') {
-          const skill = areaSkills[currentSkill];
-          console.clear();
-          process.stdin.setRawMode(false);
-          installSkill(skill.name, agent, false);
-          resolve();
-          return;
-        } else if (str === 'i') {
-          const skill = areaSkills[currentSkill];
-          console.clear();
-          process.stdin.setRawMode(false);
-          showInfo(skill.name);
-          resolve();
-          return;
-        }
-      }
-      render();
-    });
-  });
 }
 
 // ============ EXTERNAL INSTALL (GitHub/Local) ============
@@ -1932,9 +1857,10 @@ ${colors.bold}AI Agent Skills${colors.reset}
 The agent skills I actually keep around.
 
 ${colors.bold}Usage:${colors.reset}
-  npx ai-agent-skills <command> [options]
+  npx ai-agent-skills [command] [options]
 
 ${colors.bold}Commands:${colors.reset}
+  ${colors.green}(no command)${colors.reset}                     Launch the interactive browser (TTY only)
   ${colors.green}browse${colors.reset}                           Interactive skill browser (TUI)
   ${colors.green}list${colors.reset}                             List all available skills
   ${colors.green}list --installed${colors.reset}                 List installed skills for an agent
@@ -1953,6 +1879,7 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}update --all${colors.reset}                     Update all installed skills
   ${colors.green}search <query>${colors.reset}                   Search skills by name, description, or tags
   ${colors.green}info <name>${colors.reset}                      Show skill details
+  ${colors.green}preview <name>${colors.reset}                   Print the bundled SKILL.md
   ${colors.green}config${colors.reset}                           Show/edit configuration
   ${colors.green}version${colors.reset}                          Show version number
   ${colors.green}help${colors.reset}                             Show this help
@@ -1995,9 +1922,11 @@ ${colors.bold}Legacy collection aliases:${colors.reset}
   web-product, mobile-expo, backend-systems, quality-workflows, docs-files
 
 ${colors.bold}Examples:${colors.reset}
+  npx ai-agent-skills                                       # Launch the terminal browser
   npx ai-agent-skills browse                                # Interactive browser
   npx ai-agent-skills collections                           # Browse curated collections
   npx ai-agent-skills list --work-area frontend
+  npx ai-agent-skills preview pdf
   npx ai-agent-skills install frontend-design               # Install to ALL agents
   npx ai-agent-skills install pdf --agent cursor            # Install to Cursor only
   npx ai-agent-skills install pdf --agents claude,cursor    # Install to specific agents
@@ -2127,150 +2056,191 @@ function setConfig(key, value) {
 
 // ============ MAIN CLI ============
 
-const args = process.argv.slice(2);
-const { command, param, agents, explicitAgent, installed, dryRun, category, workArea, collection, tags, all } = parseArgs(args);
-const ALL_AGENTS = Object.keys(AGENT_PATHS);
+async function main() {
+  const args = process.argv.slice(2);
+  const { command, param, agents, explicitAgent, installed, dryRun, category, workArea, collection, tags, all } = parseArgs(args);
+  const ALL_AGENTS = Object.keys(AGENT_PATHS);
 
-// Handle config commands specially
-if (command === 'config') {
-  const configArgs = args.slice(1);
-  if (configArgs.length === 0) {
-    showConfig();
-  } else {
-    for (let i = 0; i < configArgs.length; i++) {
-      if (configArgs[i].startsWith('--')) {
-        const key = configArgs[i].replace('--', '');
-        const value = configArgs[i + 1];
-        if (value) {
-          setConfig(key, value);
-          i++;
+  if (!command) {
+    if (!isInteractiveTerminal()) {
+      showHelp();
+      return;
+    }
+
+    const action = await launchBrowser(agents[0]);
+    if (action && action.type === 'install') {
+      installSkill(action.skillName, agents[0], false);
+    }
+    return;
+  }
+
+  // Handle config commands specially
+  if (command === 'config') {
+    const configArgs = args.slice(1);
+    if (configArgs.length === 0) {
+      showConfig();
+    } else {
+      for (let i = 0; i < configArgs.length; i++) {
+        if (configArgs[i].startsWith('--')) {
+          const key = configArgs[i].replace('--', '');
+          const value = configArgs[i + 1];
+          if (value) {
+            setConfig(key, value);
+            i++;
+          }
         }
       }
     }
+    return;
   }
-  process.exit(0);
-}
 
-switch (command || 'help') {
-  case 'browse':
-  case 'b':
-    browseSkills(agents[0]);
-    break;
-
-  case 'list':
-  case 'ls':
-    if (installed) {
-      for (let i = 0; i < agents.length; i++) {
-        if (i > 0) log('');
-        listInstalledSkills(agents[i]);
+  switch (command) {
+    case 'browse':
+    case 'b': {
+      if (!isInteractiveTerminal()) {
+        error('The interactive browser requires a TTY terminal.');
+        log('Try: npx ai-agent-skills list, search, info, or preview');
+        process.exitCode = 1;
+        return;
       }
-    } else {
-      listSkills(category, tags, collection, workArea);
-    }
-    break;
 
-  case 'collections':
-  case 'catalog':
-    showCollections();
-    break;
-
-  case 'install':
-  case 'i':
-  case 'add':
-    if (!param) {
-      error('Please specify a skill name, GitHub repo, or local path.');
-      log('Usage: npx ai-agent-skills install <name> [--agent cursor]');
-      process.exit(1);
+      const action = await launchBrowser(agents[0]);
+      if (action && action.type === 'install') {
+        installSkill(action.skillName, agents[0], false);
+      }
+      return;
     }
-    // Default to ALL agents when no agent explicitly specified
-    const installTargets = explicitAgent ? agents : ALL_AGENTS;
-    for (const agent of installTargets) {
-      if (isLocalPath(param)) {
-        installFromLocalPath(param, agent, dryRun);
-      } else if (isGitUrl(param)) {
-        installFromGitUrl(param, agent, dryRun);
-      } else if (isGitHubUrl(param)) {
-        installFromGitHub(param, agent, dryRun);
+
+    case 'list':
+    case 'ls':
+      if (installed) {
+        for (let i = 0; i < agents.length; i++) {
+          if (i > 0) log('');
+          listInstalledSkills(agents[i]);
+        }
       } else {
-        installSkill(param, agent, dryRun);
+        listSkills(category, tags, collection, workArea);
       }
-    }
-    break;
+      return;
 
-  case 'uninstall':
-  case 'remove':
-  case 'rm':
-    if (!param) {
-      error('Please specify a skill name.');
-      log('Usage: npx ai-agent-skills uninstall <name> [--agents claude,cursor]');
-      process.exit(1);
-    }
-    for (const agent of agents) {
-      uninstallSkill(param, agent, dryRun);
-    }
-    break;
+    case 'collections':
+    case 'catalog':
+      showCollections();
+      return;
 
-  case 'update':
-  case 'upgrade':
-    if (all) {
+    case 'install':
+    case 'i':
+    case 'add': {
+      if (!param) {
+        error('Please specify a skill name, GitHub repo, or local path.');
+        log('Usage: npx ai-agent-skills install <name> [--agent cursor]');
+        process.exit(1);
+      }
+      const installTargets = explicitAgent ? agents : ALL_AGENTS;
+      for (const agent of installTargets) {
+        if (isLocalPath(param)) {
+          await installFromLocalPath(param, agent, dryRun);
+        } else if (isGitUrl(param)) {
+          await installFromGitUrl(param, agent, dryRun);
+        } else if (isGitHubUrl(param)) {
+          await installFromGitHub(param, agent, dryRun);
+        } else {
+          installSkill(param, agent, dryRun);
+        }
+      }
+      return;
+    }
+
+    case 'uninstall':
+    case 'remove':
+    case 'rm':
+      if (!param) {
+        error('Please specify a skill name.');
+        log('Usage: npx ai-agent-skills uninstall <name> [--agents claude,cursor]');
+        process.exit(1);
+      }
       for (const agent of agents) {
-        updateAllSkills(agent, dryRun);
+        uninstallSkill(param, agent, dryRun);
       }
-    } else if (!param) {
-      error('Please specify a skill name or use --all.');
-      log('Usage: npx ai-agent-skills update <name> [--agents claude,cursor]');
-      log('       npx ai-agent-skills update --all [--agents claude,cursor]');
-      process.exit(1);
-    } else {
-      for (const agent of agents) {
-        updateSkill(param, agent, dryRun);
+      return;
+
+    case 'update':
+    case 'upgrade':
+      if (all) {
+        for (const agent of agents) {
+          updateAllSkills(agent, dryRun);
+        }
+      } else if (!param) {
+        error('Please specify a skill name or use --all.');
+        log('Usage: npx ai-agent-skills update <name> [--agents claude,cursor]');
+        log('       npx ai-agent-skills update --all [--agents claude,cursor]');
+        process.exit(1);
+      } else {
+        for (const agent of agents) {
+          updateSkill(param, agent, dryRun);
+        }
       }
-    }
-    break;
+      return;
 
-  case 'search':
-  case 's':
-  case 'find':
-    if (!param) {
-      error('Please specify a search query.');
-      log('Usage: npx ai-agent-skills search <query>');
-      process.exit(1);
-    }
-    searchSkills(param, category, collection, workArea);
-    break;
-
-  case 'info':
-  case 'show':
-    if (!param) {
-      error('Please specify a skill name.');
-      log('Usage: npx ai-agent-skills info <skill-name>');
-      process.exit(1);
-    }
-    showInfo(param);
-    break;
-
-  case 'help':
-  case '--help':
-  case '-h':
-    showHelp();
-    break;
-
-  case 'version':
-  case '--version':
-  case '-v':
-    const pkg = require('./package.json');
-    log(`ai-agent-skills v${pkg.version}`);
-    break;
-
-  default:
-    // If command looks like a skill name, try to install it
-    if (getAvailableSkills().includes(command)) {
-      for (const agent of agents) {
-        installSkill(command, agent, dryRun);
+    case 'search':
+    case 's':
+    case 'find':
+      if (!param) {
+        error('Please specify a search query.');
+        log('Usage: npx ai-agent-skills search <query>');
+        process.exit(1);
       }
-    } else {
+      searchSkills(param, category, collection, workArea);
+      return;
+
+    case 'info':
+    case 'show':
+      if (!param) {
+        error('Please specify a skill name.');
+        log('Usage: npx ai-agent-skills info <skill-name>');
+        process.exit(1);
+      }
+      showInfo(param);
+      return;
+
+    case 'preview':
+      if (!param) {
+        error('Please specify a skill name.');
+        log('Usage: npx ai-agent-skills preview <skill-name>');
+        process.exit(1);
+      }
+      showPreview(param);
+      return;
+
+    case 'help':
+    case '--help':
+    case '-h':
+      showHelp();
+      return;
+
+    case 'version':
+    case '--version':
+    case '-v': {
+      const pkg = require('./package.json');
+      log(`ai-agent-skills v${pkg.version}`);
+      return;
+    }
+
+    default:
+      if (getAvailableSkills().includes(command)) {
+        for (const agent of agents) {
+          installSkill(command, agent, dryRun);
+        }
+        return;
+      }
+
       error(`Unknown command: ${command}`);
       showHelp();
       process.exit(1);
-    }
+  }
 }
+
+main().catch((e) => {
+  error(e && e.message ? e.message : String(e));
+  process.exit(1);
+});

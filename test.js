@@ -189,12 +189,19 @@ test('help command works', () => {
   assertContains(output, 'install');
   assertContains(output, 'uninstall');
   assertContains(output, 'collections');
+  assertContains(output, 'preview');
 });
 
 test('list command works', () => {
   const output = run('list');
   assertContains(output, 'Available Skills');
   assertContains(output, 'FRONTEND');
+});
+
+test('no-arg command falls back to help outside a TTY', () => {
+  const output = runArgs([]);
+  assertContains(output, 'AI Agent Skills');
+  assertContains(output, 'browse');
 });
 
 test('collections command works', () => {
@@ -221,6 +228,18 @@ test('info command works', () => {
   assertContains(output, 'Sync Mode:');
   assertContains(output, 'Why Here:');
   assertContains(output, 'Collections:');
+});
+
+test('preview command works', () => {
+  const output = run('preview pdf');
+  assertContains(output, 'Preview:');
+  assertContains(output, 'pdf');
+  assertContains(output, '# PDF Processing Guide');
+});
+
+test('browse command shows tty guidance outside a TTY', () => {
+  const output = runArgs(['browse']);
+  assertContains(output, 'requires a TTY terminal');
 });
 
 test('invalid skill name rejected', () => {

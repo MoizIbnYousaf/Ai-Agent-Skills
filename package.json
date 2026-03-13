@@ -8,11 +8,17 @@
     "skills": "cli.js"
   },
   "engines": {
-    "node": ">=14.14.0"
+    "node": ">=14.16.0"
   },
   "scripts": {
     "test": "node test.js",
     "validate": "node cli.js list"
+  },
+  "dependencies": {
+    "htm": "^3.1.1",
+    "ink": "^4.4.1",
+    "ink-text-input": "^5.0.1",
+    "react": "^18.3.1"
   },
   "repository": {
     "type": "git",
