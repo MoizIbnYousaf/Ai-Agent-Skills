@@ -1,12 +1,12 @@
 name: Skill Request
-description: Request a new skill to be added
-title: "[Skill Request] "
+description: Suggest a skill to add
+title: "[Curation] "
 labels: ["skill-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a skill! We review all requests.
+        Thanks for the suggestion. This repo is curated, so the best requests are the ones with a clear case for why a skill should be here.
 
   - type: input
     id: skill-name
@@ -21,7 +21,7 @@ body:
     id: description
     attributes:
       label: What should this skill do?
-      description: Describe the use case and functionality
+      description: Describe the job it should do and where it would help
       placeholder: |
         I want a skill that can...
 
@@ -37,12 +37,49 @@ body:
       label: Category
       options:
         - Development
-        - Documents
+        - Document
         - Creative
+        - Business
         - Productivity
-        - Other
     validations:
       required: true
+
+  - type: dropdown
+    id: collection
+    attributes:
+      label: Closest collection
+      description: Which collection should this belong to first?
+      options:
+        - My Picks
+        - Web Product
+        - Mobile Expo
+        - Backend Systems
+        - Quality Workflows
+        - Docs Files
+        - Business Research
+        - Creative Media
+        - Not sure
+
+  - type: textarea
+    id: curation-rationale
+    attributes:
+      label: Why should I add this?
+      description: Tell me why this is worth keeping around.
+      placeholder: |
+        Why would you actually reach for this?
+
+        What does it do better than a one-off prompt?
+
+        If it already exists somewhere else, why bring it into this repo?
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Source repo or link
+      description: If this already exists somewhere, link it here.
+      placeholder: e.g., https://github.com/org/repo/tree/main/skills/my-skill
 
   - type: textarea
     id: examples

@@ -1,7 +1,7 @@
 {
   "name": "ai-agent-skills",
   "version": "1.9.0",
-  "description": "Install curated AI agent skills with one command. Works with Claude Code, Cursor, Codex, Gemini CLI, VS Code, Copilot, and 11+ agents.",
+  "description": "The agent skills I actually keep around, plus install tooling for the major coding agents.",
   "main": "cli.js",
   "bin": {
     "ai-agent-skills": "cli.js",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/skillcreatorai/Ai-Agent-Skills.git"
+    "url": "git+https://github.com/MoizIbnYousaf/Ai-Agent-Skills.git"
   },
   "keywords": [
     "ai",
@@ -31,10 +31,10 @@
     "vscode",
     "mcp"
   ],
-  "author": "SkillCreator.ai",
+  "author": "Moiz Ibn Yousaf",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/skillcreatorai/Ai-Agent-Skills/issues"
+    "url": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/issues"
   },
-  "homepage": "https://skillcreator.ai/discover"
+  "homepage": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills#readme"
 }

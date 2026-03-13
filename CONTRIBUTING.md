@@ -1,84 +1,83 @@
-# Contributing to Agent Skills
+# Contributing to AI Agent Skills
 
-We welcome contributions to the universal skill repository.
+This repo is curated on purpose.
 
-## Adding a Skill
+I am not trying to build the biggest skill library on GitHub. I want a smaller, sharper library of skills that are actually worth installing.
 
-### Requirements
+Before you open a PR, read [CURATION.md](./CURATION.md).
 
-1. Your skill must follow the [Agent Skills specification](https://agentskills.io/specification)
-2. The `SKILL.md` file must include valid YAML frontmatter with `name` and `description`
-3. The skill name must be lowercase with hyphens only (e.g., `my-skill`)
-4. The skill must actually work and provide value
+## What Makes A Good Addition
 
-### Process
+A skill is a good fit when it is:
 
-1. Fork this repository
-2. Create your skill folder: `skills/<skill-name>/`
-3. Add your `SKILL.md` file with proper frontmatter:
+- clear about what it does and when to use it
+- reusable in real workflows
+- strong enough to beat a generic prompt
+- well-structured and easy for an agent to follow
+- properly attributed
 
-```yaml
----
-name: my-skill
-description: What this skill does and when to use it.
-license: MIT
----
+If your skill is fine but does not really add much to the library, I would rather leave it out.
 
-# My Skill
+## Requirements
 
-Instructions for the agent...
-```
+1. The skill must follow the [Agent Skills specification](https://agentskills.io/specification).
+2. `SKILL.md` must include valid YAML frontmatter with `name` and `description`.
+3. The skill name must be lowercase with hyphens only, for example `my-skill`.
+4. The skill should actually work and provide value.
+5. Your PR should explain why this deserves a place in the library.
 
-4. Add an entry to `skills.json`:
+## Process
 
-```json
-{
-  "name": "my-skill",
-  "description": "What this skill does and when to use it.",
-  "category": "development",
-  "author": "your-username",
-  "source": "your-username/your-repo",
-  "license": "MIT",
-  "path": "skills/my-skill",
-  "stars": 0,
-  "downloads": 0,
-  "featured": false,
-  "verified": false
-}
-```
+1. Fork the repo.
+2. Add the skill folder at `skills/<skill-name>/`.
+3. Add or update the `skills.json` entry.
+4. Put the skill in at least one collection.
+5. Run `node test.js`.
+6. Open a PR with a short explanation of why it belongs.
 
-5. Submit a pull request
+## Categories
 
-### Categories
+Use one of these:
 
-Use one of these categories:
+- `development`
+- `document`
+- `creative`
+- `business`
+- `productivity`
 
-- `development` - Coding, debugging, testing, tooling
-- `document` - PDF, Word, Excel, presentations
-- `creative` - Art, design, visuals
-- `business` - Communication, research, productivity
-- `data` - Analytics, visualization, databases
-- `content` - Writing, research, media
-- `lifestyle` - Personal productivity
+## Collections
 
-### Review Process
+Most skills should fit into at least one of these:
 
-We review all submissions for:
+- `my-picks`
+- `web-product`
+- `mobile-expo`
+- `backend-systems`
+- `quality-workflows`
+- `docs-files`
+- `business-research`
+- `creative-media`
 
-- **Spec compliance**: Valid SKILL.md format
-- **Quality**: Clear instructions, actually useful
-- **Safety**: No malicious or harmful content
-- **Uniqueness**: Not duplicating existing skills
+If none of those fit, explain why.
+
+## Review Bar
+
+I review submissions for:
+
+- usefulness
+- clarity
+- overlap with existing skills
+- attribution and licensing
+- overall fit with the repo
 
 ## Updating Existing Skills
 
-If you find a bug or want to improve an existing skill:
+If you are improving a skill that is already here:
 
-1. Fork the repo
-2. Make your changes
-3. Test that the skill still works
-4. Submit a PR with a clear description of the change
+1. Keep attribution intact unless ownership has clearly changed.
+2. Explain what you changed and why it is better.
+3. Say whether it should move collections, become featured, or become verified.
 
-## Questions?
+## Questions
 
-Open an issue or visit [skillcreator.ai](https://skillcreator.ai).
+If you are not sure whether something belongs, open an issue first. That is usually faster than building the whole thing and finding out it is not a fit.

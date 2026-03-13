@@ -5,159 +5,99 @@
 </h1>
 
 <p align="center">
-  <strong>Homebrew for AI Agent Skills.</strong><br>
-  Universal Skills installer for any agent that follows the open standard spec 
+  <strong>There are a lot of agent skills now. These are the ones I keep around.</strong><br>
+  Some are mine. Some come from other great repos. All of them earned their spot.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/skills-40-blue?style=flat-square" alt="Skills" />
+  <img src="https://img.shields.io/badge/skills-47-blue?style=flat-square" alt="Skills" />
   <img src="https://img.shields.io/badge/agents-11+-green?style=flat-square" alt="Compatible Agents" />
-  <img src="https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square" alt="License" />
   <img src="https://img.shields.io/npm/v/ai-agent-skills?style=flat-square&color=red" alt="npm" />
-  <img src="https://img.shields.io/npm/dt/ai-agent-skills?style=flat-square&color=orange" alt="Downloads" />
 </p>
 
 <p align="center">
-  <a href="https://skillcreator.ai/explore"><strong>Browse Skills</strong></a> ·
-  <a href="https://skillcreator.ai/build"><strong>Create Skills</strong></a> ·
-  <a href="https://agentskills.io"><strong>Specification</strong></a> ·
-  <a href="https://x.com/skillcreatorai"><strong>Follow Updates</strong></a>
+  <a href="#quick-start"><strong>Quick Start</strong></a> ·
+  <a href="#collections"><strong>Collections</strong></a> ·
+  <a href="./CURATION.md"><strong>Curation Guide</strong></a> ·
+  <a href="./CONTRIBUTING.md"><strong>Contribute</strong></a> ·
+  <a href="https://agentskills.io"><strong>Specification</strong></a>
 </p>
 
 ---
 
+## Why I Keep This Repo
+
+I started this project on December 17, 2025, when skills were spreading across repos and every agent had its own install location.
+
+I built it as a cross-agent installer, and that part is still useful.
+
+Now I use it as a library. It holds the skills I actually use, adapt, or recommend. Some are mine. Some come from other open-source repos. If something feels weak, repetitive, or too niche, I leave it out.
+
+I am not chasing every new coding agent either. I care about the major ones people actually use. I would rather support a smaller set well than add every new logo that shows up.
+
 ## Quick Start
 
 ```bash
-# Install a skill to ALL agents with one command
+# Install one skill to all supported agents
 npx ai-agent-skills install frontend-design
 
 # Install to a specific agent only
 npx ai-agent-skills install frontend-design --agent cursor
 
-# Browse skills interactively
-npx ai-agent-skills browse
+# Browse curated collections
+npx ai-agent-skills collections
 
-# Install from any GitHub repo
-npx ai-agent-skills install anthropics/skills
-npx ai-agent-skills install anthropics/skills/pdf    # specific skill
+# See my starter set
+npx ai-agent-skills list --collection my-picks
 
-# Install from any git URL (SSH or HTTPS)
-npx ai-agent-skills install git@github.com:anthropics/skills.git
-
-# Install from local path
-npx ai-agent-skills install ./my-custom-skill
+# Search the catalog
+npx ai-agent-skills search testing
 ```
 
-**One command. Every agent.** By default, skills install to Claude Code, Cursor, Codex, Amp, VS Code, Copilot, Gemini CLI, Goose, Letta, Kilo Code, and OpenCode simultaneously.
+By default, `install` targets the major agents I already support: Claude Code, Cursor, Codex, Amp, VS Code, Copilot, Gemini CLI, Goose, Letta, Kilo Code, and OpenCode.
 
-## Why This Exists
+## How I Organize It
 
-Every major AI coding agent now supports skills. But they're scattered everywhere.
+- `Collections` are the main way to browse this repo.
+- `My Picks` is where I would tell most people to start.
+- `Featured` means I would actively point someone to that skill first.
+- `Verified` means I have personally checked the skill and its metadata.
+- `Categories` and `tags` are there to keep the CLI useful, not to overcomplicate the repo.
 
-We also created our own repo to cureate the best in one place. Quality over quantity https://www.skillcreator.ai/explore  All skills follow the [Agent Skills spec](https://agentskills.io).
+The folder layout stays flat under `skills/<name>/` because installs stay simpler that way. The catalog handles the grouping.
 
-## Compatible Agents
+## Collections
 
-Works with **Claude Code**, **Cursor**, **Codex**, **Amp**, **VS Code**, **GitHub Copilot**, **Gemini CLI**, **Goose**, **Letta**, **Kilo Code**, and **OpenCode**.
+These collections are the best way to browse the repo.
 
-## Available Skills
+| Collection | What it's for | Start with |
+|-------|-------------|-------------|
+| `my-picks` | The first skills I would install on a fresh setup | `frontend-design`, `mcp-builder`, `qa-regression` |
+| `web-product` | Frontend work, design systems, polished UI, and shipping web apps | `react-best-practices`, `frontend-design`, `vercel-deploy` |
+| `mobile-expo` | Expo and React Native workflows | `expo-app-design`, `expo-deployment`, `upgrading-expo` |
+| `backend-systems` | APIs, architecture, MCP servers, and heavier engineering work | `mcp-builder`, `backend-development`, `database-design` |
+| `quality-workflows` | Testing, review, planning, QA, and safer execution | `qa-regression`, `code-review`, `best-practices` |
+| `docs-files` | Documents, spreadsheets, coauthoring, file-heavy work | `pdf`, `doc-coauthoring`, `xlsx` |
+| `business-research` | Growth, lead research, communication, and operator workflows | `lead-research-assistant`, `internal-comms`, `developer-growth-analysis` |
+| `creative-media` | Visual work, image/video tasks, and creative output | `canvas-design`, `image-enhancer`, `video-downloader` |
 
-### Development
-| Skill | Description |
-|-------|-------------|
-| `frontend-design` | Production-grade UI components and styling |
-| `mcp-builder` | Create MCP servers for agent tool integrations |
-| `skill-creator` | Guide for creating new agent skills |
-| `code-review` | Automated PR review patterns |
-| `code-refactoring` | Systematic code improvement techniques |
-| `backend-development` | APIs, databases, server architecture |
-| `python-development` | Modern Python 3.12+ patterns |
-| `javascript-typescript` | ES6+, Node, React, TypeScript |
-| `webapp-testing` | Browser automation and testing with Playwright |
-| `database-design` | Schema design and optimization |
-| `llm-application-dev` | Build LLM-powered applications |
-| `artifacts-builder` | Interactive React/Tailwind web components |
-| `changelog-generator` | Generate changelogs from git commits |
-
-### Documents
-| Skill | Description |
-|-------|-------------|
-| `pdf` | Extract, create, merge, split PDFs |
-| `xlsx` | Excel creation, formulas, data analysis |
-| `docx` | Word documents with formatting |
-| `pptx` | PowerPoint presentations |
-
-### Creative
-| Skill | Description |
-|-------|-------------|
-| `canvas-design` | Visual art and poster creation |
-| `algorithmic-art` | Generative art with p5.js |
-| `image-enhancer` | Improve image quality and resolution |
-| `slack-gif-creator` | Create animated GIFs for Slack |
-| `theme-factory` | Professional font and color themes |
-| `video-downloader` | Download videos from various platforms |
-
-### Business
-| Skill | Description |
-|-------|-------------|
-| `brand-guidelines` | Apply brand colors and typography |
-| `internal-comms` | Status updates and team communication |
-| `competitive-ads-extractor` | Analyze competitor ad strategies |
-| `domain-name-brainstormer` | Generate and check domain availability |
-| `lead-research-assistant` | Identify and qualify leads |
-
-### Productivity
-| Skill | Description |
-|-------|-------------|
-| `ask-questions-if-underspecified` | Clarify requirements before implementing |
-| `doc-coauthoring` | Co-author docs, proposals, specs with structured workflow |
-| `job-application` | Cover letters and applications using your CV |
-| `qa-regression` | Automated regression testing with Playwright |
-| `jira-issues` | Create, update, search Jira issues |
-| `code-documentation` | Generate docs from code |
-| `content-research-writer` | Research and write content with citations |
-| `developer-growth-analysis` | Track developer growth metrics |
-| `file-organizer` | Organize files and find duplicates |
-| `invoice-organizer` | Organize invoices for tax prep |
-| `meeting-insights-analyzer` | Analyze meeting transcripts |
-| `raffle-winner-picker` | Randomly select contest winners |
-
-## Commands
+CLI shortcuts:
 
 ```bash
-# Interactive browser (TUI)
-npx ai-agent-skills browse
-
-# List all available skills
-npx ai-agent-skills list
-npx ai-agent-skills list --category development
-npx ai-agent-skills list --installed --agent cursor
-
-# Install (defaults to ALL agents)
-npx ai-agent-skills install <name>                    # installs to ALL agents
-npx ai-agent-skills install <name> --agent cursor     # install to specific agent only
-npx ai-agent-skills install <owner/repo>              # from GitHub (all agents)
-npx ai-agent-skills install <git-url>                 # from any git URL (ssh/https)
-npx ai-agent-skills install ./path                    # from local path (all agents)
-npx ai-agent-skills install <name> --dry-run          # preview only
-
-# Manage installed skills
-npx ai-agent-skills uninstall <name>
-npx ai-agent-skills update <name>
-npx ai-agent-skills update --all
-
-# Discovery
-npx ai-agent-skills search <query>
-npx ai-agent-skills info <name>
-
-# Configuration
-npx ai-agent-skills config --default-agent cursor
+npx ai-agent-skills collections
+npx ai-agent-skills list --collection my-picks
+npx ai-agent-skills list --collection web-product
 ```
 
-### Supported Agents
+## What I Support
 
-By default, `install` targets **all agents**. Use `--agent <name>` to install to a specific one.
+I keep support focused on the bigger agents.
+
+I am not interested in racing to add support for every new coding agent that launches. If I do not use it, trust it, or expect it to last, I am probably not going to add first-class support for it.
+
+That keeps the repo focused instead of turning into compatibility theater.
+
+## Supported Agents
 
 | Agent | Flag | Install Location |
 |-------|------|------------------|
@@ -171,80 +111,90 @@ By default, `install` targets **all agents**. Use `--agent <name>` to install to
 | OpenCode | `--agent opencode` | `~/.opencode/skill/` |
 | Letta | `--agent letta` | `~/.letta/skills/` |
 | Kilo Code | `--agent kilocode` | `~/.kilocode/skills/` |
-| Portable | `--agent project` | `.skills/` (works with any agent) |
+| Portable | `--agent project` | `.skills/` |
+
+## Commands
+
+```bash
+# Discovery
+npx ai-agent-skills collections
+npx ai-agent-skills list
+npx ai-agent-skills list --category development
+npx ai-agent-skills list --collection my-picks
+npx ai-agent-skills search testing
+npx ai-agent-skills info frontend-design
+
+# Installation
+npx ai-agent-skills install <name>
+npx ai-agent-skills install <name> --agent cursor
+npx ai-agent-skills install <owner/repo>
+npx ai-agent-skills install <git-url>
+npx ai-agent-skills install ./path
+npx ai-agent-skills install <name> --dry-run
+
+# Management
+npx ai-agent-skills uninstall <name>
+npx ai-agent-skills update <name>
+npx ai-agent-skills update --all
+
+# Configuration
+npx ai-agent-skills config --default-agent cursor
+```
 
 ## Manual Install
 
 ```bash
-# Clone the repo
-git clone https://github.com/skillcreatorai/Ai-Agent-Skills.git
-
-# Copy a skill to your skills directory
+git clone https://github.com/MoizIbnYousaf/Ai-Agent-Skills.git
 cp -r Ai-Agent-Skills/skills/pdf ~/.claude/skills/
 ```
 
-## Create Your Own
+## Contributing
 
+This repo is curated. I do not accept everything, and I do not want the catalog to sprawl.
+I would rather keep it small and strong than let it get messy.
 
-1. **Build manually**: Follow the [Agent Skills spec](https://agentskills.io/specification)
+Before opening a PR:
+
+1. Read [CURATION.md](./CURATION.md).
+2. Follow [CONTRIBUTING.md](./CONTRIBUTING.md).
+3. Add or update the `skills.json` entry.
+4. Place the skill in at least one curated collection.
+5. Explain why it belongs here.
 
 ## What Are Agent Skills?
 
-An [open standard from Anthropic](https://agentskills.io) for extending AI agents. A skill is just a folder:
+Agent skills follow the open format documented at [agentskills.io](https://agentskills.io). A skill is just a folder:
 
-```
+```text
 my-skill/
-├── SKILL.md       # Instructions + metadata
-├── scripts/       # Optional code
-└── references/    # Optional docs
+├── SKILL.md
+├── scripts/
+└── references/
 ```
 
-All major AI coding tools support this format.
-
-## Contributing
-
-1. Fork this repo
-2. Add your skill to `/skills/<name>/`
-3. Ensure `SKILL.md` follows the [spec](https://agentskills.io/specification)
-4. Update `skills.json`
-5. Submit PR
-
-We review all contributions for quality and spec compliance.
+All major coding agents support some variation of this pattern.
 
 ## Links
 
-
-- [Agent Skills Spec](https://agentskills.io) - Official format documentation
-- [Browse Skills](https://skillcreator.ai/explore) - Visual skill gallery with one-click install
-- [Create Skills](https://skillcreator.ai/build) - Generate skills (waitlist) 
-- [Anthropic Skills](https://github.com/anthropics/skills) - Official example skills
-
-## See Also
-
-**[openskills](https://github.com/numman-ali/openskills)** - another universal skills loader that inspired parts of this project (created pre the open agent skills standard) & Requires global install, AGENTS.md sync, and Bash calls. Great for flexibility.
-
-**ai-agent-skills** - Just `npx`, installs to native agent folders. Homebrew for skills.
-
----
+- [Agent Skills Spec](https://agentskills.io)
+- [Anthropic Skills](https://github.com/anthropics/skills)
+- [Curation Guide](./CURATION.md)
+- [Contributing Guide](./CONTRIBUTING.md)
+- [Issues](https://github.com/MoizIbnYousaf/Ai-Agent-Skills/issues)
 
 ## Credits & Attribution
 
-This repository builds upon and curates skills from the open-source community:
+This library builds on work from the open-source community, especially:
 
-- **[Anthropic Skills](https://github.com/anthropics/skills)** - Official example skills from Anthropic that established the Agent Skills specification
-- **[ComposioHQ Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills)** - Curated community skills from the Composio ecosystem
-- **[wshobson/agents](https://github.com/wshobson/agents)** - Development skills inspired by their plugin marketplace patterns
+- [Anthropic Skills](https://github.com/anthropics/skills)
+- [ComposioHQ Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills)
+- [wshobson/agents](https://github.com/wshobson/agents)
+- [openskills](https://github.com/numman-ali/openskills)
 
-We believe in open source and giving credit where it's due. If you see your work here and want additional attribution, [open an issue](https://github.com/skillcreatorai/Ai-Agent-Skills/issues).
-
-## Community
-
-- Follow [@skillcreatorai](https://x.com/skillcreatorai) for updates
-- [Open an issue](https://github.com/skillcreatorai/Ai-Agent-Skills/issues) for bugs or requests
-- [Read CONTRIBUTING.md](./CONTRIBUTING.md) to add skills
+If something here traces back to your work and you want clearer attribution, open an issue.
 
 ---
 
 <p align="center">
-  <sub>Built with care by <a href="https://skillcreator.ai">SkillCreator.ai</a></sub>
+  <sub>Built and curated by <a href="https://github.com/MoizIbnYousaf">Moiz Ibn Yousaf</a></sub>
 </p>

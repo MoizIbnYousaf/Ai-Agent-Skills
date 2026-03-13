@@ -104,6 +104,23 @@ test('all categories are valid', () => {
   });
 });
 
+test('collections metadata is valid', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const names = new Set(data.skills.map(s => s.name));
+
+  assert(Array.isArray(data.collections), 'collections should be an array');
+
+  data.collections.forEach(collection => {
+    assert(collection.id, 'collection missing id');
+    assert(collection.title, `collection ${collection.id} missing title`);
+    assert(Array.isArray(collection.skills), `collection ${collection.id} missing skills array`);
+
+    collection.skills.forEach(skillName => {
+      assert(names.has(skillName), `collection ${collection.id} references unknown skill ${skillName}`);
+    });
+  });
+});
+
 // ============ CLI TESTS ============
 
 test('help command works', () => {
@@ -111,12 +128,20 @@ test('help command works', () => {
   assertContains(output, 'AI Agent Skills');
   assertContains(output, 'install');
   assertContains(output, 'uninstall');
+  assertContains(output, 'collections');
 });
 
 test('list command works', () => {
   const output = run('list');
   assertContains(output, 'Available Skills');
   assertContains(output, 'DEVELOPMENT');
+});
+
+test('collections command works', () => {
+  const output = run('collections');
+  assertContains(output, 'Curated Collections');
+  assertContains(output, 'My Picks');
+  assertContains(output, 'my-picks');
 });
 
 test('search command works', () => {
@@ -128,6 +153,7 @@ test('info command works', () => {
   const output = run('info pdf');
   assertContains(output, 'pdf');
   assertContains(output, 'Category:');
+  assertContains(output, 'Collections:');
 });
 
 test('invalid skill name rejected', () => {
@@ -194,6 +220,12 @@ test('unknown command shows error', () => {
 test('category filter works', () => {
   const output = run('list --category document');
   assertContains(output, 'DOCUMENT');
+});
+
+test('collection filter works', () => {
+  const output = run('list --collection my-picks');
+  assertContains(output, 'My Picks');
+  assertContains(output, 'frontend-design');
 });
 
 // ============ SECURITY TESTS ============

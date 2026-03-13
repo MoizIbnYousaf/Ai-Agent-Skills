@@ -1,7 +1,122 @@
 {
-  "version": "1.3.0",
-  "updated": "2026-01-16T00:00:00Z",
+  "version": "1.4.0",
+  "updated": "2026-03-13T00:00:00Z",
   "total": 47,
+  "collections": [
+    {
+      "id": "my-picks",
+      "title": "My Picks",
+      "description": "The skills I would install first on a fresh setup.",
+      "skills": [
+        "frontend-design",
+        "react-best-practices",
+        "expo-app-design",
+        "mcp-builder",
+        "pdf",
+        "doc-coauthoring",
+        "qa-regression",
+        "ask-questions-if-underspecified",
+        "best-practices"
+      ]
+    },
+    {
+      "id": "web-product",
+      "title": "Web Product & Design",
+      "description": "Frontend implementation, interface quality, and shipping polished web products.",
+      "skills": [
+        "react-best-practices",
+        "web-design-guidelines",
+        "vercel-deploy",
+        "frontend-design",
+        "artifacts-builder",
+        "brand-guidelines",
+        "theme-factory"
+      ]
+    },
+    {
+      "id": "mobile-expo",
+      "title": "Mobile & Expo",
+      "description": "Expo and React Native workflows for designing, upgrading, and shipping mobile apps.",
+      "skills": [
+        "expo-app-design",
+        "expo-deployment",
+        "upgrading-expo"
+      ]
+    },
+    {
+      "id": "backend-systems",
+      "title": "Backend & Systems",
+      "description": "Architecture, APIs, MCP servers, app logic, and codebase-level engineering work.",
+      "skills": [
+        "mcp-builder",
+        "backend-development",
+        "python-development",
+        "javascript-typescript",
+        "database-design",
+        "llm-application-dev",
+        "code-refactoring",
+        "skill-creator"
+      ]
+    },
+    {
+      "id": "quality-workflows",
+      "title": "Quality & Workflow",
+      "description": "Testing, review, planning, QA, and safer day-to-day execution loops.",
+      "skills": [
+        "code-review",
+        "webapp-testing",
+        "qa-regression",
+        "changelog-generator",
+        "jira-issues",
+        "ask-questions-if-underspecified",
+        "best-practices"
+      ]
+    },
+    {
+      "id": "docs-files",
+      "title": "Docs, Files & Research",
+      "description": "Documents, spreadsheets, coauthoring, analysis, and file-heavy workflows.",
+      "skills": [
+        "pdf",
+        "xlsx",
+        "docx",
+        "pptx",
+        "doc-coauthoring",
+        "code-documentation",
+        "content-research-writer",
+        "file-organizer",
+        "invoice-organizer",
+        "meeting-insights-analyzer"
+      ]
+    },
+    {
+      "id": "business-research",
+      "title": "Business & Research",
+      "description": "Communication, growth, lead research, and business-side operator workflows.",
+      "skills": [
+        "competitive-ads-extractor",
+        "lead-research-assistant",
+        "domain-name-brainstormer",
+        "internal-comms",
+        "developer-growth-analysis",
+        "job-application",
+        "raffle-winner-picker"
+      ]
+    },
+    {
+      "id": "creative-media",
+      "title": "Creative & Media",
+      "description": "Visual work, image/video tasks, and creative output beyond straight coding.",
+      "skills": [
+        "canvas-design",
+        "algorithmic-art",
+        "image-enhancer",
+        "slack-gif-creator",
+        "theme-factory",
+        "video-downloader"
+      ]
+    }
+  ],
   "skills": [
     {
       "name": "react-best-practices",
@@ -11,7 +126,11 @@
       "source": "vercel/skills",
       "license": "MIT",
       "path": "skills/react-best-practices",
-      "tags": ["react", "typescript", "nextjs"],
+      "tags": [
+        "react",
+        "typescript",
+        "nextjs"
+      ],
       "stars": 15000,
       "downloads": 2400,
       "featured": true,
@@ -25,7 +144,11 @@
       "source": "vercel/skills",
       "license": "MIT",
       "path": "skills/web-design-guidelines",
-      "tags": ["react", "nextjs", "typescript"],
+      "tags": [
+        "react",
+        "nextjs",
+        "typescript"
+      ],
       "stars": 15000,
       "downloads": 1800,
       "featured": false,
@@ -39,7 +162,11 @@
       "source": "vercel/skills",
       "license": "MIT",
       "path": "skills/vercel-deploy",
-      "tags": ["nextjs", "node", "typescript"],
+      "tags": [
+        "nextjs",
+        "node",
+        "typescript"
+      ],
       "stars": 15000,
       "downloads": 2100,
       "featured": true,
@@ -53,7 +180,11 @@
       "source": "expo/skills",
       "license": "MIT",
       "path": "skills/expo-app-design",
-      "tags": ["expo", "react", "typescript"],
+      "tags": [
+        "expo",
+        "react",
+        "typescript"
+      ],
       "stars": 38000,
       "downloads": 3200,
       "featured": true,
@@ -67,7 +198,11 @@
       "source": "expo/skills",
       "license": "MIT",
       "path": "skills/expo-deployment",
-      "tags": ["expo", "react", "node"],
+      "tags": [
+        "expo",
+        "react",
+        "node"
+      ],
       "stars": 38000,
       "downloads": 2800,
       "featured": true,
@@ -81,7 +216,11 @@
       "source": "expo/skills",
       "license": "MIT",
       "path": "skills/upgrading-expo",
-      "tags": ["expo", "react", "typescript"],
+      "tags": [
+        "expo",
+        "react",
+        "typescript"
+      ],
       "stars": 38000,
       "downloads": 1500,
       "featured": false,
@@ -95,7 +234,11 @@
       "source": "anthropics/skills",
       "license": "Apache-2.0",
       "path": "skills/frontend-design",
-      "tags": ["react", "typescript", "nextjs"],
+      "tags": [
+        "react",
+        "typescript",
+        "nextjs"
+      ],
       "stars": 21600,
       "downloads": 1320,
       "featured": true,
@@ -109,7 +252,9 @@
       "source": "anthropics/skills",
       "license": "Apache-2.0",
       "path": "skills/pdf",
-      "tags": ["python"],
+      "tags": [
+        "python"
+      ],
       "stars": 21600,
       "downloads": 890,
       "featured": true,
@@ -162,7 +307,11 @@
       "source": "anthropics/skills",
       "license": "Apache-2.0",
       "path": "skills/mcp-builder",
-      "tags": ["python", "typescript", "node"],
+      "tags": [
+        "python",
+        "typescript",
+        "node"
+      ],
       "stars": 21600,
       "downloads": 1150,
       "featured": true,
@@ -228,7 +377,11 @@
       "source": "anthropics/skills",
       "license": "Apache-2.0",
       "path": "skills/webapp-testing",
-      "tags": ["typescript", "node", "react"],
+      "tags": [
+        "typescript",
+        "node",
+        "react"
+      ],
       "stars": 21600,
       "downloads": 620,
       "featured": false,
@@ -281,7 +434,9 @@
       "source": "wshobson/agents",
       "license": "MIT",
       "path": "skills/python-development",
-      "tags": ["python"],
+      "tags": [
+        "python"
+      ],
       "stars": 22900,
       "downloads": 388,
       "featured": false,
@@ -295,7 +450,11 @@
       "source": "wshobson/agents",
       "license": "MIT",
       "path": "skills/javascript-typescript",
-      "tags": ["typescript", "react", "node"],
+      "tags": [
+        "typescript",
+        "react",
+        "node"
+      ],
       "stars": 22900,
       "downloads": 394,
       "featured": false,
@@ -309,7 +468,11 @@
       "source": "wshobson/agents",
       "license": "MIT",
       "path": "skills/backend-development",
-      "tags": ["node", "python", "typescript"],
+      "tags": [
+        "node",
+        "python",
+        "typescript"
+      ],
       "stars": 22900,
       "downloads": 320,
       "featured": false,
@@ -349,7 +512,11 @@
       "source": "wshobson/agents",
       "license": "MIT",
       "path": "skills/llm-application-dev",
-      "tags": ["python", "typescript", "node"],
+      "tags": [
+        "python",
+        "typescript",
+        "node"
+      ],
       "stars": 22900,
       "downloads": 560,
       "featured": true,
@@ -372,8 +539,8 @@
       "name": "jira-issues",
       "description": "Create, update, and manage Jira issues from natural language. Use when logging bugs, creating tickets, updating issue status, or managing your Jira backlog.",
       "category": "productivity",
-      "author": "skillcreatorai",
-      "source": "skillcreatorai/Ai-Agent-Skills",
+      "author": "MoizIbnYousaf",
+      "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
       "path": "skills/jira-issues",
       "stars": 100,
@@ -385,11 +552,14 @@
       "name": "qa-regression",
       "description": "Automate QA regression testing with reusable Playwright tests. Login flows, dashboard checks, user creation, and composable test suites.",
       "category": "productivity",
-      "author": "skillcreatorai",
-      "source": "skillcreatorai/Ai-Agent-Skills",
+      "author": "MoizIbnYousaf",
+      "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
       "path": "skills/qa-regression",
-      "tags": ["typescript", "node"],
+      "tags": [
+        "typescript",
+        "node"
+      ],
       "stars": 100,
       "downloads": 0,
       "featured": true,
@@ -399,8 +569,8 @@
       "name": "job-application",
       "description": "Write tailored cover letters and job applications using your CV and preferred style. Paste a job description and get a personalized cover letter instantly.",
       "category": "productivity",
-      "author": "skillcreatorai",
-      "source": "skillcreatorai/Ai-Agent-Skills",
+      "author": "MoizIbnYousaf",
+      "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
       "path": "skills/job-application",
       "stars": 100,
@@ -413,10 +583,15 @@
       "description": "Clarify requirements before implementing. Ask 1-5 must-have questions to avoid wrong work. Use when requests are ambiguous, have multiple valid interpretations, or lack key details like scope, constraints, or acceptance criteria.",
       "category": "productivity",
       "author": "thsottiaux",
-      "source": "skillcreatorai/Ai-Agent-Skills",
+      "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
       "path": "skills/ask-questions-if-underspecified",
-      "tags": ["clarification", "requirements", "workflow", "codex"],
+      "tags": [
+        "clarification",
+        "requirements",
+        "workflow",
+        "codex"
+      ],
       "stars": 100,
       "downloads": 0,
       "featured": true,
@@ -426,11 +601,16 @@
       "name": "best-practices",
       "description": "Transform vague prompts into optimized Claude Code instructions. Adds verification, context, constraints, and proper phasing. Use when prompts lack test cases, specific locations, or success criteria.",
       "category": "productivity",
-      "author": "skillcreatorai",
-      "source": "skillcreatorai/Ai-Agent-Skills",
+      "author": "MoizIbnYousaf",
+      "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
       "path": "skills/best-practices",
-      "tags": ["prompts", "workflow", "productivity", "optimization"],
+      "tags": [
+        "prompts",
+        "workflow",
+        "productivity",
+        "optimization"
+      ],
       "stars": 100,
       "downloads": 0,
       "featured": true,
@@ -444,7 +624,10 @@
       "source": "ComposioHQ/awesome-claude-skills",
       "license": "Apache-2.0",
       "path": "skills/artifacts-builder",
-      "tags": ["react", "typescript"],
+      "tags": [
+        "react",
+        "typescript"
+      ],
       "stars": 500,
       "downloads": 0,
       "featured": false,
@@ -631,38 +814,6 @@
       "downloads": 0,
       "featured": false,
       "verified": false
-    }
-  ],
-  "categories": [
-    {
-      "id": "development",
-      "name": "Development",
-      "description": "Coding and software development skills",
-      "count": 13
-    },
-    {
-      "id": "document",
-      "name": "Documents",
-      "description": "Document processing and creation",
-      "count": 4
-    },
-    {
-      "id": "creative",
-      "name": "Creative",
-      "description": "Design and creative skills",
-      "count": 6
-    },
-    {
-      "id": "business",
-      "name": "Business",
-      "description": "Business and communication skills",
-      "count": 5
-    },
-    {
-      "id": "productivity",
-      "name": "Productivity",
-      "description": "Productivity and workflow skills",
-      "count": 13
     }
   ]
 }

@@ -161,6 +161,49 @@ function loadSkillsJson() {
   }
 }
 
+function getCollections(data) {
+  return Array.isArray(data.collections) ? data.collections : [];
+}
+
+function getCollection(data, collectionId) {
+  if (!collectionId) return null;
+  return getCollections(data).find(collection => collection.id === collectionId);
+}
+
+function getCollectionsForSkill(data, skillName) {
+  return getCollections(data).filter(collection =>
+    Array.isArray(collection.skills) && collection.skills.includes(skillName)
+  );
+}
+
+function filterSkillsByCollection(data, skills, collectionId) {
+  if (!collectionId) {
+    return { collection: null, skills };
+  }
+
+  const collection = getCollection(data, collectionId);
+  if (!collection) {
+    return { collection: null, skills: null };
+  }
+
+  const order = new Map(collection.skills.map((name, index) => [name, index]));
+  const filtered = skills
+    .filter(skill => order.has(skill.name))
+    .sort((a, b) => order.get(a.name) - order.get(b.name));
+
+  return { collection, skills: filtered };
+}
+
+function printCollectionSuggestions(data) {
+  const collections = getCollections(data);
+  if (collections.length === 0) return;
+
+  log(`\n${colors.dim}Available collections:${colors.reset}`);
+  collections.forEach(collection => {
+    log(`  ${colors.cyan}${collection.id}${colors.reset} - ${collection.title}`);
+  });
+}
+
 function getAvailableSkills() {
   if (!fs.existsSync(SKILLS_DIR)) return [];
 
@@ -193,7 +236,8 @@ function parseArgs(args) {
     all: false,
     dryRun: false,
     tags: null,
-    category: null
+    category: null,
+    collection: null
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -241,6 +285,10 @@ function parseArgs(args) {
     }
     else if (arg === '--category' || arg === '-c') {
       result.category = args[i + 1];
+      i++;
+    }
+    else if (arg === '--collection') {
+      result.collection = args[i + 1];
       i++;
     }
     else if (arg.startsWith('--')) {
@@ -821,7 +869,7 @@ function updateAllSkills(agent = 'claude', dryRun = false) {
 
 // ============ LISTING AND SEARCH ============
 
-function listSkills(category = null, tags = null) {
+function listSkills(category = null, tags = null, collectionId = null) {
   const data = loadSkillsJson();
   let skills = data.skills || [];
 
@@ -838,8 +886,16 @@ function listSkills(category = null, tags = null) {
     );
   }
 
+  const collectionResult = filterSkillsByCollection(data, skills, collectionId);
+  if (collectionId && !collectionResult.collection) {
+    warn(`Unknown collection "${collectionId}"`);
+    printCollectionSuggestions(data);
+    return;
+  }
+  skills = collectionResult.skills;
+
   if (skills.length === 0) {
-    if (category || tags) {
+    if (category || tags || collectionId) {
       warn(`No skills found matching filters`);
       log(`\n${colors.dim}Try: npx ai-agent-skills list${colors.reset}`);
     } else {
@@ -848,19 +904,13 @@ function listSkills(category = null, tags = null) {
     return;
   }
 
-  // Group by category
-  const byCategory = {};
-  skills.forEach(skill => {
-    const cat = skill.category || 'other';
-    if (!byCategory[cat]) byCategory[cat] = [];
-    byCategory[cat].push(skill);
-  });
-
   log(`\n${colors.bold}Available Skills${colors.reset} (${skills.length} total)\n`);
 
-  Object.keys(byCategory).sort().forEach(cat => {
-    log(`${colors.blue}${colors.bold}${cat.toUpperCase()}${colors.reset}`);
-    byCategory[cat].forEach(skill => {
+  if (collectionResult.collection) {
+    log(`${colors.blue}${colors.bold}${collectionResult.collection.title}${colors.reset} ${colors.dim}[${collectionResult.collection.id}]${colors.reset}`);
+    log(`${colors.dim}${collectionResult.collection.description}${colors.reset}\n`);
+
+    skills.forEach(skill => {
       const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
       const verified = skill.verified ? ` ${colors.green}✓${colors.reset}` : '';
       const tagStr = skill.tags && skill.tags.length > 0
@@ -868,21 +918,48 @@ function listSkills(category = null, tags = null) {
         : '';
 
       log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}`);
+      log(`    ${colors.dim}${skill.category}${colors.reset}`);
 
-      const desc = skill.description.length > 65
-        ? skill.description.slice(0, 65) + '...'
+      const desc = skill.description.length > 80
+        ? skill.description.slice(0, 80) + '...'
         : skill.description;
       log(`    ${colors.dim}${desc}${colors.reset}`);
     });
-    log('');
-  });
+  } else {
+    const byCategory = {};
+    skills.forEach(skill => {
+      const cat = skill.category || 'other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(skill);
+    });
+
+    Object.keys(byCategory).sort().forEach(cat => {
+      log(`${colors.blue}${colors.bold}${cat.toUpperCase()}${colors.reset}`);
+      byCategory[cat].forEach(skill => {
+        const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
+        const verified = skill.verified ? ` ${colors.green}✓${colors.reset}` : '';
+        const tagStr = skill.tags && skill.tags.length > 0
+          ? ` ${colors.dim}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
+          : '';
+
+        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}`);
+
+        const desc = skill.description.length > 65
+          ? skill.description.slice(0, 65) + '...'
+          : skill.description;
+        log(`    ${colors.dim}${desc}${colors.reset}`);
+      });
+      log('');
+    });
+  }
 
   log(`${colors.dim}* = featured  ✓ = verified${colors.reset}`);
   log(`\nInstall: ${colors.cyan}npx ai-agent-skills install <skill-name>${colors.reset}`);
   log(`Filter:  ${colors.cyan}npx ai-agent-skills list --category development${colors.reset}`);
+  log(`Collections: ${colors.cyan}npx ai-agent-skills collections${colors.reset}`);
 }
 
-function searchSkills(query, category = null) {
+function searchSkills(query, category = null, collectionId = null) {
   const data = loadSkillsJson();
   let skills = data.skills || [];
   const q = query.toLowerCase();
@@ -891,6 +968,14 @@ function searchSkills(query, category = null) {
   if (category) {
     skills = skills.filter(s => s.category === category.toLowerCase());
   }
+
+  const collectionResult = filterSkillsByCollection(data, skills, collectionId);
+  if (collectionId && !collectionResult.collection) {
+    warn(`Unknown collection "${collectionId}"`);
+    printCollectionSuggestions(data);
+    return;
+  }
+  skills = collectionResult.skills;
 
   // Search in name, description, and tags
   const matches = skills.filter(s =>
@@ -917,7 +1002,11 @@ function searchSkills(query, category = null) {
     return;
   }
 
-  log(`\n${colors.bold}Search Results${colors.reset} (${matches.length} matches)\n`);
+  const scope = collectionResult.collection
+    ? ` in ${collectionResult.collection.title}`
+    : '';
+
+  log(`\n${colors.bold}Search Results${colors.reset} (${matches.length} matches${scope})\n`);
 
   matches.forEach(skill => {
     const tagStr = skill.tags && skill.tags.length > 0
@@ -931,6 +1020,28 @@ function searchSkills(query, category = null) {
       : skill.description;
     log(`  ${desc}`);
     log('');
+  });
+}
+
+function showCollections() {
+  const data = loadSkillsJson();
+  const collections = getCollections(data);
+
+  if (collections.length === 0) {
+    warn('No curated collections found in skills.json');
+    return;
+  }
+
+  log(`\n${colors.bold}Curated Collections${colors.reset} (${collections.length} total)\n`);
+
+  collections.forEach(collection => {
+    const sample = collection.skills.slice(0, 4).join(', ');
+    const more = collection.skills.length > 4 ? ', ...' : '';
+
+    log(`${colors.blue}${colors.bold}${collection.title}${colors.reset} ${colors.dim}[${collection.id}]${colors.reset}`);
+    log(`  ${colors.dim}${collection.description}${colors.reset}`);
+    log(`  ${colors.green}${collection.skills.length} skills${colors.reset} · ${sample}${more}`);
+    log(`  ${colors.dim}npx ai-agent-skills list --collection ${collection.id}${colors.reset}\n`);
   });
 }
 
@@ -1596,7 +1707,7 @@ function installFromLocalPath(source, agent = 'claude', dryRun = false) {
 function showHelp() {
   log(`
 ${colors.bold}AI Agent Skills${colors.reset}
-Homebrew for AI agent skills. One command, every agent.
+The agent skills I actually keep around.
 
 ${colors.bold}Usage:${colors.reset}
   npx ai-agent-skills <command> [options]
@@ -1606,6 +1717,8 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}list${colors.reset}                             List all available skills
   ${colors.green}list --installed${colors.reset}                 List installed skills for an agent
   ${colors.green}list --category <cat>${colors.reset}            Filter by category
+  ${colors.green}list --collection <id>${colors.reset}           Filter by curated collection
+  ${colors.green}collections${colors.reset}                      Show curated collections
   ${colors.green}install <name>${colors.reset}                   Install to ALL agents (default)
   ${colors.green}install <name> --agent cursor${colors.reset}    Install to specific agent only
   ${colors.green}install <owner/repo>${colors.reset}             Install from GitHub repository
@@ -1627,6 +1740,7 @@ ${colors.bold}Options:${colors.reset}
   ${colors.cyan}--installed${colors.reset}          Show only installed skills (with list)
   ${colors.cyan}--dry-run, -n${colors.reset}        Preview changes without applying
   ${colors.cyan}--category <c>${colors.reset}       Filter by category
+  ${colors.cyan}--collection <id>${colors.reset}    Filter by curated collection
   ${colors.cyan}--all${colors.reset}                Apply to all (with update)
   ${colors.cyan}--version, -v${colors.reset}        Show version number
 
@@ -1647,8 +1761,17 @@ ${colors.bold}Agents:${colors.reset} (install targets ALL by default)
 ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
 
+${colors.bold}Collections:${colors.reset}
+  my-picks, web-product, mobile-expo, backend-systems
+  quality-workflows, docs-files, business-research, creative-media
+
+${colors.bold}Support policy:${colors.reset}
+  I stick to the major agents.
+  I am not adding every new coding agent that shows up.
+
 ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills browse                                # Interactive browser
+  npx ai-agent-skills collections                           # Browse curated collections
   npx ai-agent-skills install frontend-design               # Install to ALL agents
   npx ai-agent-skills install pdf --agent cursor            # Install to Cursor only
   npx ai-agent-skills install pdf --agents claude,cursor    # Install to specific agents
@@ -1657,6 +1780,7 @@ ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills install ./my-skill                    # Install from local path
   npx ai-agent-skills install pdf --dry-run                 # Preview install
   npx ai-agent-skills list --category development
+  npx ai-agent-skills list --collection my-picks
   npx ai-agent-skills search testing
   npx ai-agent-skills update --all
 
@@ -1665,8 +1789,8 @@ ${colors.bold}Config:${colors.reset}
   Set default agent: npx ai-agent-skills config --default-agent cursor
 
 ${colors.bold}More info:${colors.reset}
-  https://skillcreator.ai/discover
-  https://github.com/skillcreatorai/Ai-Agent-Skills
+  https://github.com/MoizIbnYousaf/Ai-Agent-Skills
+  https://github.com/MoizIbnYousaf/Ai-Agent-Skills/issues
 `);
 }
 
@@ -1691,6 +1815,9 @@ function showInfo(skillName) {
   const tagStr = skill.tags && skill.tags.length > 0
     ? skill.tags.join(', ')
     : 'none';
+  const collectionStr = getCollectionsForSkill(data, skill.name)
+    .map(collection => `${collection.title} [${collection.id}]`)
+    .join(', ') || 'none';
 
   log(`
 ${colors.bold}${skill.name}${colors.reset}${skill.featured ? ` ${colors.yellow}(featured)${colors.reset}` : ''}${skill.verified ? ` ${colors.green}(verified)${colors.reset}` : ''}
@@ -1699,6 +1826,7 @@ ${colors.dim}${skill.description}${colors.reset}
 
 ${colors.bold}Category:${colors.reset}    ${skill.category}
 ${colors.bold}Tags:${colors.reset}        ${tagStr}
+${colors.bold}Collections:${colors.reset} ${collectionStr}
 ${colors.bold}Author:${colors.reset}      ${skill.author}
 ${colors.bold}License:${colors.reset}     ${skill.license}
 ${colors.bold}Source:${colors.reset}      ${skill.source}
@@ -1760,7 +1888,7 @@ function setConfig(key, value) {
 // ============ MAIN CLI ============
 
 const args = process.argv.slice(2);
-const { command, param, agents, explicitAgent, installed, dryRun, category, tags, all } = parseArgs(args);
+const { command, param, agents, explicitAgent, installed, dryRun, category, collection, tags, all } = parseArgs(args);
 const ALL_AGENTS = Object.keys(AGENT_PATHS);
 
 // Handle config commands specially
@@ -1797,8 +1925,13 @@ switch (command || 'help') {
         listInstalledSkills(agents[i]);
       }
     } else {
-      listSkills(category, tags);
+      listSkills(category, tags, collection);
     }
+    break;
+
+  case 'collections':
+  case 'catalog':
+    showCollections();
     break;
 
   case 'install':
@@ -1863,7 +1996,7 @@ switch (command || 'help') {
       log('Usage: npx ai-agent-skills search <query>');
       process.exit(1);
     }
-    searchSkills(param, category);
+    searchSkills(param, category, collection);
     break;
 
   case 'info':

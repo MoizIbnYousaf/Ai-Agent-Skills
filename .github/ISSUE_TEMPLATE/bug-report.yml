@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report an issue with a skill
+description: Report an issue with a skill or install flow
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -32,6 +32,13 @@ body:
       label: Agent
       description: Which AI agent are you using?
       placeholder: e.g., Claude Code, Cursor, Amp
+
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      description: What command did you run?
+      placeholder: e.g., npx ai-agent-skills install frontend-design --agent cursor
 
   - type: textarea
     id: logs
