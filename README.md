@@ -37,6 +37,13 @@ If you just want the default universal installer now just use `skills.sh`.
 
 This repo is my library of agent skills: the ones I use, adapt, or recommend.
 
+## What I Built
+
+- An early cross-agent installer and npm CLI that still works across the major coding agents.
+- A curated cross-repo catalog that keeps sourced skills organized by work area, branch, and trust.
+- Stable vendored installs, with source attribution kept explicit instead of hidden.
+- A browsable directory that turns the library into something easier to inspect than a flat repo.
+
 ## Quick Start
 
 ```bash
@@ -64,6 +71,7 @@ By default, `install` targets the major agents I already support: Claude Code, C
 - `Collections` still exist as the fastest CLI shortcuts.
 - A few skills are authored here. Most are curated from upstream repos and kept clearly attributed.
 - `Source` stays attached to every skill. The library matters, but so does provenance.
+- Imported skills are either kept as direct mirrors or stable snapshots. The installer still ships vendored copies either way.
 - `Featured` means I would actively point someone to that skill first.
 - `Verified` means I have personally checked the skill and its metadata.
 - `Categories`, `tags`, and search cover everything that does not need a top-level shelf.
@@ -112,6 +120,7 @@ npx ai-agent-skills search expo
 ## Source Repos
 
 This is still my library, but the upstream lineage stays visible on purpose.
+Some skills track clean upstream mirrors. Others are stable snapshots I keep vendored so installs stay deterministic.
 
 | Source repo | Why it's here | In this library |
 |------------|----------------|-----------------|

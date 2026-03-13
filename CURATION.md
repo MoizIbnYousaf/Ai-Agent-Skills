@@ -34,7 +34,7 @@ I keep the folder structure simple and let the catalog do the sorting.
 - `workArea` and `branch` are the main browse fields in the catalog
 - `work areas` are the main browse model
 - `collections` are the shorter CLI shelves
-- `category`, `tags`, `source`, `origin`, `featured`, `verified`, and `trust` help with sorting and trust
+- `category`, `tags`, `source`, `sourceUrl`, `origin`, `syncMode`, `featured`, `verified`, and `trust` help with sorting and trust
 
 I do not want a deep folder tree. That usually makes install tooling worse and the repo harder to maintain.
 
@@ -64,6 +64,13 @@ I want those markers to mean something. They should stay a little hard to earn.
 - `listed` means the skill belongs in the library, but I am not signaling much beyond that yet
 - `reviewed` means I have put a little more editorial weight behind it
 - `verified` means I have personally checked it and I am comfortable standing behind it more directly
+
+## Mirrors And Snapshots
+
+- `mirror` means the local copy still tracks a clean upstream counterpart closely
+- `snapshot` means I am intentionally shipping a stable vendored copy even if upstream has moved
+- `adapted` means the library copy is based on outside work but changed enough that I do not want to pretend it is a straight mirror
+- `authored` means I maintain the skill directly here
 
 ## Agent Support
 

@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Removed six low-signal pointer skills from the catalog and kept the stronger sourced skills.
 - Dropped static per-skill `stars` and `downloads` fields from `skills.json`.
 - Added `origin` and `trust` metadata to catalog entries for clearer provenance.
+- Added `sourceUrl`, `syncMode`, `whyHere`, and `lastVerified` fields to make curation and provenance easier to inspect.
 - Synced repo metadata around version `1.9.2`.
 
 ## [1.9.2] - 2026-01-23

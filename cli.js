@@ -311,6 +311,15 @@ function getTrust(skill) {
   return 'listed';
 }
 
+function getSyncMode(skill) {
+  if (skill && typeof skill.syncMode === 'string' && skill.syncMode.trim()) {
+    return skill.syncMode;
+  }
+  const origin = getOrigin(skill);
+  if (origin === 'authored' || origin === 'adapted') return origin;
+  return 'snapshot';
+}
+
 function getSkillMeta(skill, includeCategory = true) {
   const parts = [];
   const workArea = getSkillWorkArea(skill);
@@ -2036,6 +2045,12 @@ function showInfo(skillName) {
   const collectionStr = getCollectionsForSkill(data, skill.name)
     .map(collection => `${collection.title} [${collection.id}]`)
     .join(', ') || 'none';
+  const syncMode = getSyncMode(skill);
+  const sourceUrl = skill.sourceUrl || `https://github.com/${skill.source}`;
+  const whyHere = skill.whyHere || 'This skill still earns a place in the library.';
+  const lastVerifiedLine = skill.lastVerified
+    ? `${colors.bold}Last Verified:${colors.reset} ${skill.lastVerified}\n`
+    : '';
 
   log(`
 ${colors.bold}${skill.name}${colors.reset}${skill.featured ? ` ${colors.yellow}(featured)${colors.reset}` : ''}${skill.verified ? ` ${colors.green}(verified)${colors.reset}` : ''}
@@ -2047,12 +2062,15 @@ ${colors.bold}Branch:${colors.reset}      ${skill.branch || 'n/a'}
 ${colors.bold}Category:${colors.reset}    ${skill.category}
 ${colors.bold}Trust:${colors.reset}       ${getTrust(skill)}
 ${colors.bold}Origin:${colors.reset}      ${getOrigin(skill)}
+${colors.bold}Sync Mode:${colors.reset}   ${syncMode}
 ${colors.bold}Tags:${colors.reset}        ${tagStr}
 ${colors.bold}Collections:${colors.reset} ${collectionStr}
 ${colors.bold}Author:${colors.reset}      ${skill.author}
 ${colors.bold}License:${colors.reset}     ${skill.license}
 ${colors.bold}Source Repo:${colors.reset} ${skill.source}
-${skill.lastUpdated ? `${colors.bold}Updated:${colors.reset}     ${skill.lastUpdated}\n` : ''}
+${colors.bold}Source URL:${colors.reset}  ${sourceUrl}
+${lastVerifiedLine}${skill.lastUpdated ? `${colors.bold}Updated:${colors.reset}     ${skill.lastUpdated}\n` : ''}${colors.bold}Why Here:${colors.reset}    ${whyHere}
+
 ${colors.bold}Install:${colors.reset}
   npx ai-agent-skills install ${skill.name}
   npx ai-agent-skills install ${skill.name} --agent cursor

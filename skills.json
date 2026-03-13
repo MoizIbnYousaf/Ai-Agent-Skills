@@ -148,7 +148,11 @@
       "featured": true,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
+      "whyHere": "Kept because Anthropic's React guidance is still high-signal for interface work and front-end execution quality, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "pdf",
@@ -166,7 +170,11 @@
       "featured": true,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/pdf",
+      "whyHere": "Kept because Anthropic's PDF guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "xlsx",
@@ -181,7 +189,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "whyHere": "Kept because Anthropic's Spreadsheets guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "docx",
@@ -196,7 +208,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "whyHere": "Kept because Anthropic's Documents guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "pptx",
@@ -211,7 +227,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/pptx",
+      "whyHere": "Kept because Anthropic's Presentations guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "mcp-builder",
@@ -231,7 +251,11 @@
       "featured": true,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/mcp-builder",
+      "whyHere": "Kept because Anthropic's MCP guidance is still high-signal for systems, architecture, and deeper codebase work, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "skill-creator",
@@ -246,7 +270,11 @@
       "featured": true,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/skill-creator",
+      "whyHere": "Kept because Anthropic's Skills guidance is still high-signal for execution, planning, and day-to-day operating flow, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "doc-coauthoring",
@@ -261,7 +289,11 @@
       "featured": true,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/doc-coauthoring",
+      "whyHere": "Kept because Anthropic's Writing skill remains one of the strongest starting points for docs, file-heavy tasks, and long-form output.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "canvas-design",
@@ -276,7 +308,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
+      "whyHere": "Kept because Anthropic's Canvas guidance is still high-signal for visual direction and design craft, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "algorithmic-art",
@@ -291,7 +327,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
+      "whyHere": "Kept because Anthropic's Generative Art guidance is still high-signal for visual direction and design craft, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "webapp-testing",
@@ -311,7 +351,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing",
+      "whyHere": "Kept because Anthropic's Web QA guidance is still high-signal for review, QA, and product-quality work, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "brand-guidelines",
@@ -326,7 +370,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/brand-guidelines",
+      "whyHere": "Kept because Anthropic's Brand guidance is still high-signal for adjacent business and operating work, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "internal-comms",
@@ -341,7 +389,11 @@
       "featured": false,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/internal-comms",
+      "whyHere": "Kept because Anthropic's Communication guidance is still high-signal for adjacent business and operating work, and the library ships a stable snapshot so installs stay deterministic.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "code-review",
@@ -356,7 +408,11 @@
       "featured": true,
       "verified": true,
       "origin": "curated",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/anthropics/claude-code/tree/main/plugins/code-review",
+      "whyHere": "Kept because the Claude Code review guidance is still strong enough to belong here, even though the upstream repo now packages it differently.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "python-development",
@@ -374,7 +430,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/python-development",
+      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
     },
     {
       "name": "javascript-typescript",
@@ -394,7 +453,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/javascript-typescript",
+      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
     },
     {
       "name": "backend-development",
@@ -414,7 +476,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/backend-development",
+      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
     },
     {
       "name": "database-design",
@@ -429,7 +494,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/database-design",
+      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
     },
     {
       "name": "code-refactoring",
@@ -444,7 +512,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents",
+      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
     },
     {
       "name": "llm-application-dev",
@@ -464,7 +535,10 @@
       "featured": true,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/llm-application-dev",
+      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
     },
     {
       "name": "code-documentation",
@@ -479,7 +553,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/documentation-generation",
+      "whyHere": "Kept because this wshobson pattern still earns a place for docs, file-heavy tasks, and long-form output, even though upstream has since reorganized around plugins."
     },
     {
       "name": "jira-issues",
@@ -494,7 +571,11 @@
       "featured": true,
       "verified": true,
       "origin": "authored",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "authored",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/jira-issues",
+      "whyHere": "Original library skill for turning messy Jira work into clearer tickets, updates, and execution flow.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "qa-regression",
@@ -513,7 +594,11 @@
       "featured": true,
       "verified": true,
       "origin": "authored",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "authored",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/qa-regression",
+      "whyHere": "Original library skill for reusable Playwright-based regression coverage across real product flows.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "job-application",
@@ -528,7 +613,11 @@
       "featured": true,
       "verified": true,
       "origin": "authored",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "authored",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/job-application",
+      "whyHere": "Original library skill for structured application writing, tailoring, and career positioning work.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "ask-questions-if-underspecified",
@@ -548,8 +637,12 @@
       ],
       "featured": true,
       "verified": true,
-      "origin": "authored",
-      "trust": "verified"
+      "origin": "adapted",
+      "trust": "verified",
+      "syncMode": "adapted",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/ask-questions-if-underspecified",
+      "whyHere": "Kept because this requirement-clarification pattern is one of the cleanest ways to stop agents from running ahead on underspecified work.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "best-practices",
@@ -570,7 +663,11 @@
       "featured": true,
       "verified": true,
       "origin": "authored",
-      "trust": "verified"
+      "trust": "verified",
+      "syncMode": "authored",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/best-practices",
+      "whyHere": "Original library skill that sets the quality bar for prompts, constraints, and implementation workflow across the library.",
+      "lastVerified": "2026-03-13"
     },
     {
       "name": "artifacts-builder",
@@ -589,7 +686,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/artifacts-builder",
+      "whyHere": "Kept because it adds practical UI coverage without diluting the library's focus on interface work and front-end execution quality."
     },
     {
       "name": "changelog-generator",
@@ -604,7 +704,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/changelog-generator",
+      "whyHere": "Kept because it adds practical Release Notes coverage without diluting the library's focus on execution, planning, and day-to-day operating flow."
     },
     {
       "name": "competitive-ads-extractor",
@@ -619,7 +722,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/competitive-ads-extractor",
+      "whyHere": "Kept because it adds practical Competitive Intel coverage without diluting the library's focus on research and synthesis that actually helps execution."
     },
     {
       "name": "content-research-writer",
@@ -634,7 +740,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/content-research-writer",
+      "whyHere": "Kept because it adds practical Writing coverage without diluting the library's focus on research and synthesis that actually helps execution."
     },
     {
       "name": "developer-growth-analysis",
@@ -649,7 +758,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/developer-growth-analysis",
+      "whyHere": "Kept because it adds practical Developer Growth coverage without diluting the library's focus on research and synthesis that actually helps execution."
     },
     {
       "name": "domain-name-brainstormer",
@@ -664,7 +776,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/domain-name-brainstormer",
+      "whyHere": "Kept because it adds practical Naming coverage without diluting the library's focus on adjacent business and operating work."
     },
     {
       "name": "file-organizer",
@@ -679,7 +794,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/file-organizer",
+      "whyHere": "Kept because it adds practical Files coverage without diluting the library's focus on execution, planning, and day-to-day operating flow."
     },
     {
       "name": "image-enhancer",
@@ -694,7 +812,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/image-enhancer",
+      "whyHere": "Kept because it adds practical Images coverage without diluting the library's focus on visual direction and design craft."
     },
     {
       "name": "invoice-organizer",
@@ -709,7 +830,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/invoice-organizer",
+      "whyHere": "Kept because it adds practical Operations coverage without diluting the library's focus on adjacent business and operating work."
     },
     {
       "name": "lead-research-assistant",
@@ -724,7 +848,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/lead-research-assistant",
+      "whyHere": "Kept because it adds practical Lead Research coverage without diluting the library's focus on research and synthesis that actually helps execution."
     },
     {
       "name": "meeting-insights-analyzer",
@@ -739,7 +866,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/meeting-insights-analyzer",
+      "whyHere": "Kept because it adds practical Meetings coverage without diluting the library's focus on execution, planning, and day-to-day operating flow."
     },
     {
       "name": "raffle-winner-picker",
@@ -754,7 +884,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/raffle-winner-picker",
+      "whyHere": "Kept because it adds practical Utilities coverage without diluting the library's focus on execution, planning, and day-to-day operating flow."
     },
     {
       "name": "slack-gif-creator",
@@ -769,7 +902,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/slack-gif-creator",
+      "whyHere": "Kept because it adds practical GIFs coverage without diluting the library's focus on visual direction and design craft."
     },
     {
       "name": "theme-factory",
@@ -784,7 +920,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/theme-factory",
+      "whyHere": "Kept because it adds practical Themes coverage without diluting the library's focus on visual direction and design craft."
     },
     {
       "name": "video-downloader",
@@ -799,7 +938,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "snapshot",
+      "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/video-downloader",
+      "whyHere": "Kept because it still earns a place for visual direction and design craft, but the library ships a stable snapshot instead of tracking every upstream change."
     },
     {
       "name": "openai-docs",
@@ -819,7 +961,10 @@
       "featured": true,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.system/openai-docs",
+      "whyHere": "Kept because it gives the library a current, official path into OpenAI docs, model guidance, and implementation help."
     },
     {
       "name": "gh-fix-ci",
@@ -839,7 +984,10 @@
       "featured": true,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/gh-fix-ci",
+      "whyHere": "Kept because OpenAI's CI skill is current, high-signal, and fits the library well for review, QA, and product-quality work."
     },
     {
       "name": "figma",
@@ -859,7 +1007,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/figma",
+      "whyHere": "Kept because OpenAI's Figma skill is current, high-signal, and fits the library well for visual direction and design craft."
     },
     {
       "name": "figma-implement-design",
@@ -879,7 +1030,10 @@
       "featured": true,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/figma-implement-design",
+      "whyHere": "Kept because OpenAI's Figma skill is current, high-signal, and fits the library well for interface work and front-end execution quality."
     },
     {
       "name": "notion-spec-to-implementation",
@@ -899,7 +1053,10 @@
       "featured": true,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/notion-spec-to-implementation",
+      "whyHere": "Kept because OpenAI's Planning skill is current, high-signal, and fits the library well for execution, planning, and day-to-day operating flow."
     },
     {
       "name": "sentry",
@@ -919,7 +1076,10 @@
       "featured": false,
       "verified": false,
       "origin": "curated",
-      "trust": "listed"
+      "trust": "listed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/sentry",
+      "whyHere": "Kept because OpenAI's Observability skill is current, high-signal, and fits the library well for review, QA, and product-quality work."
     },
     {
       "name": "playwright",
@@ -939,7 +1099,10 @@
       "featured": true,
       "verified": false,
       "origin": "curated",
-      "trust": "reviewed"
+      "trust": "reviewed",
+      "syncMode": "mirror",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/playwright",
+      "whyHere": "Kept because OpenAI's Browser Automation skill is current, high-signal, and fits the library well for review, QA, and product-quality work."
     }
   ]
 }

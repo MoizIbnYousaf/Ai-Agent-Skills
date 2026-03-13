@@ -32,8 +32,8 @@ If your skill is fine but does not really add much to the library, I would rathe
 1. Fork the repo.
 2. Add the skill folder at `skills/<skill-name>/`.
 3. Add or update the `skills.json` entry, including the right `workArea` and `branch`.
-4. Keep the source repo and attribution clean.
-5. Set the right trust level. Most additions should start as `listed`.
+4. Keep the source repo, `sourceUrl`, and attribution clean.
+5. Set the right trust level and sync mode. Most additions should start as `listed` and either `mirror` or `snapshot`.
 6. Make sure the work area and tags are clean. Put the skill in a collection only if it clearly belongs on one of the shorter CLI shelves.
 7. Run `node test.js`.
 8. Open a PR with a short explanation of why it belongs.

@@ -73,12 +73,35 @@ test('skills.json exists and is valid JSON', () => {
 
 test('skills.json has skills with required fields', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-  const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'origin', 'trust'];
+  const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode', 'whyHere'];
 
   data.skills.forEach(skill => {
     required.forEach(field => {
       assert(skill[field], `Skill ${skill.name} missing ${field}`);
     });
+  });
+});
+
+test('skills.json provenance metadata is valid', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const validOrigins = ['authored', 'curated', 'adapted'];
+  const validSyncModes = ['authored', 'mirror', 'snapshot', 'adapted'];
+
+  data.skills.forEach(skill => {
+    assert(validOrigins.includes(skill.origin), `Invalid origin "${skill.origin}" for ${skill.name}`);
+    assert(validSyncModes.includes(skill.syncMode), `Invalid syncMode "${skill.syncMode}" for ${skill.name}`);
+    assert(
+      typeof skill.sourceUrl === 'string' && skill.sourceUrl.startsWith('https://github.com/'),
+      `Invalid sourceUrl for ${skill.name}`
+    );
+    assert(
+      typeof skill.whyHere === 'string' && skill.whyHere.trim().length >= 20,
+      `whyHere is too thin for ${skill.name}`
+    );
+
+    if (skill.verified) {
+      assert(skill.lastVerified, `Verified skill ${skill.name} missing lastVerified`);
+    }
   });
 });
 
@@ -194,6 +217,9 @@ test('info command works', () => {
   assertContains(output, 'Category:');
   assertContains(output, 'Trust:');
   assertContains(output, 'Source Repo:');
+  assertContains(output, 'Source URL:');
+  assertContains(output, 'Sync Mode:');
+  assertContains(output, 'Why Here:');
   assertContains(output, 'Collections:');
 });
 
