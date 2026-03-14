@@ -77,6 +77,41 @@ function moveGrid(index, key, itemCount, columnsPerRow) {
   return index;
 }
 
+function getViewportState({items, selectedIndex, columns, rows, mode = 'default', reservedRows = 12}) {
+  const columnsPerRow = getColumnsPerRow(columns, mode);
+  const gutter = columnsPerRow > 1 ? columnsPerRow - 1 : 0;
+  const tileWidth = Math.max(
+    mode === 'skills' ? 32 : 28,
+    Math.floor((columns - gutter * 2) / columnsPerRow)
+  );
+  const tileHeight = mode === 'skills' ? 11 : 12;
+  const usableRows = Math.max(tileHeight, rows - reservedRows);
+  const visibleRows = Math.max(1, Math.floor(usableRows / tileHeight));
+  const totalRows = Math.max(1, Math.ceil(items.length / columnsPerRow));
+  const selectedRow = Math.floor(selectedIndex / columnsPerRow);
+  const startRow = clamp(
+    selectedRow - Math.floor(visibleRows / 2),
+    0,
+    Math.max(0, totalRows - visibleRows)
+  );
+  const endRow = Math.min(totalRows, startRow + visibleRows);
+  const startIndex = startRow * columnsPerRow;
+  const endIndex = Math.min(items.length, endRow * columnsPerRow);
+
+  return {
+    columnsPerRow,
+    tileWidth,
+    visibleRows,
+    totalRows,
+    startRow,
+    endRow,
+    visibleItems: items.slice(startIndex, endIndex),
+    visibleIndex: clamp(selectedIndex - startIndex, 0, Math.max(0, endIndex - startIndex - 1)),
+    hiddenAbove: startIndex,
+    hiddenBelow: Math.max(0, items.length - endIndex),
+  };
+}
+
 function Header({breadcrumbs, title, subtitle, hint}) {
   return html`
     <${Box} flexDirection="column" marginBottom=${1}>
@@ -211,31 +246,49 @@ function AtlasTile({
   `;
 }
 
-function AtlasGrid({items, selectedIndex, columns, mode = 'default'}) {
-  const columnsPerRow = getColumnsPerRow(columns, mode);
-  const gutter = columnsPerRow > 1 ? columnsPerRow - 1 : 0;
-  const tileWidth = Math.max(
-    mode === 'skills' ? 32 : 28,
-    Math.floor((columns - gutter * 2) / columnsPerRow)
-  );
+function AtlasGrid({items, selectedIndex, columns, rows, mode = 'default', reservedRows = 12}) {
+  const viewport = getViewportState({
+    items,
+    selectedIndex,
+    columns,
+    rows,
+    mode,
+    reservedRows,
+  });
 
   return html`
-    <${Box} flexWrap="wrap">
-      ${items.map((item, index) => html`
-        <${AtlasTile}
-          key=${item.id}
-          width=${tileWidth}
-          minHeight=${item.minHeight || (mode === 'skills' ? 10 : 11)}
-          selected=${index === selectedIndex}
-          title=${item.title}
-          count=${item.count}
-          description=${item.description}
-          chips=${item.chips}
-          footerLeft=${item.footerLeft}
-          footerRight=${item.footerRight}
-          sampleLines=${item.sampleLines}
-        />
-      `)}
+    <${Box} flexDirection="column">
+      ${viewport.hiddenAbove > 0
+        ? html`
+            <${Box} marginBottom=${1}>
+              <${Text} color=${COLORS.muted}>↑ ${viewport.hiddenAbove} more above<//>
+            <//>
+          `
+        : null}
+      <${Box} flexWrap="wrap">
+        ${viewport.visibleItems.map((item, index) => html`
+          <${AtlasTile}
+            key=${item.id}
+            width=${viewport.tileWidth}
+            minHeight=${item.minHeight || (mode === 'skills' ? 10 : 11)}
+            selected=${index === viewport.visibleIndex}
+            title=${item.title}
+            count=${item.count}
+            description=${item.description}
+            chips=${item.chips}
+            footerLeft=${item.footerLeft}
+            footerRight=${item.footerRight}
+            sampleLines=${item.sampleLines}
+          />
+        `)}
+      <//>
+      ${viewport.hiddenBelow > 0
+        ? html`
+            <${Box}>
+              <${Text} color=${COLORS.muted}>↓ ${viewport.hiddenBelow} more below<//>
+            <//>
+          `
+        : null}
     <//>
   `;
 }
@@ -502,6 +555,7 @@ function App({catalog, agent, onExit}) {
   const {exit} = useApp();
   const {stdout} = useStdout();
   const columns = stdout?.columns || process.stdout.columns || 120;
+  const rows = stdout?.rows || process.stdout.rows || 40;
 
   const [rootMode, setRootMode] = useState('areas');
   const [stack, setStack] = useState([{type: 'home'}]);
@@ -788,6 +842,8 @@ function App({catalog, agent, onExit}) {
           items=${rootMode === 'areas' ? getHomeItems(catalog) : getSourceItems(catalog)}
           selectedIndex=${selectedIndex}
           columns=${columns}
+          rows=${rows}
+          reservedRows=${11}
         />
       <//>
     `;
@@ -806,6 +862,8 @@ function App({catalog, agent, onExit}) {
             items=${getAreaItems(currentArea)}
             selectedIndex=${selectedIndex}
             columns=${columns}
+            rows=${rows}
+            reservedRows=${10}
           />
         <//>
       <//>
@@ -825,6 +883,8 @@ function App({catalog, agent, onExit}) {
             items=${getSourceBranchItems(currentSource)}
             selectedIndex=${selectedIndex}
             columns=${columns}
+            rows=${rows}
+            reservedRows=${10}
           />
         <//>
       <//>
@@ -845,7 +905,9 @@ function App({catalog, agent, onExit}) {
             items=${getSkillItems(currentBranch.skills)}
             selectedIndex=${selectedIndex}
             columns=${columns}
+            rows=${rows}
             mode="skills"
+            reservedRows=${18}
           />
         <//>
         ${selectedSkill
@@ -876,7 +938,9 @@ function App({catalog, agent, onExit}) {
             items=${getSkillItems(currentSourceBranch.skills)}
             selectedIndex=${selectedIndex}
             columns=${columns}
+            rows=${rows}
             mode="skills"
+            reservedRows=${18}
           />
         <//>
         ${selectedSkill
