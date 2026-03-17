@@ -381,7 +381,12 @@ test('git url install works', () => {
   execSync(`git clone --bare ${workDir} ${bareRepo}`, { stdio: 'pipe' });
 
   const gitUrl = `file://${bareRepo}`;
-  const expectedSkillName = path.basename(bareRepo).replace(/\.git$/, '');
+  const expectedSkillName = path.basename(bareRepo)
+    .replace(/\.git$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
   const installedPath = path.join(__dirname, '.skills', expectedSkillName);
 
   // Ensure clean slate
