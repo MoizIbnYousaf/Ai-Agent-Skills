@@ -11,6 +11,7 @@ test.js
 # Documentation (README is auto-included)
 CONTRIBUTING.md
 CHANGELOG.md
+docs/
 
 # OS files
 .DS_Store

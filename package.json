@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-skills",
-  "version": "1.9.2",
+  "version": "2.0.0",
   "description": "The agent skills I actually keep around, plus install tooling for the major coding agents.",
   "main": "cli.js",
   "bin": {

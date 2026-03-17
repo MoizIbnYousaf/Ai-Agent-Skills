@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { pathToFileURL } = require('url');
+const { compareSkillsByCurationData, getGitHubInstallSpec, getSiblingRecommendations, sortSkillsByCuration } = require('./tui/catalog.cjs');
 
 // Version check
 const [NODE_MAJOR, NODE_MINOR] = process.versions.node.split('.').map(Number);
@@ -164,6 +165,77 @@ function validateSkillName(name) {
   return true;
 }
 
+function validateGitHubSkillPath(skillPath) {
+  if (!skillPath) return [];
+
+  const segments = String(skillPath).split('/').filter(Boolean);
+  if (segments.length === 0) {
+    throw new Error('Invalid GitHub skill path');
+  }
+
+  segments.forEach((segment) => {
+    if (segment === '.' || segment === '..') {
+      throw new Error(`Invalid GitHub skill path segment: "${segment}"`);
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(segment)) {
+      throw new Error(`Invalid GitHub skill path segment: "${segment}" contains invalid characters`);
+    }
+  });
+
+  return segments;
+}
+
+function parseFrontmatterValue(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('[')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed;
+    }
+  }
+
+  return trimmed.replace(/^["']|["']$/g, '');
+}
+
+function parseSkillMarkdown(raw) {
+  const match = String(raw || '').match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!match) return null;
+
+  const frontmatter = {};
+  for (const line of match[1].split('\n')) {
+    const kvMatch = line.match(/^([A-Za-z0-9._-]+):\s*(.*)$/);
+    if (!kvMatch) continue;
+    const [, key, value] = kvMatch;
+    frontmatter[key] = parseFrontmatterValue(value);
+  }
+
+  return {
+    frontmatter,
+    content: match[2].trim(),
+  };
+}
+
+function readSkillDirectory(skillDir) {
+  const skillMdPath = path.join(skillDir, 'SKILL.md');
+  if (!fs.existsSync(skillMdPath)) {
+    return null;
+  }
+
+  const raw = fs.readFileSync(skillMdPath, 'utf8');
+  const parsed = parseSkillMarkdown(raw);
+  if (!parsed) {
+    return null;
+  }
+
+  return {
+    skillMdPath,
+    ...parsed,
+  };
+}
+
 // ============ ERROR-SAFE JSON LOADING ============
 
 function loadSkillsJson() {
@@ -263,6 +335,42 @@ function getCollectionsForSkill(data, skillName) {
   return getCollections(data).filter(collection =>
     Array.isArray(collection.skills) && collection.skills.includes(skillName)
   );
+}
+
+function getCollectionBadgeText(data, skill, limit = 2) {
+  const collections = getCollectionsForSkill(data, skill.name).slice(0, limit);
+  if (collections.length === 0) return null;
+  return collections.map(collection => collection.title).join(', ');
+}
+
+function getCollectionStartHere(collection, limit = 3) {
+  return (collection?.skills || []).slice(0, limit);
+}
+
+function getSearchMatchScore(skill, query) {
+  const q = query.toLowerCase();
+  let score = 0;
+
+  if (skill.name.toLowerCase() === q) score += 5000;
+  else if (skill.name.toLowerCase().startsWith(q)) score += 3000;
+  else if (skill.name.toLowerCase().includes(q)) score += 1800;
+
+  if ((skill.workArea || '').toLowerCase() === q) score += 1200;
+  if ((skill.branch || '').toLowerCase() === q) score += 1200;
+  if ((skill.category || '').toLowerCase() === q) score += 1000;
+  if ((skill.description || '').toLowerCase().includes(q)) score += 500;
+  if ((skill.tags || []).some(tag => tag.toLowerCase() === q)) score += 900;
+  else if ((skill.tags || []).some(tag => tag.toLowerCase().includes(q))) score += 300;
+
+  return score;
+}
+
+function sortSkillsForSearch(data, skills, query) {
+  return [...skills].sort((left, right) => {
+    const scoreDiff = getSearchMatchScore(right, query) - getSearchMatchScore(left, query);
+    if (scoreDiff !== 0) return scoreDiff;
+    return compareSkillsByCurationData(data, left, right);
+  });
 }
 
 function getWorkAreas(data) {
@@ -745,6 +853,127 @@ function listInstalledSkills(agent = 'claude') {
   log(`${colors.dim}Uninstall: npx ai-agent-skills uninstall <name> --agent ${agent}${colors.reset}`);
 }
 
+function runDoctor(agentsToCheck = Object.keys(AGENT_PATHS)) {
+  const checks = [];
+
+  try {
+    const data = loadSkillsJson();
+    const missingSkills = (data.skills || []).filter((skill) => {
+      const skillPath = path.join(SKILLS_DIR, skill.name, 'SKILL.md');
+      return !fs.existsSync(skillPath);
+    });
+
+    checks.push({
+      name: 'Bundled library',
+      pass: missingSkills.length === 0,
+      detail: missingSkills.length === 0
+        ? `${data.skills.length} skills across ${getCollections(data).length} collections`
+        : `Missing bundled SKILL.md for ${missingSkills.map((skill) => skill.name).join(', ')}`,
+    });
+  } catch (e) {
+    checks.push({
+      name: 'Bundled library',
+      pass: false,
+      detail: `Failed to load skills.json: ${e.message}`,
+    });
+  }
+
+  if (!fs.existsSync(CONFIG_FILE)) {
+    checks.push({
+      name: 'Config file',
+      pass: true,
+      detail: `Not created yet; defaults will be used at ${CONFIG_FILE}`,
+    });
+  } else {
+    try {
+      JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      checks.push({
+        name: 'Config file',
+        pass: true,
+        detail: `Readable at ${CONFIG_FILE}`,
+      });
+    } catch (e) {
+      checks.push({
+        name: 'Config file',
+        pass: false,
+        detail: `Invalid JSON at ${CONFIG_FILE}: ${e.message}`,
+      });
+    }
+  }
+
+  agentsToCheck.forEach((agent) => {
+    const targetPath = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+    const access = getPathAccessStatus(targetPath);
+    const installedCount = getInstalledSkills(agent).length;
+    const brokenCount = getBrokenInstalledEntries(agent).length;
+    const detailParts = [access.detail, `${installedCount} installed`];
+    if (brokenCount > 0) {
+      detailParts.push(`${brokenCount} broken entries`);
+    }
+
+    checks.push({
+      name: `${agent} target`,
+      pass: access.pass && brokenCount === 0,
+      detail: detailParts.join(' · '),
+    });
+  });
+
+  log(`\n${colors.bold}AI Agent Skills Doctor${colors.reset}`);
+  log(`${colors.dim}Checking the library, config, and install targets.${colors.reset}\n`);
+
+  let passed = 0;
+  let failed = 0;
+  checks.forEach((check) => {
+    const badge = check.pass
+      ? `${colors.green}${colors.bold}PASS${colors.reset}`
+      : `${colors.red}${colors.bold}FAIL${colors.reset}`;
+    log(`  [${badge}] ${check.name}`);
+    log(`      ${colors.dim}${check.detail}${colors.reset}`);
+    log('');
+    if (check.pass) passed++;
+    else failed++;
+  });
+
+  log(`${colors.bold}Summary:${colors.reset} ${colors.green}${passed} passed${colors.reset}, ${failed > 0 ? `${colors.red}${failed} failed${colors.reset}` : `${colors.dim}0 failed${colors.reset}`}\n`);
+
+  if (failed > 0) {
+    process.exitCode = 1;
+  }
+}
+
+function runValidate(targetPath) {
+  const result = validateSkillDirectory(targetPath);
+  const label = targetPath ? expandPath(targetPath) : process.cwd();
+
+  log(`\n${colors.bold}Validate Skill${colors.reset}`);
+  log(`${colors.dim}${label}${colors.reset}\n`);
+
+  if (!result.summary) {
+    result.errors.forEach((message) => log(`  ${colors.red}${colors.bold}ERROR${colors.reset} ${message}`));
+    log('');
+    process.exitCode = 1;
+    return;
+  }
+
+  result.errors.forEach((message) => log(`  ${colors.red}${colors.bold}ERROR${colors.reset} ${message}`));
+  result.warnings.forEach((message) => log(`  ${colors.yellow}${colors.bold}WARN${colors.reset}  ${message}`));
+
+  if (result.errors.length === 0 && result.warnings.length === 0) {
+    log(`  ${colors.green}${colors.bold}PASS${colors.reset} Skill is valid`);
+  }
+
+  log('');
+  log(`  ${colors.bold}Name:${colors.reset} ${result.summary.name || 'n/a'}`);
+  log(`  ${colors.bold}Description:${colors.reset} ${result.summary.description || 'n/a'}`);
+  log(`  ${colors.bold}Size:${colors.reset} ${(result.summary.totalSize / 1024).toFixed(1)}KB`);
+  log(`  ${colors.bold}Path:${colors.reset} ${result.skillDir}`);
+  log('');
+
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
 // Update from bundled registry
 function updateFromRegistry(skillName, agent, destPath, dryRun) {
   const sourcePath = path.join(SKILLS_DIR, skillName);
@@ -1081,6 +1310,10 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
   }
   skills = collectionResult.skills;
 
+  if (!collectionResult.collection) {
+    skills = sortSkillsByCuration(data, skills);
+  }
+
   if (skills.length === 0) {
     if (category || workArea || tags || collectionId) {
       warn(`No skills found matching filters`);
@@ -1094,8 +1327,10 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
   log(`\n${colors.bold}Available Skills${colors.reset} (${skills.length} total)\n`);
 
   if (collectionResult.collection) {
+    const startHere = getCollectionStartHere(collectionResult.collection);
     log(`${colors.blue}${colors.bold}${collectionResult.collection.title}${colors.reset} ${colors.dim}[${collectionResult.collection.id}]${colors.reset}`);
     log(`${colors.dim}${collectionResult.collection.description}${colors.reset}\n`);
+    log(`${colors.dim}Start here:${colors.reset} ${startHere.join(', ')}\n`);
 
     skills.forEach(skill => {
       const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
@@ -1103,8 +1338,11 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
       const tagStr = skill.tags && skill.tags.length > 0
         ? ` ${colors.dim}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
         : '';
+      const collectionBadge = getCollectionBadgeText(data, skill)
+        ? ` ${colors.dim}{${getCollectionBadgeText(data, skill)}}${colors.reset}`
+        : '';
 
-      log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}`);
+      log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}${collectionBadge}`);
       log(`    ${colors.dim}${getSkillMeta(skill)}${colors.reset}`);
 
       const desc = skill.description.length > 80
@@ -1132,14 +1370,17 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
       if (meta && meta.description) {
         log(`${colors.dim}${meta.description}${colors.reset}`);
       }
-      byWorkArea[areaId].forEach(skill => {
+      sortSkillsByCuration(data, byWorkArea[areaId]).forEach(skill => {
         const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
         const verified = skill.verified ? ` ${colors.green}✓${colors.reset}` : '';
         const tagStr = skill.tags && skill.tags.length > 0
           ? ` ${colors.dim}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
           : '';
+        const collectionBadge = getCollectionBadgeText(data, skill)
+          ? ` ${colors.dim}{${getCollectionBadgeText(data, skill)}}${colors.reset}`
+          : '';
 
-        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}`);
+        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}${collectionBadge}`);
         log(`    ${colors.dim}${getSkillMeta(skill, false)}${colors.reset}`);
 
         const desc = skill.description.length > 65
@@ -1195,7 +1436,9 @@ function searchSkills(query, category = null, collectionId = null, workArea = nu
     (s.tags && s.tags.some(t => t.toLowerCase().includes(q)))
   );
 
-  if (matches.length === 0) {
+  const rankedMatches = sortSkillsForSearch(data, matches, query);
+
+  if (rankedMatches.length === 0) {
     warn(`No skills found matching "${query}"`);
 
     // Suggest similar
@@ -1216,17 +1459,20 @@ function searchSkills(query, category = null, collectionId = null, workArea = nu
     ? ` in ${collectionResult.collection.title}`
     : '';
 
-  log(`\n${colors.bold}Search Results${colors.reset} (${matches.length} matches${scope})\n`);
+  log(`\n${colors.bold}Search Results${colors.reset} (${rankedMatches.length} matches${scope})\n`);
 
-  matches.forEach(skill => {
+  rankedMatches.forEach(skill => {
     const tagStr = skill.tags && skill.tags.length > 0
       ? ` ${colors.magenta}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
+      : '';
+    const collectionBadge = getCollectionBadgeText(data, skill)
+      ? ` ${colors.dim}{${getCollectionBadgeText(data, skill)}}${colors.reset}`
       : '';
 
     const label = getSkillWorkArea(skill) && getSkillBranch(skill)
       ? `${formatWorkAreaTitle(getSkillWorkArea(skill))} / ${getSkillBranch(skill)}`
       : skill.category;
-    log(`${colors.green}${skill.name}${colors.reset} ${colors.dim}[${label}]${colors.reset}${tagStr}`);
+    log(`${colors.green}${skill.name}${colors.reset} ${colors.dim}[${label}]${colors.reset}${tagStr}${collectionBadge}`);
     log(`  ${colors.dim}${getOrigin(skill)} · ${getTrust(skill)} · ${skill.source}${colors.reset}`);
 
     const desc = skill.description.length > 75
@@ -1250,11 +1496,13 @@ function showCollections() {
   log(`${colors.dim}These are the main shelves. Search and tags cover the rest.${colors.reset}\n`);
 
   collections.forEach(collection => {
+    const startHere = getCollectionStartHere(collection);
     const sample = collection.skills.slice(0, 4).join(', ');
     const more = collection.skills.length > 4 ? ', ...' : '';
 
     log(`${colors.blue}${colors.bold}${collection.title}${colors.reset} ${colors.dim}[${collection.id}]${colors.reset}`);
     log(`  ${colors.dim}${collection.description}${colors.reset}`);
+    log(`  ${colors.dim}Start here:${colors.reset} ${startHere.join(', ')}`);
     log(`  ${colors.green}${collection.skills.length} skills${colors.reset} · ${sample}${more}`);
     log(`  ${colors.dim}npx ai-agent-skills list --collection ${collection.id}${colors.reset}\n`);
   });
@@ -1486,31 +1734,187 @@ function validateGitHubName(name, type = 'name') {
   return true;
 }
 
+function findNearestExistingParent(targetPath) {
+  let current = targetPath;
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    current = parent;
+  }
+  return current;
+}
+
+function getPathAccessStatus(targetPath) {
+  const existing = fs.existsSync(targetPath);
+  const inspectPath = existing ? targetPath : findNearestExistingParent(targetPath);
+
+  if (!inspectPath) {
+    return {
+      pass: false,
+      detail: `Cannot resolve writable parent for ${targetPath}`,
+    };
+  }
+
+  try {
+    fs.accessSync(inspectPath, fs.constants.W_OK);
+    return {
+      pass: true,
+      detail: existing
+        ? `Writable at ${targetPath}`
+        : `Missing but creatable under ${inspectPath}`,
+    };
+  } catch {
+    return {
+      pass: false,
+      detail: existing
+        ? `Not writable: ${targetPath}`
+        : `Parent is not writable: ${inspectPath}`,
+    };
+  }
+}
+
+function getBrokenInstalledEntries(agent = 'claude') {
+  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  if (!fs.existsSync(destDir)) return [];
+
+  try {
+    return fs.readdirSync(destDir).filter((name) => {
+      const skillPath = path.join(destDir, name);
+      try {
+        return fs.statSync(skillPath).isDirectory() &&
+          !fs.existsSync(path.join(skillPath, 'SKILL.md'));
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
+function validateSkillDirectory(skillTarget) {
+  const rawTarget = skillTarget ? expandPath(skillTarget) : process.cwd();
+  const skillDir = fs.existsSync(rawTarget) && fs.statSync(rawTarget).isFile()
+    ? path.dirname(rawTarget)
+    : rawTarget;
+  const skillMarkdownPath = path.join(skillDir, 'SKILL.md');
+
+  if (!fs.existsSync(skillMarkdownPath)) {
+    return {
+      ok: false,
+      skillDir,
+      errors: ['No SKILL.md found'],
+      warnings: [],
+      summary: null,
+    };
+  }
+
+  const issues = [];
+  const parsed = readSkillDirectory(skillDir);
+  if (!parsed) {
+    return {
+      ok: false,
+      skillDir,
+      errors: ['Could not parse SKILL.md frontmatter'],
+      warnings: [],
+      summary: null,
+    };
+  }
+
+  const { frontmatter, content, skillMdPath } = parsed;
+  const name = String(frontmatter.name || '').trim();
+  const description = String(frontmatter.description || '').trim();
+
+  if (!name) {
+    issues.push({ level: 'error', message: 'Missing required frontmatter field: name' });
+  } else {
+    try {
+      validateSkillName(name);
+    } catch (e) {
+      issues.push({ level: 'error', message: e.message });
+    }
+  }
+
+  if (!description) {
+    issues.push({ level: 'error', message: 'Missing required frontmatter field: description' });
+  } else {
+    if (description.length < 10) {
+      issues.push({ level: 'error', message: 'Description is too short (minimum 10 characters)' });
+    }
+    if (description.length > 500) {
+      issues.push({ level: 'warn', message: 'Description is over 500 characters and may route poorly' });
+    }
+  }
+
+  if (content.length < 50) {
+    issues.push({ level: 'warn', message: 'Very little content in SKILL.md' });
+  }
+
+  if (!content.includes('#')) {
+    issues.push({ level: 'warn', message: 'No headings found; the skill could use more structure' });
+  }
+
+  const skillMdSize = fs.statSync(skillMdPath).size;
+  if (skillMdSize > MAX_SKILL_SIZE) {
+    issues.push({ level: 'error', message: `SKILL.md exceeds ${(MAX_SKILL_SIZE / 1024 / 1024).toFixed(0)}MB` });
+  }
+
+  const totalSize = getDirectorySize(skillDir);
+  if (totalSize > MAX_SKILL_SIZE) {
+    issues.push({ level: 'error', message: `Skill directory is ${(totalSize / 1024 / 1024).toFixed(1)}MB (max ${(MAX_SKILL_SIZE / 1024 / 1024).toFixed(0)}MB)` });
+  }
+
+  const dirName = path.basename(skillDir);
+  if (name && dirName !== name) {
+    issues.push({ level: 'warn', message: `Directory name "${dirName}" does not match skill name "${name}"` });
+  }
+
+  return {
+    ok: issues.every((issue) => issue.level !== 'error'),
+    skillDir,
+    errors: issues.filter((issue) => issue.level === 'error').map((issue) => issue.message),
+    warnings: issues.filter((issue) => issue.level === 'warn').map((issue) => issue.message),
+    summary: {
+      name,
+      description,
+      totalSize,
+      skillMdSize,
+    },
+  };
+}
+
 async function installFromGitHub(source, agent = 'claude', dryRun = false) {
   const { execFileSync } = require('child_process');
 
   // Parse owner/repo format
   const parts = source.split('/');
   if (parts.length < 2) {
-    error('Invalid GitHub source. Use format: owner/repo or owner/repo/skill-name');
+    error('Invalid GitHub source. Use format: owner/repo or owner/repo/path/to/skill');
     return false;
   }
 
   const owner = parts[0];
   const repo = parts[1];
-  const skillName = parts[2]; // Optional specific skill
+  const skillPath = parts.slice(2).join('/'); // Optional specific skill path
+  let skillSegments = [];
 
   // Validate owner and repo to prevent injection attacks
   try {
     validateGitHubName(owner, 'owner');
     validateGitHubName(repo, 'repository');
-    if (skillName) {
-      validateSkillName(skillName);
+    skillSegments = skillPath ? validateGitHubSkillPath(skillPath) : [];
+    const validatedInstallName = skillSegments.length > 0 ? skillSegments[skillSegments.length - 1] : null;
+    if (validatedInstallName) {
+      validateSkillName(validatedInstallName);
     }
   } catch (e) {
     error(e.message);
     return false;
   }
+
+  const installName = skillSegments.length > 0 ? skillSegments[skillSegments.length - 1] : null;
 
   const repoUrl = `https://github.com/${owner}/${repo}.git`;
   const tempDir = path.join(os.tmpdir(), `ai-skills-${Date.now()}`);
@@ -1518,7 +1922,7 @@ async function installFromGitHub(source, agent = 'claude', dryRun = false) {
   if (dryRun) {
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
     info(`Would clone: ${repoUrl}`);
-    info(`Would install ${skillName ? `skill: ${skillName}` : 'all skills from repo'}`);
+    info(`Would install ${skillPath ? `skill path: ${skillPath}` : 'all skills from repo'}`);
     info(`Agent: ${agent}`);
     return true;
   }
@@ -1536,32 +1940,33 @@ async function installFromGitHub(source, agent = 'claude', dryRun = false) {
     // Check if repo root IS a skill (has SKILL.md at root)
     const isRootSkill = fs.existsSync(path.join(tempDir, 'SKILL.md'));
 
-    if (skillName) {
+    if (skillPath) {
       // Install specific skill
-      const skillPath = path.join(skillsDir, skillName);
-      if (!fs.existsSync(skillPath) || !fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-        error(`Skill "${skillName}" not found in ${owner}/${repo}`);
+      const resolvedSkillPath = path.join(skillsDir, ...skillSegments);
+      if (!fs.existsSync(resolvedSkillPath) || !fs.existsSync(path.join(resolvedSkillPath, 'SKILL.md'))) {
+        error(`Skill path "${skillPath}" not found in ${owner}/${repo}`);
         fs.rmSync(tempDir, { recursive: true });
         return false;
       }
 
       const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-      const destPath = path.join(destDir, skillName);
+      const destPath = path.join(destDir, installName);
 
       if (!fs.existsSync(destDir)) {
         fs.mkdirSync(destDir, { recursive: true });
       }
 
-      copyDir(skillPath, destPath);
+      copyDir(resolvedSkillPath, destPath);
 
       // Write metadata for update tracking
       writeSkillMeta(destPath, {
         source: 'github',
         repo: `${owner}/${repo}`,
-        skillPath: skillName
+        skillPath
       });
 
-      success(`\nInstalled: ${skillName} from ${owner}/${repo}`);
+      success(`\nInstalled: ${installName} from ${owner}/${repo}`);
+      info(`Source path: ${skillPath}`);
       info(`Location: ${destPath}`);
     } else if (isRootSkill) {
       // Repo itself is a single skill
@@ -1892,7 +2297,7 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}collections${colors.reset}                      Show curated collections
   ${colors.green}install <name>${colors.reset}                   Install to ALL agents (default)
   ${colors.green}install <name> --agent cursor${colors.reset}    Install to specific agent only
-  ${colors.green}install <owner/repo>${colors.reset}             Install from GitHub repository
+  ${colors.green}install <owner/repo[/path]>${colors.reset}      Install from GitHub repository or nested skill path
   ${colors.green}install <git-url>${colors.reset}                Install from any git URL (ssh/https)
   ${colors.green}install ./path${colors.reset}                   Install from local path
   ${colors.green}install <name> --dry-run${colors.reset}         Preview installation without changes
@@ -1902,6 +2307,8 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}search <query>${colors.reset}                   Search skills by name, description, or tags
   ${colors.green}info <name>${colors.reset}                      Show skill details
   ${colors.green}preview <name>${colors.reset}                   Print the bundled SKILL.md
+  ${colors.green}doctor${colors.reset}                           Check install targets and library health
+  ${colors.green}validate [path]${colors.reset}                  Validate a skill directory (defaults to cwd)
   ${colors.green}config${colors.reset}                           Show/edit configuration
   ${colors.green}version${colors.reset}                          Show version number
   ${colors.green}help${colors.reset}                             Show this help
@@ -1953,6 +2360,7 @@ ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills install pdf --agent cursor            # Install to Cursor only
   npx ai-agent-skills install pdf --agents claude,cursor    # Install to specific agents
   npx ai-agent-skills install anthropics/skills             # Install from GitHub
+  npx ai-agent-skills install anthropics/claude-code/plugins/code-review
   npx ai-agent-skills install git@example.com:user/repo.git # Install from any git URL (ssh/https)
   npx ai-agent-skills install ./my-skill                    # Install from local path
   npx ai-agent-skills install pdf --dry-run                 # Preview install
@@ -1960,6 +2368,8 @@ ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills list --collection my-picks
   npx ai-agent-skills list --collection build-apps
   npx ai-agent-skills search testing
+  npx ai-agent-skills doctor
+  npx ai-agent-skills validate ./skills/pdf
   npx ai-agent-skills update --all
 
 ${colors.bold}Config:${colors.reset}
@@ -1999,6 +2409,8 @@ function showInfo(skillName) {
   const syncMode = getSyncMode(skill);
   const sourceUrl = skill.sourceUrl || `https://github.com/${skill.source}`;
   const whyHere = skill.whyHere || 'This skill still earns a place in the library.';
+  const alsoLookAt = getSiblingRecommendations(data, skill, 3).map(candidate => candidate.name).join(', ') || 'none';
+  const upstreamInstall = getGitHubInstallSpec(skill, 'cursor');
   const lastVerifiedLine = skill.lastVerified
     ? `${colors.bold}Last Verified:${colors.reset} ${skill.lastVerified}\n`
     : '';
@@ -2021,12 +2433,13 @@ ${colors.bold}License:${colors.reset}     ${skill.license}
 ${colors.bold}Source Repo:${colors.reset} ${skill.source}
 ${colors.bold}Source URL:${colors.reset}  ${sourceUrl}
 ${lastVerifiedLine}${skill.lastUpdated ? `${colors.bold}Updated:${colors.reset}     ${skill.lastUpdated}\n` : ''}${colors.bold}Why Here:${colors.reset}    ${whyHere}
+${colors.bold}Also Look At:${colors.reset} ${alsoLookAt}
 
 ${colors.bold}Install:${colors.reset}
   npx ai-agent-skills install ${skill.name}
   npx ai-agent-skills install ${skill.name} --agent cursor
   npx ai-agent-skills install ${skill.name} --dry-run
-`);
+${upstreamInstall ? `  ${upstreamInstall.command}\n` : ''}`);
 }
 
 function showConfig() {
@@ -2092,6 +2505,8 @@ async function main() {
     const action = await launchBrowser(agents[0]);
     if (action && action.type === 'install') {
       installSkill(action.skillName, agents[0], false);
+    } else if (action && action.type === 'github-install') {
+      await installFromGitHub(action.source, agents[0], false);
     } else if (action && action.type === 'skills-install') {
       runExternalInstallAction(action);
     }
@@ -2131,6 +2546,8 @@ async function main() {
       const action = await launchBrowser(agents[0]);
       if (action && action.type === 'install') {
         installSkill(action.skillName, agents[0], false);
+      } else if (action && action.type === 'github-install') {
+        await installFromGitHub(action.source, agents[0], false);
       } else if (action && action.type === 'skills-install') {
         runExternalInstallAction(action);
       }
@@ -2236,6 +2653,16 @@ async function main() {
         process.exit(1);
       }
       showPreview(param);
+      return;
+
+    case 'doctor': {
+      const doctorAgents = explicitAgent ? agents : Object.keys(AGENT_PATHS);
+      runDoctor(doctorAgents);
+      return;
+    }
+
+    case 'validate':
+      runValidate(param);
       return;
 
     case 'help':

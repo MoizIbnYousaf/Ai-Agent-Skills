@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync, execFileSync } = require('child_process');
-const { buildCatalog, getSkillsInstallSpec } = require('./tui/catalog.cjs');
+const { buildCatalog, getGitHubInstallSpec, getSkillsInstallSpec } = require('./tui/catalog.cjs');
 
 const colors = {
   reset: '\x1b[0m',
@@ -162,6 +162,16 @@ test('collections metadata is valid', () => {
   });
 });
 
+test('catalog exposes curated collections with resolved skills', () => {
+  const catalog = buildCatalog();
+  const myPicks = catalog.collections.find(collection => collection.id === 'my-picks');
+
+  assert(Array.isArray(catalog.collections) && catalog.collections.length > 0, 'catalog should expose collections');
+  assert(myPicks, 'expected my-picks collection to exist');
+  assert(myPicks.skills.length > 0, 'collection should resolve skill objects');
+  assertContains(myPicks.skills.map(skill => skill.name).join(' '), 'frontend-design');
+});
+
 test('work area metadata is valid', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const workAreas = data.workAreas || [];
@@ -182,7 +192,7 @@ test('work area metadata is valid', () => {
   });
 });
 
-test('skills.sh install spec is only created for eligible mirror skills', () => {
+test('skills.sh install spec is created for upstream GitHub skills', () => {
   const catalog = buildCatalog();
   const mirrorSkill = catalog.skills.find(skill => skill.name === 'figma-implement-design');
   const snapshotSkill = catalog.skills.find(skill => skill.name === 'frontend-design');
@@ -193,9 +203,18 @@ test('skills.sh install spec is only created for eligible mirror skills', () => 
   assertContains(mirrorSpec.command, 'skills@1.4.5');
   assertContains(mirrorSpec.command, 'figma-implement-design');
   assertContains(mirrorSpec.command, 'codex');
+  assertContains(mirrorSpec.command, '--skill');
 
-  assertEqual(getSkillsInstallSpec(snapshotSkill, 'codex'), null, 'Snapshot skill should not expose skills.sh install');
-  assertEqual(getSkillsInstallSpec(authoredSkill, 'codex'), null, 'Authored skill should not expose skills.sh install');
+  const snapshotSpec = getSkillsInstallSpec(snapshotSkill, 'codex');
+  assert(snapshotSpec, 'Expected snapshot skill to expose a skills.sh install spec');
+  assertContains(snapshotSpec.command, 'https://github.com/anthropics/skills');
+  assertContains(snapshotSpec.command, '--skill frontend-design');
+  assertContains(snapshotSpec.command, '--agent codex');
+
+  const authoredSpec = getSkillsInstallSpec(authoredSkill, 'codex');
+  assert(authoredSpec, 'Expected GitHub-backed authored skill to expose a skills.sh install spec');
+  assertContains(authoredSpec.command, 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills');
+  assertContains(authoredSpec.command, '--skill qa-regression');
 });
 
 test('skills.sh install spec respects supported agent mappings', () => {
@@ -204,6 +223,28 @@ test('skills.sh install spec respects supported agent mappings', () => {
 
   assertEqual(getSkillsInstallSpec(mirrorSkill, 'project'), null, 'Project agent should not expose skills.sh install');
   assertEqual(getSkillsInstallSpec(mirrorSkill, 'letta'), null, 'Unsupported mapped agent should not expose skills.sh install');
+});
+
+test('github install spec resolves upstream path for curated external skills', () => {
+  const catalog = buildCatalog();
+  const snapshotSkill = catalog.skills.find(skill => skill.name === 'frontend-design');
+  const nestedSkill = catalog.skills.find(skill => skill.name === 'code-review');
+  const openaiSkill = catalog.skills.find(skill => skill.name === 'openai-docs');
+  const authoredSkill = catalog.skills.find(skill => skill.name === 'qa-regression');
+
+  const snapshotSpec = getGitHubInstallSpec(snapshotSkill, 'codex');
+  assert(snapshotSpec, 'Expected curated external skill to expose a GitHub install spec');
+  assertContains(snapshotSpec.command, 'anthropics/skills/frontend-design');
+
+  const nestedSpec = getGitHubInstallSpec(nestedSkill, 'codex');
+  assert(nestedSpec, 'Expected nested upstream skill to expose a GitHub install spec');
+  assertContains(nestedSpec.command, 'anthropics/claude-code/plugins/code-review');
+
+  const openaiSpec = getGitHubInstallSpec(openaiSkill, 'codex');
+  assert(openaiSpec, 'Expected OpenAI system skill to expose a GitHub install spec');
+  assertContains(openaiSpec.command, 'openai/skills/.system/openai-docs');
+
+  assertEqual(getGitHubInstallSpec(authoredSkill, 'codex'), null, 'Authored skills should not expose an upstream GitHub install spec');
 });
 
 // ============ CLI TESTS ============
@@ -236,9 +277,21 @@ test('collections command works', () => {
   assertContains(output, 'build-apps');
 });
 
+test('collections command shows start-here recommendations', () => {
+  const output = run('collections');
+  assertContains(output, 'Start here:');
+  assertContains(output, 'frontend-design, mcp-builder, pdf');
+});
+
 test('search command works', () => {
   const output = run('search pdf');
   assertContains(output, 'pdf');
+});
+
+test('search ranks stronger curated matches first', () => {
+  const output = run('search react');
+  assert(output.indexOf('frontend-design') < output.indexOf('artifacts-builder'), 'frontend-design should rank ahead of artifacts-builder for react');
+  assertContains(output, '{My Picks, Build Apps}');
 });
 
 test('info command works', () => {
@@ -253,6 +306,13 @@ test('info command works', () => {
   assertContains(output, 'Sync Mode:');
   assertContains(output, 'Why Here:');
   assertContains(output, 'Collections:');
+});
+
+test('info command shows neighboring recommendations', () => {
+  const output = run('info frontend-design');
+  assertContains(output, 'Also Look At:');
+  assertContains(output, 'figma-implement-design');
+  assertContains(output, 'anthropics/skills/frontend-design');
 });
 
 test('preview command works', () => {
@@ -276,6 +336,12 @@ test('dry-run shows preview', () => {
   const output = run('install pdf --dry-run');
   assertContains(output, 'Dry Run');
   assertContains(output, 'Would install');
+});
+
+test('nested GitHub skill path install dry-run works', () => {
+  const output = runArgs(['install', 'anthropics/claude-code/plugins/code-review', '--agent', 'project', '--dry-run']);
+  assertContains(output, 'Dry Run');
+  assertContains(output, 'Would install skill path: plugins/code-review');
 });
 
 test('git url install works', () => {
@@ -326,6 +392,21 @@ test('config command works', () => {
   assertContains(output, 'defaultAgent');
 });
 
+test('doctor command works', () => {
+  const output = run('doctor --agent project');
+  assertContains(output, 'AI Agent Skills Doctor');
+  assertContains(output, 'Bundled library');
+  assertContains(output, 'project target');
+});
+
+test('validate command works on a bundled skill', () => {
+  const output = runArgs(['validate', 'skills/pdf']);
+  assertContains(output, 'Validate Skill');
+  assertContains(output, 'PASS');
+  assertContains(output, 'Name:');
+  assertContains(output, 'pdf');
+});
+
 test('unknown command shows error', () => {
   const output = run('notacommand');
   assertContains(output, 'Unknown command');
@@ -340,6 +421,11 @@ test('work area filter works', () => {
   const output = run('list --work-area testing');
   assertContains(output, 'TESTING');
   assertContains(output, 'qa-regression');
+});
+
+test('work area list shows collection badges', () => {
+  const output = run('list --work-area frontend');
+  assertContains(output, '{My Picks, Build Apps}');
 });
 
 test('collection filter works', () => {

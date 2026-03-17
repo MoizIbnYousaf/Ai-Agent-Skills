@@ -18,8 +18,10 @@
 
 <p align="center">
   <a href="#quick-start"><strong>Quick Start</strong></a> ·
+  <a href="#read-the-library"><strong>Read the Library</strong></a> ·
   <a href="#work-areas"><strong>Work Areas</strong></a> ·
   <a href="#cli-collections"><strong>CLI Collections</strong></a> ·
+  <a href="#source-repos"><strong>Source Repos</strong></a> ·
   <a href="./CURATION.md"><strong>Curation Guide</strong></a> ·
   <a href="./CONTRIBUTING.md"><strong>Contribute</strong></a> ·
   <a href="https://agentskills.io"><strong>Specification</strong></a>
@@ -42,7 +44,7 @@ This repo is my library of agent skills: the ones I use, adapt, or recommend.
 - An early cross-agent installer and npm CLI that still works across the major coding agents.
 - A curated cross-repo catalog that keeps sourced skills organized by work area, branch, and trust.
 - Stable vendored installs, with source attribution kept explicit instead of hidden.
-- A browsable directory that turns the library into something easier to inspect than a flat repo.
+- A browsable directory and terminal atlas that turn the library into something easier to inspect than a flat repo.
 
 ## Quick Start
 
@@ -61,9 +63,23 @@ npx ai-agent-skills list --work-area frontend
 
 # Search the catalog
 npx ai-agent-skills search testing
+
+# Browse the library in the terminal
+npx ai-agent-skills browse
 ```
 
 By default, `install` targets the major agents I already support: Claude Code, Cursor, Codex, Amp, VS Code, Copilot, Gemini CLI, Goose, Letta, Kilo Code, and OpenCode.
+
+## Read the Library
+
+This repo reads best in four ways:
+
+| View | Best for | Start here |
+|------|----------|------------|
+| Work Areas | The main way to understand the library | `npx ai-agent-skills list --work-area frontend` |
+| CLI Collections | The fastest shortcuts when you want a short shelf | `npx ai-agent-skills list --collection my-picks` |
+| Source Repos | Seeing the upstream lineage on purpose | `npx ai-agent-skills info frontend-design` |
+| Terminal Browser | Walking the atlas instead of reading a flat repo | `npx ai-agent-skills browse` |
 
 ## How I Organize It
 
@@ -83,6 +99,7 @@ The full repo map lives in [WORK_AREAS.md](./WORK_AREAS.md).
 
 This is the cleanest way to read the library.
 The full repo index is in [WORK_AREAS.md](./WORK_AREAS.md).
+If you want the same map in the terminal, use `npx ai-agent-skills browse`.
 
 | Work area | What it covers | Typical branches | Main sources |
 |-----------|----------------|------------------|--------------|
@@ -151,6 +168,7 @@ Some skills track clean upstream mirrors. Others are stable snapshots I keep ven
 
 ```bash
 # Discovery
+npx ai-agent-skills browse
 npx ai-agent-skills collections
 npx ai-agent-skills list
 npx ai-agent-skills list --work-area frontend
