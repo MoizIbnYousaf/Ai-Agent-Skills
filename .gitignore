@@ -29,3 +29,6 @@ temp/
 
 # Internal working papers
 docs/
+
+# Local install artifacts
+.skills/

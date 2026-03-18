@@ -7,6 +7,10 @@
 
 # Test files
 test.js
+scripts/
+
+# Local install artifacts
+.skills/
 
 # Documentation (README is auto-included)
 CONTRIBUTING.md
