@@ -26,3 +26,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Internal working papers
+docs/
