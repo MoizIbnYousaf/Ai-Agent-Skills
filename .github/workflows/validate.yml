@@ -190,3 +190,6 @@ jobs:
 
       - name: Validate CLI loads
         run: node cli.js list > /dev/null && echo "✓ CLI loads successfully"
+
+      - name: Verify publish surface
+        run: npm pack --dry-run 2>&1 && echo "✓ Package contents verified"

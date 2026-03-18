@@ -14,11 +14,6 @@
       "description": "Infra, tooling, application architecture, and codebase depth."
     },
     {
-      "id": "mobile",
-      "title": "Mobile",
-      "description": "App work for iOS, Android, Expo, and handheld product flows."
-    },
-    {
       "id": "docs",
       "title": "Docs",
       "description": "Documents, specs, file handling, and long-form output."
@@ -433,7 +428,7 @@
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/python-development",
-      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
+      "whyHere": "Covers Python project structure, virtual environments, and testing conventions that general-purpose skills skip over. Useful when the codebase is Python-heavy and needs more than just code generation."
     },
     {
       "name": "javascript-typescript",
@@ -456,7 +451,7 @@
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/javascript-typescript",
-      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
+      "whyHere": "Gives agents a concrete JS/TS style guide covering module patterns, error handling, and type safety. The upstream repo reorganized, but this snapshot still holds up for everyday TypeScript work."
     },
     {
       "name": "backend-development",
@@ -479,7 +474,7 @@
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/backend-development",
-      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
+      "whyHere": "Covers API design patterns, service architecture, and error handling at the backend layer. Fills a gap that frontend-focused skill sets leave open."
     },
     {
       "name": "database-design",
@@ -497,7 +492,7 @@
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/database-design",
-      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
+      "whyHere": "Gives agents real schema design guidance: normalization, indexing strategy, migration patterns. Most general skills treat the database as an afterthought."
     },
     {
       "name": "code-refactoring",
@@ -515,7 +510,7 @@
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents",
-      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
+      "whyHere": "Practical refactoring guidance: when to extract, when to inline, how to restructure without breaking behavior. Agents tend to over-refactor without this kind of constraint."
     },
     {
       "name": "llm-application-dev",
@@ -538,7 +533,7 @@
       "trust": "reviewed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/llm-application-dev",
-      "whyHere": "Kept because this wshobson pattern still earns a place for systems, architecture, and deeper codebase work, even though upstream has since reorganized around plugins."
+      "whyHere": "Covers prompt engineering, token management, and LLM integration patterns from a backend perspective. Relevant whenever the codebase talks to a language model."
     },
     {
       "name": "code-documentation",

@@ -2347,9 +2347,6 @@ ${colors.bold}Categories:${colors.reset}
 ${colors.bold}Collections:${colors.reset}
   my-picks, build-apps, build-systems, test-and-debug, docs-and-research
 
-${colors.bold}Legacy collection aliases:${colors.reset}
-  web-product, mobile-expo, backend-systems, quality-workflows, docs-files
-
 ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills                                       # Launch the terminal browser
   npx ai-agent-skills browse                                # Interactive browser

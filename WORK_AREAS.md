@@ -34,15 +34,6 @@ Infra, tooling, application architecture, and codebase depth.
 | Refactoring | [`code-refactoring`](./skills/code-refactoring) | wshobson |
 | TypeScript | [`javascript-typescript`](./skills/javascript-typescript) | wshobson |
 
-## Mobile
-
-App work for iOS, Android, Expo, and handheld product flows.
-
-**Coverage:** intentionally selective right now.  
-**Main sources:** none active in the package today
-
-This area stays in the browse model because it matters, but I am not keeping weak mobile pointers in the library just to fill the shelf.
-
 ## Docs
 
 Documents, specs, file handling, and long-form output.

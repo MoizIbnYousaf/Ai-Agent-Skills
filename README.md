@@ -101,6 +101,25 @@ This repo reads best in four ways:
 The folder layout stays flat under `skills/<name>/` because installs stay simpler that way. The catalog handles the grouping.
 The full repo map lives in [WORK_AREAS.md](./WORK_AREAS.md).
 
+## How the Catalog Works
+
+Every skill in this library carries metadata beyond a name and description. Here is what a real entry looks like:
+
+```json
+{
+  "name": "ask-questions-if-underspecified",
+  "author": "thsottiaux",
+  "origin": "adapted",
+  "trust": "verified",
+  "syncMode": "adapted",
+  "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/...",
+  "whyHere": "Kept because this requirement-clarification pattern is one of the cleanest ways to stop agents from running ahead on underspecified work.",
+  "lastVerified": "2026-03-13"
+}
+```
+
+`trust` tells you how much review a skill has received: verified, reviewed, or listed. `syncMode` tells you whether the skill tracks upstream changes or is pinned as a stable snapshot. `whyHere` is a written rationale for why this specific skill belongs in the library. You can see this for any skill by running `npx ai-agent-skills info <name>`.
+
 ## Work Areas
 
 This is the cleanest way to read the library.
@@ -111,7 +130,6 @@ If you want the same map in the terminal, use `npx ai-agent-skills browse`.
 |-----------|----------------|------------------|--------------|
 | Frontend | Product UI, interface systems, and design implementation work | React, Figma, UI | Anthropic, OpenAI, Composio |
 | Backend | APIs, architecture, databases, MCP, and deeper codebase work | MCP, Database, Python | wshobson, Anthropic |
-| Mobile | Handheld product work and release support | Expo, Swift | Selective coverage |
 | Docs | Documents, specs, code docs, and product documentation | PDF, Writing, OpenAI | Anthropic, OpenAI |
 | Testing | Review, QA, browser automation, CI, and observability | Regression, CI, Browser Automation, Observability | Moiz, Anthropic, OpenAI |
 | Workflow | Clarification, plans, files, and execution support | Clarification, Planning, Jira, Files | Moiz, OpenAI, Composio |
