@@ -1,7 +1,7 @@
 {
   "name": "ai-agent-skills",
-  "version": "2.0.1",
-  "description": "The agent skills I actually keep around, plus install tooling for the major coding agents.",
+  "version": "3.0.0",
+  "description": "My curated agent skills library, with a CLI that installs from any source.",
   "main": "cli.js",
   "bin": {
     "ai-agent-skills": "cli.js"
@@ -28,13 +28,10 @@
     "agent",
     "skills",
     "claude",
-    "cursor",
-    "codex",
-    "gemini",
-    "copilot",
-    "amp",
-    "vscode",
-    "mcp"
+    "mcp",
+    "curated",
+    "library",
+    "provenance"
   ],
   "author": "Moiz Ibn Yousaf",
   "license": "MIT",

@@ -500,10 +500,21 @@ function buildCatalog() {
   };
 }
 
+function getInstallCommand(skill, scope) {
+  const scopeFlag = scope === 'project' ? ' -p' : '';
+  return `npx ai-agent-skills install ${shellQuote(skill.name)}${scopeFlag}`;
+}
+
+function getInstallCommandForAgent(skill, agent) {
+  return `npx ai-agent-skills install ${shellQuote(skill.name)} --agent ${shellQuote(agent)}`;
+}
+
 module.exports = {
   buildCatalog,
   compareSkillsByCurationData,
   getGitHubInstallSpec,
+  getInstallCommand,
+  getInstallCommandForAgent,
   getSiblingRecommendations,
   getSkillsAgent,
   getSkillsInstallSpec,

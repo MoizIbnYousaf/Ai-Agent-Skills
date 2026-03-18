@@ -91,6 +91,17 @@ data.skills.forEach(skill => {
   if (skill.verified && !skill.lastVerified) {
     warn(`Verified skill ${skill.name} has no lastVerified date`);
   }
+
+  // Description quality check: descriptions should tell the model WHEN to trigger,
+  // not just summarize what the skill does. Action-oriented descriptions contain
+  // words like "when", "use", "trigger", "if", "before", "after", "during".
+  if (skill.description) {
+    const desc = skill.description.toLowerCase();
+    const actionPatterns = /\b(when|use |use$|trigger|if |before|after|during|whenever|upon|while)\b/;
+    if (!actionPatterns.test(desc)) {
+      warn(`${skill.name}: description reads like a summary, not a trigger condition. Consider starting with "Use when..." or similar action-oriented language.`);
+    }
+  }
 });
 
 pass(`${data.skills.length} skills, all required fields present`);
@@ -121,6 +132,16 @@ names.forEach(name => {
 });
 
 pass(`${folders.length} folders match skills.json`);
+
+// ── Rich skills count ──
+
+let richCount = 0;
+folders.forEach(folder => {
+  const folderPath = path.join(skillsDir, folder);
+  const hasScripts = fs.existsSync(path.join(folderPath, 'scripts'));
+  const hasReferences = fs.existsSync(path.join(folderPath, 'references'));
+  if (hasScripts || hasReferences) richCount++;
+});
 
 // ── Frontmatter checks ──
 
@@ -177,6 +198,7 @@ if (Array.isArray(data.collections)) {
 // ── Summary ──
 
 console.log('\n' + '─'.repeat(40));
+console.log(`${data.skills.length} skills (${richCount} rich, ${data.skills.length - richCount} instruction-only)`);
 if (errors > 0) {
   console.log(`\x1b[31m${errors} error${errors > 1 ? 's' : ''}\x1b[0m`);
 }

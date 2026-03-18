@@ -6,7 +6,7 @@ import TextInput from 'ink-text-input';
 import htm from 'htm';
 
 const require = createRequire(import.meta.url);
-const {buildCatalog, getSiblingRecommendations, getSkillsInstallSpec} = require('./catalog.cjs');
+const {buildCatalog, getInstallCommand, getInstallCommandForAgent, getSiblingRecommendations, getSkillsInstallSpec} = require('./catalog.cjs');
 
 const html = htm.bind(React.createElement);
 
@@ -1070,11 +1070,13 @@ function ModalOption({label, description, selected}) {
   `;
 }
 
-function SkillScreen({skill, previewMode, agent, columns, viewport = null, relatedSkills = []}) {
+function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null, relatedSkills = []}) {
   const profile = viewport || getViewportProfile({columns, rows: 40});
   const previewLines = formatPreviewLines(skill.markdown, 12);
-  const installCommand = `npx ai-agent-skills install ${skill.name} --agent ${agent}`;
-  const skillsSpec = getSkillsInstallSpec(skill, agent);
+  const installCommand = agent
+    ? getInstallCommandForAgent(skill, agent)
+    : getInstallCommand(skill, scope || 'global');
+  const skillsSpec = agent ? getSkillsInstallSpec(skill, agent) : null;
   const wideLayout = profile.showWideHero;
   const leftWidth = wideLayout ? clamp(Math.floor(columns * 0.23), 28, 34) : null;
   const rightWidth = wideLayout ? clamp(Math.floor(columns * 0.27), 30, 38) : null;
@@ -1296,37 +1298,64 @@ function SkillScreen({skill, previewMode, agent, columns, viewport = null, relat
   `;
 }
 
-function InstallChooser({skill, agent, selectedIndex, columns, viewport = null}) {
-  const skillsSpec = getSkillsInstallSpec(skill, agent);
+function InstallChooser({skill, scope, agent, selectedIndex, columns, viewport = null}) {
+  const skillsSpec = agent ? getSkillsInstallSpec(skill, agent) : null;
   const chooserWidth = clamp(columns - (viewport?.micro ? 4 : 2), 46, viewport?.micro ? 72 : 104);
-  const options = [
-    {
-      id: 'local',
-      label: 'Install with ai-agent-skills',
-      description: 'Use the vendored library copy; stable and deterministic.',
-      command: `npx ai-agent-skills install ${skill.name} --agent ${agent}`,
-    },
-    ...(skillsSpec
-      ? [{
-          id: 'skills',
-          label: 'Install with skills.sh',
-          description: 'Use the official open skills CLI against the upstream repository.',
-          command: skillsSpec.command,
-        }]
-      : []),
-    {
-      id: 'open',
-      label: 'Open upstream',
-      description: 'Open the upstream source in the browser.',
-      command: skill.sourceUrl,
-    },
-    {
-      id: 'cancel',
-      label: 'Cancel',
-      description: 'Close the chooser and stay on this skill.',
-      command: '',
-    },
-  ];
+  const options = agent
+    ? [
+        {
+          id: 'local',
+          label: 'Install with ai-agent-skills',
+          description: `Install to ${agent} agent path.`,
+          command: getInstallCommandForAgent(skill, agent),
+        },
+        ...(skillsSpec
+          ? [{
+              id: 'skills',
+              label: 'Install with skills.sh',
+              description: 'Use the official open skills CLI against the upstream repository.',
+              command: skillsSpec.command,
+            }]
+          : []),
+        {
+          id: 'open',
+          label: 'Open upstream',
+          description: 'Open the upstream source in the browser.',
+          command: skill.sourceUrl,
+        },
+        {
+          id: 'cancel',
+          label: 'Cancel',
+          description: 'Close the chooser and stay on this skill.',
+          command: '',
+        },
+      ]
+    : [
+        {
+          id: 'global',
+          label: 'Install globally',
+          description: 'Install to ~/.claude/skills/ (available in every project).',
+          command: getInstallCommand(skill, 'global'),
+        },
+        {
+          id: 'project',
+          label: 'Install to project',
+          description: 'Install to .agents/skills/ (shared with the team via git).',
+          command: getInstallCommand(skill, 'project'),
+        },
+        {
+          id: 'open',
+          label: 'Open upstream',
+          description: 'Open the upstream source in the browser.',
+          command: skill.sourceUrl,
+        },
+        {
+          id: 'cancel',
+          label: 'Cancel',
+          description: 'Close the chooser and stay on this skill.',
+          command: '',
+        },
+      ];
 
   const selected = options[selectedIndex] || options[0];
 
@@ -1334,7 +1363,9 @@ function InstallChooser({skill, agent, selectedIndex, columns, viewport = null})
     <${ModalShell}
       width=${chooserWidth}
       title=${`Install ${skill.title}`}
-      subtitle="Choose the curated library path or the upstream skills.sh install when it exists."
+      subtitle=${agent
+        ? "Choose the curated library path or the upstream skills.sh install when it exists."
+        : "Choose where to install this skill."}
       footerLines=${['Enter chooses · Esc closes the chooser']}
     >
       <${Box} marginTop=${1} flexDirection="column">
@@ -1507,7 +1538,7 @@ function filterPaletteItems(items, query) {
   return items.filter((item) => `${item.label} ${item.detail}`.toLowerCase().includes(needle));
 }
 
-function App({catalog, agent, onExit}) {
+function App({catalog, scope, agent, onExit}) {
   const {exit} = useApp();
   const {stdout} = useStdout();
   const {columns, rows} = resolveTerminalSize(stdout);
@@ -1598,7 +1629,7 @@ function App({catalog, agent, onExit}) {
     : null;
 
   const breadcrumbs = buildBreadcrumbs(rootMode, stack, catalog);
-  const currentSkillsSpec = currentSkill ? getSkillsInstallSpec(currentSkill, agent) : null;
+  const currentSkillsSpec = currentSkill && agent ? getSkillsInstallSpec(currentSkill, agent) : null;
   const curatedHomeSections = useMemo(() => {
     const myPicks = catalog.collections.find((collection) => collection.id === 'my-picks');
     const featuredSkills = catalog.skills.filter((skill) => skill.featured).slice(0, 6);
@@ -1648,29 +1679,51 @@ function App({catalog, agent, onExit}) {
   }, [catalog]);
 
   const installOptions = currentSkill
-    ? [
-        {
-          id: 'local',
-          action: {
-            type: 'install',
-            skillName: currentSkill.name,
+    ? agent
+      ? [
+          {
+            id: 'local',
+            action: {
+              type: 'install',
+              skillName: currentSkill.name,
+              agent,
+            },
           },
-        },
-        ...(currentSkillsSpec
-          ? [{
-              id: 'skills',
-              action: {
-                type: 'skills-install',
-                skillName: currentSkill.name,
-                command: currentSkillsSpec.command,
-                binary: currentSkillsSpec.binary,
-                args: currentSkillsSpec.args,
-              },
-            }]
-          : []),
-        {id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}},
-        {id: 'cancel', action: null},
-      ]
+          ...(currentSkillsSpec
+            ? [{
+                id: 'skills',
+                action: {
+                  type: 'skills-install',
+                  skillName: currentSkill.name,
+                  command: currentSkillsSpec.command,
+                  binary: currentSkillsSpec.binary,
+                  args: currentSkillsSpec.args,
+                },
+              }]
+            : []),
+          {id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}},
+          {id: 'cancel', action: null},
+        ]
+      : [
+          {
+            id: 'global',
+            action: {
+              type: 'install',
+              skillName: currentSkill.name,
+              scope: 'global',
+            },
+          },
+          {
+            id: 'project',
+            action: {
+              type: 'install',
+              skillName: currentSkill.name,
+              scope: 'project',
+            },
+          },
+          {id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}},
+          {id: 'cancel', action: null},
+        ]
     : [];
 
   const paletteItems = useMemo(() => {
@@ -2157,7 +2210,7 @@ function App({catalog, agent, onExit}) {
             breadcrumbs=${breadcrumbs}
             title="Start from the curated shelves"
             subtitle="Lead with taste first. Then drop into the work areas, branches, and source lineage underneath."
-            metaItems=${[`${catalog.total} skills`, `${catalog.collections.length} collections`, `${catalog.areas.length} work areas`, `${catalog.sources.length} sources`, `target ${agent}`, activeTheme.label]}
+            metaItems=${[`${catalog.total} skills`, `${catalog.collections.length} collections`, `${catalog.areas.length} work areas`, `${catalog.sources.length} sources`, `scope ${agent ? agent : (scope || 'global')}`, activeTheme.label]}
             hint="Up/down changes shelves · Left/right moves within a shelf · Enter opens · : command palette"
             viewport=${viewport}
           />
@@ -2228,7 +2281,7 @@ function App({catalog, agent, onExit}) {
             subtitle=${rootMode === 'areas'
               ? 'Start with the kind of work, then move into branches and skills.'
               : 'Browse trusted source repos and the lanes they feed into the library.'}
-            metaItems=${[`${catalog.total} skills`, `${catalog.collections.length} collections`, `${catalog.areas.length} work areas`, `${catalog.sources.length} sources`, `target ${agent}`, activeTheme.label]}
+            metaItems=${[`${catalog.total} skills`, `${catalog.collections.length} collections`, `${catalog.areas.length} work areas`, `${catalog.sources.length} sources`, `scope ${agent ? agent : (scope || 'global')}`, activeTheme.label]}
             hint="Arrow keys move · Enter drills in · / searches · : command palette"
             viewport=${viewport}
           />
@@ -2486,9 +2539,9 @@ function App({catalog, agent, onExit}) {
           hint="i opens install choices · p toggles preview · o opens upstream"
           viewport=${viewport}
         />
-        <${SkillScreen} skill=${currentSkill} previewMode=${previewMode} agent=${agent} columns=${columns} viewport=${viewport} relatedSkills=${relatedSkills} />
+        <${SkillScreen} skill=${currentSkill} previewMode=${previewMode} scope=${scope} agent=${agent} columns=${columns} viewport=${viewport} relatedSkills=${relatedSkills} />
         ${chooserOpen
-          ? html`<${InstallChooser} skill=${currentSkill} agent=${agent} selectedIndex=${chooserIndex} columns=${columns} viewport=${viewport} />`
+          ? html`<${InstallChooser} skill=${currentSkill} scope=${scope} agent=${agent} selectedIndex=${chooserIndex} columns=${columns} viewport=${viewport} />`
           : null}
       <//>
     `;
@@ -2520,14 +2573,14 @@ function App({catalog, agent, onExit}) {
   `;
 }
 
-export async function launchTui({agent = 'claude'} = {}) {
+export async function launchTui({agent = null, scope = 'global'} = {}) {
   const catalog = buildCatalog();
   const restoreScreen = enterInteractiveScreen(process.stdout);
 
   return await new Promise((resolve) => {
     let exitAction = null;
     const instance = render(
-      html`<${App} catalog=${catalog} agent=${agent} onExit=${(action) => {
+      html`<${App} catalog=${catalog} scope=${scope} agent=${agent} onExit=${(action) => {
         exitAction = action;
       }} />`,
       {

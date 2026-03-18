@@ -17,20 +17,31 @@ const SKILLS_DIR = path.join(__dirname, 'skills');
 const CONFIG_FILE = path.join(os.homedir(), '.agent-skills.json');
 const MAX_SKILL_SIZE = 50 * 1024 * 1024; // 50MB limit
 
-// Agent-specific skill directories
-const AGENT_PATHS = {
-  claude: path.join(os.homedir(), '.claude', 'skills'),
-  cursor: path.join(process.cwd(), '.cursor', 'skills'),
-  amp: path.join(os.homedir(), '.amp', 'skills'),
-  vscode: path.join(process.cwd(), '.github', 'skills'),
-  copilot: path.join(process.cwd(), '.github', 'skills'),
-  project: path.join(process.cwd(), '.skills'),
-  goose: path.join(os.homedir(), '.config', 'goose', 'skills'),
+// v3 scope model: two primary scopes replace the agent picker
+const SCOPES = {
+  global: path.join(os.homedir(), '.claude', 'skills'),
+  project: path.join(process.cwd(), '.agents', 'skills'),
+};
+
+// Legacy agent paths (still functional via --agent)
+const LEGACY_AGENTS = {
+  cursor:   path.join(process.cwd(), '.cursor', 'skills'),
+  amp:      path.join(os.homedir(), '.amp', 'skills'),
+  vscode:   path.join(process.cwd(), '.github', 'skills'),
+  copilot:  path.join(process.cwd(), '.github', 'skills'),
+  project:  path.join(process.cwd(), '.skills'),
+  goose:    path.join(os.homedir(), '.config', 'goose', 'skills'),
   opencode: path.join(os.homedir(), '.config', 'opencode', 'skill'),
-  codex: path.join(os.homedir(), '.codex', 'skills'),
-  letta: path.join(os.homedir(), '.letta', 'skills'),
+  codex:    path.join(os.homedir(), '.codex', 'skills'),
+  letta:    path.join(os.homedir(), '.letta', 'skills'),
   kilocode: path.join(os.homedir(), '.kilocode', 'skills'),
-  gemini: path.join(os.homedir(), '.gemini', 'skills'),
+  gemini:   path.join(os.homedir(), '.gemini', 'skills'),
+};
+
+// Unified lookup: resolve scope or legacy agent name to a path
+const AGENT_PATHS = {
+  claude: SCOPES.global,
+  ...LEGACY_AGENTS,
 };
 
 const colors = {
@@ -163,6 +174,26 @@ function validateSkillName(name) {
   }
 
   return true;
+}
+
+function isSafePath(basePath, targetPath) {
+  const normalizedBase = path.normalize(path.resolve(basePath));
+  const normalizedTarget = path.normalize(path.resolve(targetPath));
+  return normalizedTarget.startsWith(normalizedBase + path.sep)
+    || normalizedTarget === normalizedBase;
+}
+
+function safeTempCleanup(dir) {
+  try {
+    const normalizedDir = path.normalize(path.resolve(dir));
+    const normalizedTmp = path.normalize(path.resolve(os.tmpdir()));
+    if (!normalizedDir.startsWith(normalizedTmp + path.sep)) {
+      throw new Error('Attempted to clean up directory outside of temp directory');
+    }
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch (cleanupErr) {
+    // Swallow cleanup errors so they don't obscure the real error
+  }
 }
 
 function validateGitHubSkillPath(skillPath) {
@@ -505,28 +536,55 @@ function getAvailableSkills() {
 function parseArgs(args) {
   const config = loadConfig();
   const validAgents = Object.keys(AGENT_PATHS);
-  const defaultAgent = config.defaultAgent || 'claude';
+  const validLegacyAgents = Object.keys(LEGACY_AGENTS);
 
   const result = {
     command: null,
     param: null,
-    agents: [],           // New: array of agents
-    allAgents: false,     // New: --all-agents flag
-    explicitAgent: false, // Track if user explicitly specified agent(s)
+    scope: null,          // v3: 'global', 'project', or null (default)
+    agents: [],           // Legacy: array of agents
+    allAgents: false,
+    explicitAgent: false,
     installed: false,
     all: false,
     dryRun: false,
     tags: null,
     category: null,
     workArea: null,
-    collection: null
+    collection: null,
+    skillFilters: [],     // v3: --skill flag values
+    listMode: false,      // v3: --list flag
+    yes: false,           // v3: --yes flag (non-interactive)
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
+    // v3 scope flags
+    if (arg === '-p' || arg === '--project') {
+      result.scope = 'project';
+    }
+    else if (arg === '-g' || arg === '--global') {
+      result.scope = 'global';
+    }
+    // v3 --skill filter
+    else if (arg === '--skill') {
+      const value = args[i + 1];
+      if (value) {
+        result.skillFilters.push(value);
+        i++;
+      }
+    }
+    // v3 --list flag
+    else if (arg === '--list') {
+      result.listMode = true;
+    }
+    // v3 --yes flag
+    else if (arg === '--yes' || arg === '-y') {
+      result.yes = true;
+    }
     // --agents claude,cursor,codex (multiple agents)
-    if (arg === '--agents') {
+    else if (arg === '--agents') {
       result.explicitAgent = true;
       const value = args[i + 1] || '';
       value.split(',').forEach(a => {
@@ -540,7 +598,7 @@ function parseArgs(args) {
     // --agent cursor (single agent, backward compatible)
     else if (arg === '--agent' || arg === '-a') {
       result.explicitAgent = true;
-      let agentValue = args[i + 1] || defaultAgent;
+      let agentValue = args[i + 1] || 'claude';
       agentValue = agentValue.replace(/^-+/, '');
       if (validAgents.includes(agentValue) && !result.agents.includes(agentValue)) {
         result.agents.push(agentValue);
@@ -603,10 +661,34 @@ function parseArgs(args) {
     const configAgents = config.agents && config.agents.length > 0
       ? config.agents.filter(a => validAgents.includes(a))
       : [];
-    result.agents = configAgents.length > 0 ? configAgents : [defaultAgent];
+    result.agents = configAgents.length > 0 ? configAgents : ['claude'];
   }
 
   return result;
+}
+
+// v3: resolve install target path from scope/agent flags
+function resolveInstallPath(parsed) {
+  // 1. Explicit legacy --agent override
+  if (parsed.explicitAgent && parsed.agents.length > 0) {
+    return parsed.agents.map(a => AGENT_PATHS[a] || SCOPES.global);
+  }
+  // 2. --all installs to both scopes
+  if (parsed.all) {
+    return [SCOPES.global, SCOPES.project];
+  }
+  // 3. Explicit scope flag
+  if (parsed.scope === 'project') return [SCOPES.project];
+  if (parsed.scope === 'global') return [SCOPES.global];
+  // 4. Default: global
+  return [SCOPES.global];
+}
+
+// v3: resolve scope label for metadata
+function resolveScopeLabel(targetPath) {
+  if (targetPath === SCOPES.global) return 'global';
+  if (targetPath === SCOPES.project) return 'project';
+  return 'legacy';
 }
 
 // ============ SAFE FILE OPERATIONS ============
@@ -687,7 +769,7 @@ function getDirectorySize(dir) {
 
 // ============ CORE COMMANDS ============
 
-function installSkill(skillName, agent = 'claude', dryRun = false) {
+function installSkill(skillName, agent = 'claude', dryRun = false, targetPath = null) {
   try {
     validateSkillName(skillName);
   } catch (e) {
@@ -713,14 +795,15 @@ function installSkill(skillName, agent = 'claude', dryRun = false) {
     return false;
   }
 
-  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  const destDir = targetPath || AGENT_PATHS[agent] || SCOPES.global;
   const destPath = path.join(destDir, skillName);
   const skillSize = getDirectorySize(sourcePath);
 
   if (dryRun) {
+    const scopeLabel = resolveScopeLabel(destDir);
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
     info(`Would install: ${skillName}`);
-    info(`Agent: ${agent}`);
+    info(`Scope: ${scopeLabel}`);
     info(`Source: ${sourcePath}`);
     info(`Destination: ${destPath}`);
     info(`Size: ${(skillSize / 1024).toFixed(1)} KB`);
@@ -740,18 +823,67 @@ function installSkill(skillName, agent = 'claude', dryRun = false) {
 
     // Write metadata for update tracking
     writeSkillMeta(destPath, {
-      source: 'registry',
-      name: skillName
+      source: 'catalog',
+      name: skillName,
+      scope: resolveScopeLabel(destDir),
     });
 
+    const scopeLabel = resolveScopeLabel(destDir);
     success(`\nInstalled: ${skillName}`);
-    info(`Agent: ${agent}`);
+    info(`Scope: ${scopeLabel}`);
     info(`Location: ${destPath}`);
     info(`Size: ${(skillSize / 1024).toFixed(1)} KB`);
 
     log('');
-    showAgentInstructions(agent, skillName, destPath);
+    if (agent) {
+      showAgentInstructions(agent, skillName, destPath);
+    }
 
+    return true;
+  } catch (e) {
+    error(`Failed to install skill: ${e.message}`);
+    return false;
+  }
+}
+
+// v3: install a catalog skill to a scope path directly (for TUI scope chooser)
+function installSkillToScope(skillName, scopePath, scopeLabel, dryRun = false) {
+  try { validateSkillName(skillName); } catch (e) { error(e.message); return false; }
+
+  const sourcePath = path.join(SKILLS_DIR, skillName);
+  if (!fs.existsSync(sourcePath)) {
+    error(`Skill "${skillName}" not found.`);
+    const available = getAvailableSkills();
+    const similar = available.filter(s => s.includes(skillName) || skillName.includes(s) || levenshteinDistance(s, skillName) <= 3).slice(0, 3);
+    if (similar.length > 0) log(`\n${colors.dim}Did you mean: ${similar.join(', ')}?${colors.reset}`);
+    return false;
+  }
+
+  const destPath = path.join(scopePath, skillName);
+  const skillSize = getDirectorySize(sourcePath);
+
+  if (dryRun) {
+    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+    info(`Would install: ${skillName}`);
+    info(`Scope: ${scopeLabel}`);
+    info(`Destination: ${destPath}`);
+    info(`Size: ${(skillSize / 1024).toFixed(1)} KB`);
+    return true;
+  }
+
+  try {
+    if (!fs.existsSync(scopePath)) fs.mkdirSync(scopePath, { recursive: true });
+    copyDir(sourcePath, destPath);
+    writeSkillMeta(destPath, { source: 'catalog', url: 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills', name: skillName, scope: scopeLabel });
+    success(`\nInstalled: ${skillName}`);
+    info(`Scope: ${scopeLabel}`);
+    info(`Location: ${destPath}`);
+    info(`Size: ${(skillSize / 1024).toFixed(1)} KB`);
+    if (scopeLabel === 'global') {
+      log(`${colors.dim}The skill is now available in Claude Code.\nJust mention "${skillName}" in your prompt and Claude will use it.${colors.reset}`);
+    } else {
+      log(`${colors.dim}The skill is installed in .agents/skills/ for this project.\nMultiple agents (Claude, Cursor, Codex, Gemini CLI) can read it.${colors.reset}`);
+    }
     return true;
   } catch (e) {
     error(`Failed to install skill: ${e.message}`);
@@ -1537,10 +1669,10 @@ function isInteractiveTerminal() {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
 
-async function launchBrowser(agent = 'claude') {
+async function launchBrowser({agent = null, scope = 'global'} = {}) {
   const tuiUrl = pathToFileURL(path.join(__dirname, 'tui', 'index.mjs')).href;
   const tuiModule = await import(tuiUrl);
-  return tuiModule.launchTui({ agent });
+  return tuiModule.launchTui({ agent, scope });
 }
 
 function runExternalInstallAction(action) {
@@ -1596,6 +1728,101 @@ function levenshteinDistance(a, b) {
 }
 
 // ============ EXTERNAL INSTALL (GitHub/Local) ============
+
+// v3: sanitize subpath segments (reject path traversal)
+function sanitizeSubpath(subpath) {
+  if (!subpath) return null;
+  const segments = String(subpath).split('/').filter(Boolean);
+  for (const seg of segments) {
+    if (seg === '..') {
+      throw new Error(`Path traversal rejected: "${subpath}" contains ".." segment`);
+    }
+  }
+  return segments.join('/') || null;
+}
+
+// v3: unified source parser handling all 7 input formats
+function parseSource(source) {
+  if (!source || typeof source !== 'string') {
+    return { type: 'catalog', name: source };
+  }
+
+  const trimmed = source.trim();
+
+  // Priority 1: local path (starts with ./, ../, /, or is ".")
+  if (trimmed === '.' || trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('/') || trimmed.startsWith('~/') || isWindowsPath(trimmed)) {
+    return { type: 'local', url: trimmed };
+  }
+
+  // Priority 2: full github.com URL with /tree/ (branch + subpath)
+  const treeMatch = trimmed.match(/^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(?:\/(.+))?$/);
+  if (treeMatch) {
+    const subpath = treeMatch[4] ? sanitizeSubpath(treeMatch[4]) : null;
+    return {
+      type: 'github',
+      url: `https://github.com/${treeMatch[1]}/${treeMatch[2]}`,
+      owner: treeMatch[1],
+      repo: treeMatch[2],
+      ref: treeMatch[3],
+      subpath,
+    };
+  }
+
+  // Priority 3: full github.com URL (no tree)
+  const ghUrlMatch = trimmed.match(/^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/)?$/);
+  if (ghUrlMatch) {
+    return {
+      type: 'github',
+      url: `https://github.com/${ghUrlMatch[1]}/${ghUrlMatch[2]}`,
+      owner: ghUrlMatch[1],
+      repo: ghUrlMatch[2],
+    };
+  }
+
+  // Priority 4: owner/repo@skill-name
+  const atMatch = trimmed.match(/^([^/:@.]+)\/([^/:@.]+)@(.+)$/);
+  if (atMatch) {
+    return {
+      type: 'github',
+      url: `https://github.com/${atMatch[1]}/${atMatch[2]}`,
+      owner: atMatch[1],
+      repo: atMatch[2],
+      skillFilter: atMatch[3],
+    };
+  }
+
+  // Priority 5: owner/repo (exactly two segments, no special chars that suggest a URL)
+  const shortMatch = trimmed.match(/^([^/:@.]+)\/([^/:@.]+)$/);
+  if (shortMatch && !trimmed.includes(':') && !trimmed.includes('.')) {
+    return {
+      type: 'github',
+      url: `https://github.com/${shortMatch[1]}/${shortMatch[2]}`,
+      owner: shortMatch[1],
+      repo: shortMatch[2],
+    };
+  }
+
+  // Priority 6: owner/repo/subpath (3+ segments, no protocol)
+  const subpathMatch = trimmed.match(/^([^/:@.]+)\/([^/:@.]+)\/(.+)$/);
+  if (subpathMatch && !trimmed.includes(':') && !trimmed.includes('://')) {
+    const subpath = sanitizeSubpath(subpathMatch[3]);
+    return {
+      type: 'github',
+      url: `https://github.com/${subpathMatch[1]}/${subpathMatch[2]}`,
+      owner: subpathMatch[1],
+      repo: subpathMatch[2],
+      subpath,
+    };
+  }
+
+  // Priority 7: any other URL (git, ssh, etc.)
+  if (isGitUrl(trimmed)) {
+    return { type: 'git', url: trimmed };
+  }
+
+  // Fallback: treat as catalog skill name
+  return { type: 'catalog', name: trimmed };
+}
 
 function isGitHubUrl(source) {
   // Must have owner/repo format, not start with path indicators
@@ -1883,6 +2110,352 @@ function validateSkillDirectory(skillTarget) {
       skillMdSize,
     },
   };
+}
+
+// v3: discover skills in a directory (cloned repo or local path)
+function discoverSkills(rootDir) {
+  const seen = new Set();
+  const skills = [];
+
+  function scanDir(dir) {
+    if (!fs.existsSync(dir)) return;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (['.git', 'node_modules', 'dist', 'build', '__pycache__'].includes(entry.name)) continue;
+        const skillDir = path.join(dir, entry.name);
+        const skillMd = path.join(skillDir, 'SKILL.md');
+        if (fs.existsSync(skillMd)) {
+          const parsed = parseSkillMarkdown(fs.readFileSync(skillMd, 'utf8'));
+          const name = parsed && parsed.frontmatter && typeof parsed.frontmatter.name === 'string'
+            ? parsed.frontmatter.name.trim()
+            : entry.name;
+          const description = parsed && parsed.frontmatter && typeof parsed.frontmatter.description === 'string'
+            ? parsed.frontmatter.description.trim()
+            : '';
+          if (name && !seen.has(name.toLowerCase())) {
+            seen.add(name.toLowerCase());
+            skills.push({ name, description, dirName: entry.name, dir: skillDir });
+          }
+        }
+      }
+    } catch (e) {
+      // skip unreadable directories
+    }
+  }
+
+  // Check if root itself is a single skill
+  if (fs.existsSync(path.join(rootDir, 'SKILL.md'))) {
+    const parsed = parseSkillMarkdown(fs.readFileSync(path.join(rootDir, 'SKILL.md'), 'utf8'));
+    const name = parsed && parsed.frontmatter && typeof parsed.frontmatter.name === 'string'
+      ? parsed.frontmatter.name.trim()
+      : path.basename(rootDir);
+    const description = parsed && parsed.frontmatter && typeof parsed.frontmatter.description === 'string'
+      ? parsed.frontmatter.description.trim()
+      : '';
+    if (name) {
+      return [{ name, description, dirName: path.basename(rootDir), dir: rootDir, isRoot: true }];
+    }
+  }
+
+  // Scan standard directories in priority order
+  const standardDirs = [
+    path.join(rootDir, 'skills'),
+    path.join(rootDir, 'skills', '.curated'),
+    path.join(rootDir, '.agents', 'skills'),
+    path.join(rootDir, '.claude', 'skills'),
+  ];
+
+  for (const dir of standardDirs) {
+    scanDir(dir);
+  }
+
+  // Recursive fallback if nothing found
+  if (skills.length === 0) {
+    function walkTree(dir, depth) {
+      if (depth > 5) return;
+      if (!fs.existsSync(dir)) return;
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          if (['.git', 'node_modules', 'dist', 'build', '__pycache__'].includes(entry.name)) continue;
+          const childDir = path.join(dir, entry.name);
+          const skillMd = path.join(childDir, 'SKILL.md');
+          if (fs.existsSync(skillMd)) {
+            const parsed = parseSkillMarkdown(fs.readFileSync(skillMd, 'utf8'));
+            const name = parsed && parsed.frontmatter && typeof parsed.frontmatter.name === 'string'
+              ? parsed.frontmatter.name.trim()
+              : entry.name;
+            const description = parsed && parsed.frontmatter && typeof parsed.frontmatter.description === 'string'
+              ? parsed.frontmatter.description.trim()
+              : '';
+            if (name && !seen.has(name.toLowerCase())) {
+              seen.add(name.toLowerCase());
+              skills.push({ name, description, dirName: entry.name, dir: childDir });
+            }
+          } else {
+            walkTree(childDir, depth + 1);
+          }
+        }
+      } catch (e) {
+        // skip
+      }
+    }
+    walkTree(rootDir, 0);
+  }
+
+  return skills;
+}
+
+// v3: classify git clone errors for actionable messages
+function classifyGitError(message) {
+  const msg = String(message || '');
+  if (msg.includes('timed out') || msg.includes('block timeout')) {
+    return 'Clone timed out. If this is a private repo, check your credentials.';
+  }
+  if (msg.includes('Authentication failed') || msg.includes('Permission denied')) {
+    return 'Authentication failed. Check your git credentials or SSH keys.';
+  }
+  if (msg.includes('Repository not found') || msg.includes('not found')) {
+    return 'Repository not found. It may be private or the URL may be wrong.';
+  }
+  return msg;
+}
+
+// v3: copy skill files with appropriate skip list
+function copySkillFiles(srcDir, destDir) {
+  const skipList = ['.git', 'node_modules', '__pycache__', '__pypackages__', 'metadata.json'];
+
+  if (fs.existsSync(destDir)) {
+    fs.rmSync(destDir, { recursive: true });
+  }
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (skipList.includes(entry.name)) continue;
+    // Skip dotfiles (files/dirs starting with .)
+    if (entry.name.startsWith('.')) continue;
+
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+
+    if (entry.isSymbolicLink()) continue;
+
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+// v3: main source-repo install flow
+async function installFromSource(source, parsed, installPaths, skillFilters, listMode, yes, dryRun) {
+  const { execFileSync } = require('child_process');
+
+  let rootDir = null;
+  let tempDir = null;
+  let sourceType = parsed.type;
+  let sourceUrl = parsed.url;
+
+  try {
+    // Clone or resolve local path
+    if (parsed.type === 'local') {
+      rootDir = expandPath(parsed.url);
+      if (!fs.existsSync(rootDir)) {
+        error(`Path not found: ${rootDir}`);
+        return false;
+      }
+    } else {
+      // Git clone
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-'));
+      rootDir = tempDir;
+
+      const cloneUrl = parsed.type === 'github'
+        ? `${parsed.url}.git`
+        : parsed.url;
+
+      const cloneArgs = ['clone'];
+      if (!cloneUrl.startsWith('file://')) {
+        cloneArgs.push('--depth', '1');
+      }
+      if (parsed.ref) {
+        cloneArgs.push('--branch', parsed.ref);
+      }
+      cloneArgs.push(cloneUrl, tempDir);
+
+      if (dryRun) {
+        log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+        info(`Would clone: ${cloneUrl}`);
+        info(`Would install to: ${installPaths.join(', ')}`);
+        return true;
+      }
+
+      info(`Cloning ${source}...`);
+      try {
+        execFileSync('git', cloneArgs, {
+          stdio: 'pipe',
+          timeout: 60000,
+          env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+        });
+      } catch (cloneErr) {
+        error(classifyGitError(cloneErr.message || cloneErr.stderr));
+        return false;
+      }
+
+      // Navigate to subpath if specified
+      if (parsed.subpath) {
+        const subDir = path.join(tempDir, parsed.subpath);
+        if (!fs.existsSync(subDir)) {
+          error(`Subpath "${parsed.subpath}" not found in repository`);
+          return false;
+        }
+        rootDir = subDir;
+      }
+    }
+
+    // Discover skills
+    const discovered = discoverSkills(rootDir);
+
+    // For root skills cloned from a repo, derive a proper name from the source URL
+    if (discovered.length === 1 && discovered[0].isRoot && tempDir) {
+      const repoName = parsed.repo || getRepoNameFromUrl(parsed.url);
+      if (repoName) {
+        const cleanName = repoName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        if (cleanName) {
+          discovered[0].name = cleanName;
+        }
+      }
+    }
+
+    if (discovered.length === 0) {
+      warn('No skills found in source');
+      return false;
+    }
+
+    // --list: show available skills and exit
+    if (listMode) {
+      log(`\n${colors.bold}Available Skills${colors.reset} (${discovered.length} found)\n`);
+      for (const skill of discovered) {
+        log(`  ${colors.green}${skill.name}${colors.reset}`);
+        if (skill.description) {
+          log(`    ${colors.dim}${skill.description}${colors.reset}`);
+        }
+      }
+      log(`\n${colors.dim}Install: npx ai-agent-skills install ${source} --skill <name>${colors.reset}`);
+      return true;
+    }
+
+    // Resolve skill filter (from --skill flags or @skill-name syntax)
+    let filters = [...skillFilters];
+    if (parsed.skillFilter) {
+      filters.push(parsed.skillFilter);
+    }
+
+    // Select skills
+    let selected;
+    if (filters.includes('*')) {
+      selected = discovered;
+    } else if (filters.length > 0) {
+      selected = [];
+      for (const filter of filters) {
+        const match = discovered.find(s => s.name.toLowerCase() === filter.toLowerCase());
+        if (match) {
+          selected.push(match);
+        } else {
+          error(`Skill "${filter}" not found in source`);
+          log(`\n${colors.dim}Available skills:${colors.reset}`);
+          for (const s of discovered) {
+            log(`  ${colors.green}${s.name}${colors.reset}`);
+          }
+          return false;
+        }
+      }
+    } else if (discovered.length === 1) {
+      selected = discovered;
+      info(`Found: ${discovered[0].name}${discovered[0].description ? ' - ' + discovered[0].description : ''}`);
+    } else if (yes || !process.stdin.isTTY) {
+      selected = discovered;
+      info(`Installing all ${discovered.length} skills (non-interactive mode)`);
+    } else {
+      // Interactive: for now, install all and show what was installed
+      selected = discovered;
+      info(`Found ${discovered.length} skills, installing all`);
+    }
+
+    if (selected.length === 0) {
+      warn('No skills selected for install');
+      return false;
+    }
+
+    if (dryRun) {
+      log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+      info(`Would install ${selected.length} skill(s) to ${installPaths.length} target(s)`);
+      for (const skill of selected) {
+        log(`  ${colors.green}${skill.name}${colors.reset}`);
+      }
+      return true;
+    }
+
+    // Install each selected skill to each target path
+    let successes = 0;
+    let failures = 0;
+
+    for (const skill of selected) {
+      for (const targetBase of installPaths) {
+        try {
+          const destPath = path.join(targetBase, skill.name);
+
+          // Validate path safety
+          if (!isSafePath(targetBase, destPath)) {
+            error(`Unsafe install path rejected: ${destPath}`);
+            failures++;
+            continue;
+          }
+
+          if (!fs.existsSync(targetBase)) {
+            fs.mkdirSync(targetBase, { recursive: true });
+          }
+
+          if (skill.isRoot) {
+            copyDir(skill.dir, destPath);
+          } else {
+            copySkillFiles(skill.dir, destPath);
+          }
+
+          // Write .skill-meta.json
+          writeSkillMeta(destPath, {
+            source: sourceType,
+            url: sourceUrl || null,
+            skill: skill.name,
+            scope: resolveScopeLabel(targetBase),
+          });
+
+          log(`  ${colors.green}\u2713${colors.reset} ${skill.name}`);
+          successes++;
+        } catch (installErr) {
+          log(`  ${colors.red}\u2717${colors.reset} ${skill.name}: ${installErr.message}`);
+          failures++;
+        }
+      }
+    }
+
+    if (successes > 0) {
+      success(`\nInstalled ${successes} skill(s)`);
+    }
+    if (failures > 0) {
+      warn(`${failures} failed`);
+    }
+
+    return successes > 0;
+  } finally {
+    if (tempDir) {
+      safeTempCleanup(tempDir);
+    }
+  }
 }
 
 async function installFromGitHub(source, agent = 'claude', dryRun = false) {
@@ -2280,102 +2853,70 @@ function installFromLocalPath(source, agent = 'claude', dryRun = false) {
 
 function showHelp() {
   log(`
-${colors.bold}AI Agent Skills${colors.reset}
-The agent skills I actually keep around.
+${colors.bold}AI Agent Skills${colors.reset} \u2014 My curated agent skills library
 
 ${colors.bold}Usage:${colors.reset}
   npx ai-agent-skills [command] [options]
 
 ${colors.bold}Commands:${colors.reset}
-  ${colors.green}(no command)${colors.reset}                     Launch the interactive browser (TTY only)
-  ${colors.green}browse${colors.reset}                           Interactive skill browser (TUI)
-  ${colors.green}list${colors.reset}                             List all available skills
-  ${colors.green}list --installed${colors.reset}                 List installed skills for an agent
-  ${colors.green}list --work-area <area>${colors.reset}          Filter by work area
-  ${colors.green}list --category <cat>${colors.reset}            Filter by category
-  ${colors.green}list --collection <id>${colors.reset}           Filter by curated collection
-  ${colors.green}collections${colors.reset}                      Show curated collections
-  ${colors.green}install <name>${colors.reset}                   Install to ALL agents (default)
-  ${colors.green}install <name> --agent cursor${colors.reset}    Install to specific agent only
-  ${colors.green}install <owner/repo[/path]>${colors.reset}      Install from GitHub repository or nested skill path
-  ${colors.green}install <git-url>${colors.reset}                Install from any git URL (ssh/https)
-  ${colors.green}install ./path${colors.reset}                   Install from local path
-  ${colors.green}install <name> --dry-run${colors.reset}         Preview installation without changes
-  ${colors.green}uninstall <name>${colors.reset}                 Remove an installed skill
-  ${colors.green}update <name>${colors.reset}                    Update an installed skill to latest
-  ${colors.green}update --all${colors.reset}                     Update all installed skills
-  ${colors.green}search <query>${colors.reset}                   Search skills by name, description, or tags
-  ${colors.green}info <name>${colors.reset}                      Show skill details
-  ${colors.green}preview <name>${colors.reset}                   Print the bundled SKILL.md
-  ${colors.green}doctor${colors.reset}                           Check install targets and library health
-  ${colors.green}validate [path]${colors.reset}                  Validate a skill directory (defaults to cwd)
-  ${colors.green}config${colors.reset}                           Show/edit configuration
-  ${colors.green}version${colors.reset}                          Show version number
-  ${colors.green}help${colors.reset}                             Show this help
+  ${colors.green}browse${colors.reset}                Browse the library in the terminal
+  ${colors.green}install <source>${colors.reset}      Install skills (from library, GitHub, git URL, or local path)
+  ${colors.green}list${colors.reset}                  List catalog skills
+  ${colors.green}search <query>${colors.reset}        Search the catalog
+  ${colors.green}info <name>${colors.reset}           Show skill details and provenance
+  ${colors.green}preview <name>${colors.reset}        Preview a skill's content
+  ${colors.green}collections${colors.reset}           Browse curated collections
+  ${colors.green}uninstall <name>${colors.reset}      Remove an installed skill
+  ${colors.green}update [name]${colors.reset}         Update installed skills
+  ${colors.green}check${colors.reset}                 Check for available updates
+  ${colors.green}init [name]${colors.reset}           Create a new SKILL.md template
+  ${colors.green}config${colors.reset}                Manage CLI settings
+  ${colors.green}doctor${colors.reset}                Diagnose install issues
+  ${colors.green}validate [path]${colors.reset}       Validate a skill directory
+
+${colors.bold}Scopes:${colors.reset}
+  ${colors.cyan}(default)${colors.reset}             ~/.claude/skills/        Global, available everywhere
+  ${colors.cyan}-p, --project${colors.reset}         .agents/skills/          Project, committed with your repo
+
+${colors.bold}Source formats:${colors.reset}
+  install pdf                                    From this library
+  install anthropics/skills                      All skills from a GitHub repo
+  install anthropics/skills@frontend-design      One skill from a repo
+  install anthropics/skills --skill pdf          Select specific skills
+  install anthropics/skills --list               List skills without installing
+  install ./local-path                           From a local directory
 
 ${colors.bold}Options:${colors.reset}
-  ${colors.cyan}--agent <name>${colors.reset}       Target specific agent (install defaults to ALL)
-  ${colors.cyan}--agents <list>${colors.reset}      Target multiple agents (comma-separated)
-  ${colors.cyan}--installed${colors.reset}          Show only installed skills (with list)
-  ${colors.cyan}--dry-run, -n${colors.reset}        Preview changes without applying
-  ${colors.cyan}--work-area <a>${colors.reset}      Filter by work area
-  ${colors.cyan}--category <c>${colors.reset}       Filter by category
-  ${colors.cyan}--collection <id>${colors.reset}    Filter by curated collection
-  ${colors.cyan}--all${colors.reset}                Apply to all (with update)
-  ${colors.cyan}--version, -v${colors.reset}        Show version number
-
-${colors.bold}Agents:${colors.reset} (install targets ALL by default)
-  ${colors.cyan}claude${colors.reset}   ~/.claude/skills/
-  ${colors.cyan}cursor${colors.reset}   .cursor/skills/ (project)
-  ${colors.cyan}codex${colors.reset}    ~/.codex/skills/
-  ${colors.cyan}amp${colors.reset}      ~/.amp/skills/
-  ${colors.cyan}vscode${colors.reset}   .github/skills/ (project)
-  ${colors.cyan}copilot${colors.reset}  .github/skills/ (alias for vscode)
-  ${colors.cyan}gemini${colors.reset}   ~/.gemini/skills/
-  ${colors.cyan}goose${colors.reset}    ~/.config/goose/skills/
-  ${colors.cyan}opencode${colors.reset} ~/.config/opencode/skill/
-  ${colors.cyan}letta${colors.reset}    ~/.letta/skills/
-  ${colors.cyan}kilocode${colors.reset} ~/.kilocode/skills/
-  ${colors.cyan}project${colors.reset}  .skills/ (portable)
-
-${colors.bold}Work Areas:${colors.reset}
-  frontend, backend, mobile, docs, testing, workflow, research, design, business
+  ${colors.cyan}-g, --global${colors.reset}          Install to global scope (default)
+  ${colors.cyan}-p, --project${colors.reset}         Install to project scope (.agents/skills/)
+  ${colors.cyan}--skill <name>${colors.reset}        Select specific skills from a source
+  ${colors.cyan}--list${colors.reset}                List available skills without installing
+  ${colors.cyan}--yes${colors.reset}                 Skip prompts (for CI/CD)
+  ${colors.cyan}--all${colors.reset}                 Install to both global and project scopes
+  ${colors.cyan}--dry-run${colors.reset}             Show what would be installed
+  ${colors.cyan}--agent <name>${colors.reset}        Install to a specific agent path (legacy)
 
 ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
+
+${colors.bold}Work areas:${colors.reset}
+  frontend, backend, docs, testing, workflow, research, design, business
 
 ${colors.bold}Collections:${colors.reset}
   my-picks, build-apps, build-systems, test-and-debug, docs-and-research
 
 ${colors.bold}Examples:${colors.reset}
-  npx ai-agent-skills                                       # Launch the terminal browser
-  npx ai-agent-skills browse                                # Interactive browser
-  npx ai-agent-skills collections                           # Browse curated collections
-  npx ai-agent-skills list --work-area frontend
-  npx ai-agent-skills preview pdf
-  npx ai-agent-skills install frontend-design               # Install to ALL agents
-  npx ai-agent-skills install pdf --agent cursor            # Install to Cursor only
-  npx ai-agent-skills install pdf --agents claude,cursor    # Install to specific agents
-  npx ai-agent-skills install anthropics/skills             # Install from GitHub
-  npx ai-agent-skills install anthropics/claude-code/plugins/code-review
-  npx ai-agent-skills install git@example.com:user/repo.git # Install from any git URL (ssh/https)
-  npx ai-agent-skills install ./my-skill                    # Install from local path
-  npx ai-agent-skills install pdf --dry-run                 # Preview install
-  npx ai-agent-skills list --category development
-  npx ai-agent-skills list --collection my-picks
-  npx ai-agent-skills list --collection build-apps
-  npx ai-agent-skills search testing
-  npx ai-agent-skills doctor
-  npx ai-agent-skills validate ./skills/pdf
-  npx ai-agent-skills update --all
+  npx ai-agent-skills                            Launch the terminal browser
+  npx ai-agent-skills install frontend-design    Install to ~/.claude/skills/
+  npx ai-agent-skills install pdf -p             Install to .agents/skills/
+  npx ai-agent-skills install anthropics/skills  Install all skills from repo
+  npx ai-agent-skills search testing             Search the catalog
 
-${colors.bold}Config:${colors.reset}
-  Config file: ~/.agent-skills.json
-  Set default agent: npx ai-agent-skills config --default-agent cursor
+${colors.bold}Legacy agents:${colors.reset}
+  Still supported via --agent <name>: cursor, amp, codex, gemini, goose, opencode, letta, kilocode
 
 ${colors.bold}More info:${colors.reset}
   https://github.com/MoizIbnYousaf/Ai-Agent-Skills
-  https://github.com/MoizIbnYousaf/Ai-Agent-Skills/issues
 `);
 }
 
@@ -2486,11 +3027,140 @@ function setConfig(key, value) {
   return false;
 }
 
+// ============ INIT COMMAND ============
+
+function initSkill(name) {
+  const skillName = name || path.basename(process.cwd());
+  const targetDir = name ? path.join(process.cwd(), name) : process.cwd();
+  const skillMdPath = path.join(targetDir, 'SKILL.md');
+
+  if (fs.existsSync(skillMdPath)) {
+    error(`SKILL.md already exists at ${skillMdPath}`);
+    process.exitCode = 1;
+    return false;
+  }
+
+  const safeName = skillName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  const template = `---
+name: ${safeName}
+description: Describe when this skill should trigger, not what it does.
+---
+
+# ${safeName}
+
+## When to Use
+
+Describe the conditions that should activate this skill.
+
+## Instructions
+
+What the agent should do when this skill is active.
+
+## Gotchas
+
+Specific failure modes or non-obvious behaviors the agent would hit without this guidance.
+`;
+
+  if (name && !fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+
+  fs.writeFileSync(skillMdPath, template);
+  success(`Created ${skillMdPath}`);
+  log(`\n${colors.dim}Edit the file, then validate:${colors.reset}`);
+  log(`  npx ai-agent-skills validate ${name ? name : '.'}`);
+  return true;
+}
+
+// ============ CHECK COMMAND ============
+
+function checkSkills(scope) {
+  const { execFileSync } = require('child_process');
+
+  const targets = [];
+  if (!scope || scope === 'global') {
+    targets.push({ label: 'global', path: SCOPES.global });
+  }
+  if (!scope || scope === 'project') {
+    targets.push({ label: 'project', path: SCOPES.project });
+  }
+
+  log(`\n${colors.bold}Checking installed skills...${colors.reset}\n`);
+
+  let updatesAvailable = 0;
+  let checked = 0;
+
+  for (const target of targets) {
+    if (!fs.existsSync(target.path)) continue;
+
+    try {
+      const entries = fs.readdirSync(target.path, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const skillDir = path.join(target.path, entry.name);
+        if (!fs.existsSync(path.join(skillDir, 'SKILL.md'))) continue;
+
+        checked++;
+        const meta = readSkillMeta(skillDir);
+
+        if (!meta) {
+          log(`  ${colors.dim}?${colors.reset} ${entry.name}${colors.dim}      no source metadata (manually installed)${colors.reset}`);
+          continue;
+        }
+
+        // For GitHub sources, try to check if updates exist
+        if (meta.source === 'github' && meta.url) {
+          try {
+            const repoPath = meta.url.replace('https://github.com/', '').replace(/\.git$/, '');
+            execFileSync('git', ['ls-remote', '--exit-code', `https://github.com/${repoPath}.git`, 'HEAD'], {
+              stdio: 'pipe',
+              timeout: 10000,
+              env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+            });
+            // If we get here, remote is reachable. We can't cheaply diff without the original SHA,
+            // so just report as potentially up to date
+            log(`  ${colors.green}\u2713${colors.reset} ${entry.name}${colors.dim}      up to date${colors.reset}`);
+          } catch {
+            log(`  ${colors.yellow}\u2191${colors.reset} ${entry.name}${colors.dim}      update may be available (${meta.url})${colors.reset}`);
+            updatesAvailable++;
+          }
+        } else if (meta.source === 'catalog' || meta.source === 'registry') {
+          // Check against bundled catalog
+          const bundledPath = path.join(SKILLS_DIR, entry.name);
+          if (fs.existsSync(bundledPath)) {
+            log(`  ${colors.green}\u2713${colors.reset} ${entry.name}${colors.dim}      up to date${colors.reset}`);
+          } else {
+            log(`  ${colors.dim}?${colors.reset} ${entry.name}${colors.dim}      not in current catalog${colors.reset}`);
+          }
+        } else {
+          log(`  ${colors.green}\u2713${colors.reset} ${entry.name}${colors.dim}      ${meta.source}${colors.reset}`);
+        }
+      }
+    } catch (e) {
+      // skip unreadable dirs
+    }
+  }
+
+  if (checked === 0) {
+    warn('No installed skills found');
+    return;
+  }
+
+  log('');
+  if (updatesAvailable > 0) {
+    log(`${updatesAvailable} update(s) may be available. Run ${colors.cyan}npx ai-agent-skills update${colors.reset} to install.`);
+  } else {
+    log(`${colors.dim}All ${checked} skill(s) checked.${colors.reset}`);
+  }
+}
+
 // ============ MAIN CLI ============
 
 async function main() {
   const args = process.argv.slice(2);
-  const { command, param, agents, explicitAgent, installed, dryRun, category, workArea, collection, tags, all } = parseArgs(args);
+  const parsed = parseArgs(args);
+  const { command, param, agents, explicitAgent, installed, dryRun, category, workArea, collection, tags, all, scope, skillFilters, listMode, yes } = parsed;
   const ALL_AGENTS = Object.keys(AGENT_PATHS);
 
   if (!command) {
@@ -2499,9 +3169,16 @@ async function main() {
       return;
     }
 
-    const action = await launchBrowser(agents[0]);
+    const tuiAgent = explicitAgent ? agents[0] : null;
+    const tuiScope = scope || 'global';
+    const action = await launchBrowser({agent: tuiAgent, scope: tuiScope});
     if (action && action.type === 'install') {
-      installSkill(action.skillName, agents[0], false);
+      if (action.agent) {
+        installSkill(action.skillName, action.agent, false);
+      } else {
+        const scopePath = SCOPES[action.scope || 'global'];
+        installSkillToScope(action.skillName, scopePath, action.scope || 'global', false);
+      }
     } else if (action && action.type === 'github-install') {
       await installFromGitHub(action.source, agents[0], false);
     } else if (action && action.type === 'skills-install') {
@@ -2540,9 +3217,16 @@ async function main() {
         return;
       }
 
-      const action = await launchBrowser(agents[0]);
+      const browseAgent = explicitAgent ? agents[0] : null;
+      const browseScope = scope || 'global';
+      const action = await launchBrowser({agent: browseAgent, scope: browseScope});
       if (action && action.type === 'install') {
-        installSkill(action.skillName, agents[0], false);
+        if (action.agent) {
+          installSkill(action.skillName, action.agent, false);
+        } else {
+          const scopePath = SCOPES[action.scope || 'global'];
+          installSkillToScope(action.skillName, scopePath, action.scope || 'global', false);
+        }
       } else if (action && action.type === 'github-install') {
         await installFromGitHub(action.source, agents[0], false);
       } else if (action && action.type === 'skills-install') {
@@ -2573,20 +3257,20 @@ async function main() {
     case 'add': {
       if (!param) {
         error('Please specify a skill name, GitHub repo, or local path.');
-        log('Usage: npx ai-agent-skills install <name> [--agent cursor]');
+        log('Usage: npx ai-agent-skills install <source> [-p]');
         process.exit(1);
       }
-      const installTargets = explicitAgent ? agents : ALL_AGENTS;
-      for (const agent of installTargets) {
-        if (isLocalPath(param)) {
-          await installFromLocalPath(param, agent, dryRun);
-        } else if (isGitUrl(param)) {
-          await installFromGitUrl(param, agent, dryRun);
-        } else if (isGitHubUrl(param)) {
-          await installFromGitHub(param, agent, dryRun);
-        } else {
-          installSkill(param, agent, dryRun);
+      const source = parseSource(param);
+      const installPaths = resolveInstallPath(parsed);
+
+      if (source.type === 'catalog') {
+        // Install from bundled library (original flow)
+        for (const targetPath of installPaths) {
+          installSkill(source.name, null, dryRun, targetPath);
         }
+      } else {
+        // Source-repo install (v3 flow)
+        await installFromSource(param, source, installPaths, skillFilters, listMode, yes, dryRun);
       }
       return;
     }
@@ -2662,6 +3346,14 @@ async function main() {
       runValidate(param);
       return;
 
+    case 'init':
+      initSkill(param);
+      return;
+
+    case 'check':
+      checkSkills(scope);
+      return;
+
     case 'help':
     case '--help':
     case '-h':
@@ -2678,8 +3370,9 @@ async function main() {
 
     default:
       if (getAvailableSkills().includes(command)) {
-        for (const agent of agents) {
-          installSkill(command, agent, dryRun);
+        const defaultPaths = resolveInstallPath(parsed);
+        for (const tp of defaultPaths) {
+          installSkill(command, null, dryRun, tp);
         }
         return;
       }

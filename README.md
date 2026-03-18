@@ -6,18 +6,19 @@
 
 <p align="center">
   <strong>There are a lot of agent skills now. These are the ones I keep around.</strong><br>
-  Some are mine. Some come from other great repos.
+  Some are mine. Some come from other great repos.<br>
+  <em>My curated agent skills library</em>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/skills-48-blue?style=flat-square" alt="Skills" />
-  <img src="https://img.shields.io/badge/agents-11+-green?style=flat-square" alt="Compatible Agents" />
   <img src="https://img.shields.io/npm/v/ai-agent-skills?style=flat-square&color=red" alt="npm" />
   <img src="https://img.shields.io/npm/dt/ai-agent-skills?style=flat-square&color=orange" alt="Downloads" />
 </p>
 
 <p align="center">
   <a href="#quick-start"><strong>Quick Start</strong></a> ·
+  <a href="#install-from-any-source"><strong>Install from Any Source</strong></a> ·
   <a href="#read-the-library"><strong>Read the Library</strong></a> ·
   <a href="#work-areas"><strong>Work Areas</strong></a> ·
   <a href="#cli-collections"><strong>CLI Collections</strong></a> ·
@@ -35,7 +36,7 @@ I launched this on December 17, 2025, the day after Agent Skills became an open 
 
 This repo is my library of agent skills: the ones I use, adapt, or recommend.
 
-I built it first as a universal installer. That still works, but the center now is curation: work-area organization, source lineage, trust metadata, and stable vendored installs.
+I built it first as a universal installer. That still works, but the center now is curation: work-area organization, source lineage, trust metadata, and stable vendored installs. v3 simplifies the install model to two scopes: global (`~/.claude/skills/`) for your personal library, and project (`.agents/skills/`) for skills committed with your repo.
 
 If you only want the default universal installer flow, use `skills.sh`. If you want a curated library with explicit provenance, use this repo.
 
@@ -49,32 +50,53 @@ If you only want the default universal installer flow, use `skills.sh`. If you w
 ## Quick Start
 
 ```bash
+# Browse the library
+npx ai-agent-skills
 
-just start by browsing 
-
-npx ai-agent-skills 
-
-
-# Install one skill to all supported agents
+# Install a skill
 npx ai-agent-skills install frontend-design
 
-# Install to a specific agent only
-npx ai-agent-skills install frontend-design --agent cursor
+# Install from any GitHub repo
+npx ai-agent-skills install anthropics/skills
 
-# Browse curated collections
-npx ai-agent-skills collections
-
-# Browse by work area
-npx ai-agent-skills list --work-area frontend
-
-# Search the catalog
-npx ai-agent-skills search testing
-
-# Browse the library in the terminal
-npx ai-agent-skills browse
+# Install to your project (shared with team)
+npx ai-agent-skills install pdf -p
 ```
 
-By default, `install` targets the major agents I already support: Claude Code, Cursor, Codex, Amp, VS Code, Copilot, Gemini CLI, Goose, Letta, Kilo Code, and OpenCode.
+Skills install to `~/.claude/skills/` by default.
+Use `-p` for project-scoped installs to `.agents/skills/`, where most major agents can read them.
+
+## How the Catalog Works
+
+Every skill in this library carries metadata beyond a name and description. Here is what a real entry looks like:
+
+```json
+{
+  "name": "ask-questions-if-underspecified",
+  "author": "thsottiaux",
+  "origin": "adapted",
+  "trust": "verified",
+  "syncMode": "adapted",
+  "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/...",
+  "whyHere": "Kept because this requirement-clarification pattern is one of the cleanest ways to stop agents from running ahead on underspecified work.",
+  "lastVerified": "2026-03-13"
+}
+```
+
+`trust` tells you how much review a skill has received: verified, reviewed, or listed. `syncMode` tells you whether the skill tracks upstream changes or is pinned as a stable snapshot. `whyHere` is a written rationale for why this specific skill belongs in the library. You can see this for any skill by running `npx ai-agent-skills info <name>`.
+
+## Install from Any Source
+
+Point the CLI at any GitHub repo that follows the SKILL.md standard:
+
+```bash
+npx ai-agent-skills install anthropics/skills
+npx ai-agent-skills install anthropics/skills@frontend-design
+npx ai-agent-skills install anthropics/skills --list
+npx ai-agent-skills install ./local-skills
+```
+
+Use `--skill` to pick specific skills. Use `--list` to see what's available before installing.
 
 ## Read the Library
 
@@ -100,25 +122,6 @@ This repo reads best in four ways:
 
 The folder layout stays flat under `skills/<name>/` because installs stay simpler that way. The catalog handles the grouping.
 The full repo map lives in [WORK_AREAS.md](./WORK_AREAS.md).
-
-## How the Catalog Works
-
-Every skill in this library carries metadata beyond a name and description. Here is what a real entry looks like:
-
-```json
-{
-  "name": "ask-questions-if-underspecified",
-  "author": "thsottiaux",
-  "origin": "adapted",
-  "trust": "verified",
-  "syncMode": "adapted",
-  "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/...",
-  "whyHere": "Kept because this requirement-clarification pattern is one of the cleanest ways to stop agents from running ahead on underspecified work.",
-  "lastVerified": "2026-03-13"
-}
-```
-
-`trust` tells you how much review a skill has received: verified, reviewed, or listed. `syncMode` tells you whether the skill tracks upstream changes or is pinned as a stable snapshot. `whyHere` is a written rationale for why this specific skill belongs in the library. You can see this for any skill by running `npx ai-agent-skills info <name>`.
 
 ## Work Areas
 
@@ -172,7 +175,44 @@ Some skills track clean upstream mirrors. Others are stable snapshots I keep ven
 | [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) | Broad practical coverage for workflow, files, research, and creative tasks. | 15 skills |
 | [MoizIbnYousaf/Ai-Agent-Skills](https://github.com/MoizIbnYousaf/Ai-Agent-Skills) | The skills I write and maintain directly. | 5 skills |
 
-## Supported Agents
+## Commands
+
+```bash
+# Discovery
+npx ai-agent-skills browse
+npx ai-agent-skills collections
+npx ai-agent-skills list
+npx ai-agent-skills list --work-area frontend
+npx ai-agent-skills list --collection my-picks
+npx ai-agent-skills search testing
+npx ai-agent-skills info frontend-design
+
+# Installation
+npx ai-agent-skills install <name>
+npx ai-agent-skills install <name> -p
+npx ai-agent-skills install <owner/repo>
+npx ai-agent-skills install <owner/repo>@<skill>
+npx ai-agent-skills install <owner/repo> --list
+npx ai-agent-skills install <owner/repo> --skill <name>
+npx ai-agent-skills install ./path
+npx ai-agent-skills install <name> --dry-run
+
+# Management
+npx ai-agent-skills uninstall <name>
+npx ai-agent-skills update [name]
+npx ai-agent-skills check
+
+# Authoring
+npx ai-agent-skills init [name]
+
+# Configuration
+npx ai-agent-skills config
+```
+
+<details>
+<summary>Legacy agent support</summary>
+
+These agents are still supported via `--agent <name>`:
 
 | Agent | Flag | Install Location |
 |-------|------|------------------|
@@ -188,35 +228,20 @@ Some skills track clean upstream mirrors. Others are stable snapshots I keep ven
 | Kilo Code | `--agent kilocode` | `~/.kilocode/skills/` |
 | Portable | `--agent project` | `.skills/` |
 
-## Commands
+</details>
 
-```bash
-# Discovery
-npx ai-agent-skills browse
-npx ai-agent-skills collections
-npx ai-agent-skills list
-npx ai-agent-skills list --work-area frontend
-npx ai-agent-skills list --category development
-npx ai-agent-skills list --collection my-picks
-npx ai-agent-skills search testing
-npx ai-agent-skills info frontend-design
+## What Are Agent Skills?
 
-# Installation
-npx ai-agent-skills install <name>
-npx ai-agent-skills install <name> --agent cursor
-npx ai-agent-skills install <owner/repo>
-npx ai-agent-skills install <git-url>
-npx ai-agent-skills install ./path
-npx ai-agent-skills install <name> --dry-run
+Agent skills follow the open format documented at [agentskills.io](https://agentskills.io). A skill is just a folder:
 
-# Management
-npx ai-agent-skills uninstall <name>
-npx ai-agent-skills update <name>
-npx ai-agent-skills update --all
-
-# Configuration
-npx ai-agent-skills config --default-agent cursor
+```text
+my-skill/
+├── SKILL.md
+├── scripts/
+└── references/
 ```
+
+All major coding agents support some variation of this pattern.
 
 ## Manual Install
 
@@ -237,19 +262,6 @@ Before opening a PR:
 3. Add or update the `skills.json` entry.
 4. Put the skill on a top-level shelf only if it clearly belongs there.
 5. Explain why it belongs here.
-
-## What Are Agent Skills?
-
-Agent skills follow the open format documented at [agentskills.io](https://agentskills.io). A skill is just a folder:
-
-```text
-my-skill/
-├── SKILL.md
-├── scripts/
-└── references/
-```
-
-All major coding agents support some variation of this pattern.
 
 ## Links
 
