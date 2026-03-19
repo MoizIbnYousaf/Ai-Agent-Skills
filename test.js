@@ -821,6 +821,466 @@ test('skill names with shell metacharacters are rejected', () => {
   }
 });
 
+// ============ V3.1 METADATA INTEGRITY TESTS ============
+
+test('skills.json version matches package.json version', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+  assertEqual(data.version, pkg.version, `skills.json version "${data.version}" != package.json "${pkg.version}"`);
+});
+
+test('skills.json total matches actual skill count', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  assertEqual(data.total, data.skills.length, `total field is ${data.total} but found ${data.skills.length} skills`);
+});
+
+test('skills.json updated field is valid ISO date', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  assert(data.updated, 'updated field is missing');
+  assert(!isNaN(Date.parse(data.updated)), `updated field "${data.updated}" is not a valid date`);
+});
+
+test('every skill folder has exactly one SKILL.md (no orphan folders)', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const catalogNames = new Set(data.skills.map(s => s.name));
+  const folders = fs.readdirSync(path.join(__dirname, 'skills')).filter(f =>
+    fs.statSync(path.join(__dirname, 'skills', f)).isDirectory()
+  );
+  folders.forEach(folder => {
+    assert(catalogNames.has(folder), `Folder "skills/${folder}" exists but not in skills.json`);
+  });
+  catalogNames.forEach(name => {
+    assert(folders.includes(name), `skills.json has "${name}" but no folder exists`);
+  });
+});
+
+test('batch-fill template whyHere count is tracked (15 remaining, fix in v3.1)', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const templatePattern = /without diluting the library's focus/;
+  const templateSkills = data.skills.filter(s => templatePattern.test(s.whyHere));
+  // 15 Composio skills have batch-fill templates. This number should go to 0 in v3.1.
+  assert(
+    templateSkills.length <= 15,
+    `Expected at most 15 batch-fill whyHere entries, found ${templateSkills.length}`
+  );
+});
+
+// ============ VALIDATE SCRIPT TESTS ============
+
+test('validate script catches version mismatch', () => {
+  // Create a temporary skills.json with wrong version
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-ver-'));
+  const tmpCatalog = path.join(tmpDir, 'skills.json');
+  const tmpPkg = path.join(tmpDir, 'package.json');
+  const tmpScripts = path.join(tmpDir, 'scripts');
+  const tmpSkills = path.join(tmpDir, 'skills');
+
+  try {
+    // Copy validate script
+    fs.mkdirSync(tmpScripts, { recursive: true });
+    fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
+
+    // Create minimal skills dir with one skill
+    const skillDir = path.join(tmpSkills, 'test-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: test-skill\ndescription: Test\n---\n# Test');
+
+    // Write mismatched version
+    fs.writeFileSync(tmpCatalog, JSON.stringify({
+      version: '0.0.0',
+      updated: '2026-01-01T00:00:00Z',
+      total: 1,
+      workAreas: [{ id: 'test', title: 'Test', description: 'Test area' }],
+      collections: [],
+      skills: [{
+        name: 'test-skill', description: 'Use when testing', category: 'development',
+        workArea: 'test', branch: 'Test', author: 'test', license: 'MIT',
+        source: 'test/test', sourceUrl: 'https://github.com/test/test',
+        origin: 'authored', trust: 'verified', syncMode: 'authored',
+        whyHere: 'This is a real whyHere with enough length to pass validation.'
+      }]
+    }));
+    fs.writeFileSync(tmpPkg, JSON.stringify({ version: '9.9.9' }));
+
+    let output;
+    try {
+      output = execSync(`node scripts/validate.js`, { encoding: 'utf8', cwd: tmpDir, stdio: 'pipe' });
+    } catch (e) {
+      output = (e.stdout || '') + (e.stderr || '');
+    }
+    assertContains(output, 'does not match');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('validate script catches total mismatch', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-total-'));
+  const tmpScripts = path.join(tmpDir, 'scripts');
+  const tmpSkills = path.join(tmpDir, 'skills');
+
+  try {
+    fs.mkdirSync(tmpScripts, { recursive: true });
+    fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
+
+    const skillDir = path.join(tmpSkills, 'test-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: test-skill\ndescription: Test\n---\n# Test');
+
+    fs.writeFileSync(path.join(tmpDir, 'skills.json'), JSON.stringify({
+      version: '1.0.0',
+      updated: '2026-01-01T00:00:00Z',
+      total: 999,
+      workAreas: [{ id: 'test', title: 'Test', description: 'Test area' }],
+      collections: [],
+      skills: [{
+        name: 'test-skill', description: 'Use when testing', category: 'development',
+        workArea: 'test', branch: 'Test', author: 'test', license: 'MIT',
+        source: 'test/test', sourceUrl: 'https://github.com/test/test',
+        origin: 'authored', trust: 'verified', syncMode: 'authored',
+        whyHere: 'This is a real whyHere with enough length to pass validation.'
+      }]
+    }));
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ version: '1.0.0' }));
+
+    let output;
+    try {
+      output = execSync(`node scripts/validate.js`, { encoding: 'utf8', cwd: tmpDir, stdio: 'pipe' });
+    } catch (e) {
+      output = (e.stdout || '') + (e.stderr || '');
+    }
+    assertContains(output, 'total');
+    assertContains(output, '999');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('validate script passes on the real catalog', () => {
+  try {
+    const output = execSync('node scripts/validate.js', { encoding: 'utf8', cwd: __dirname, stdio: 'pipe' });
+    assertContains(output, 'Validation passed');
+  } catch (e) {
+    const output = (e.stdout || '') + (e.stderr || '');
+    assert(false, `Validate should pass on real catalog. Output: ${output.slice(0, 200)}`);
+  }
+});
+
+// ============ VENDOR SCRIPT TESTS ============
+
+test('vendor --list discovers skills from local repo with skills/ dir', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-list-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'test-alpha');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: test-alpha\ndescription: Alpha\n---\n# Alpha');
+
+    const skillDir2 = path.join(tmpDir, 'skills', 'test-beta');
+    fs.mkdirSync(skillDir2, { recursive: true });
+    fs.writeFileSync(path.join(skillDir2, 'SKILL.md'), '---\nname: test-beta\ndescription: Beta\n---\n# Beta');
+
+    const output = execSync(`node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --list`, { encoding: 'utf8' });
+    assertContains(output, 'test-alpha');
+    assertContains(output, 'test-beta');
+    assertContains(output, '2 found');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor --list discovers skills from top-level dirs', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-topdir-'));
+  try {
+    // Skill in a top-level dir (not under skills/)
+    const skillDir = path.join(tmpDir, 'my-cool-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: my-cool-skill\ndescription: Cool\n---\n# Cool');
+
+    const output = execSync(`node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --list`, { encoding: 'utf8' });
+    assertContains(output, 'my-cool-skill');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor --list discovers single root skill', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-root-'));
+  try {
+    fs.writeFileSync(path.join(tmpDir, 'SKILL.md'), '---\nname: root-skill\ndescription: Root\n---\n# Root');
+
+    const output = execSync(`node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --list`, { encoding: 'utf8' });
+    assertContains(output, 'root-skill');
+    assertContains(output, '1 found');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor --dry-run shows what would be done without writing', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-dry-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'dry-test-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: dry-test-skill\ndescription: Dry test\n---\n# Dry');
+
+    const output = execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill dry-test-skill --area frontend --branch Test --dry-run`,
+      { encoding: 'utf8' }
+    );
+    assertContains(output, 'Dry run');
+    assertContains(output, 'dry-test-skill');
+    assertContains(output, 'frontend');
+
+    // Verify nothing was actually written
+    assert(!fs.existsSync(path.join(__dirname, 'skills', 'dry-test-skill')), 'Dry run should not create folder');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor dry-run sets addedDate to today', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-date-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'date-test');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: date-test\ndescription: Date test\n---\n# Date');
+
+    const output = execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill date-test --dry-run`,
+      { encoding: 'utf8' }
+    );
+    const today = new Date().toISOString().split('T')[0];
+    assertContains(output, `"addedDate": "${today}"`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor dry-run defaults to trust: listed and origin: curated', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-trust-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'trust-test');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: trust-test\ndescription: Trust test\n---\n# Trust');
+
+    const output = execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill trust-test --dry-run`,
+      { encoding: 'utf8' }
+    );
+    assertContains(output, '"trust": "listed"');
+    assertContains(output, '"origin": "curated"');
+    assertContains(output, '"syncMode": "snapshot"');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor applies --area, --branch, --category, --tags flags', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-flags-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'flag-test');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: flag-test\ndescription: Flag test\n---\n# Flags');
+
+    const output = execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill flag-test --area mobile --branch Swift --category development --tags "swift,ios" --dry-run`,
+      { encoding: 'utf8' }
+    );
+    assertContains(output, '"workArea": "mobile"');
+    assertContains(output, '"branch": "Swift"');
+    assertContains(output, '"category": "development"');
+    assertContains(output, '"swift"');
+    assertContains(output, '"ios"');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor actually copies skill folder and updates skills.json', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-real-'));
+  const skillName = `vendor-test-${Date.now()}`;
+  const destFolder = path.join(__dirname, 'skills', skillName);
+
+  try {
+    // Create source skill
+    const skillDir = path.join(tmpDir, 'skills', skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: Vendor end-to-end test\n---\n# Test`);
+    fs.writeFileSync(path.join(skillDir, 'extra.txt'), 'reference content');
+
+    // Take a snapshot of current catalog
+    const beforeData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    const beforeCount = beforeData.skills.length;
+
+    // Run vendor
+    execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test`,
+      { encoding: 'utf8' }
+    );
+
+    // Verify folder was created
+    assert(fs.existsSync(destFolder), 'Skill folder should exist after vendor');
+    assert(fs.existsSync(path.join(destFolder, 'SKILL.md')), 'SKILL.md should be copied');
+    assert(fs.existsSync(path.join(destFolder, 'extra.txt')), 'Extra files should be copied');
+
+    // Verify skills.json was updated
+    const afterData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    assertEqual(afterData.skills.length, beforeCount + 1, 'Should have one more skill');
+    assertEqual(afterData.total, afterData.skills.length, 'total should match skill count');
+
+    const added = afterData.skills.find(s => s.name === skillName);
+    assert(added, 'New skill should be in skills.json');
+    assertEqual(added.workArea, 'frontend');
+    assertEqual(added.branch, 'Test');
+    assertEqual(added.trust, 'listed');
+    assertEqual(added.origin, 'curated');
+
+  } finally {
+    // Revert: remove the vendored skill from catalog and disk
+    if (fs.existsSync(destFolder)) {
+      fs.rmSync(destFolder, { recursive: true, force: true });
+    }
+    const revertData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    revertData.skills = revertData.skills.filter(s => s.name !== skillName);
+    revertData.total = revertData.skills.length;
+    fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(revertData, null, 2) + '\n');
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor rejects skill that already exists in catalog', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-dup-'));
+  try {
+    // Use a skill name that already exists: frontend-design
+    const skillDir = path.join(tmpDir, 'skills', 'frontend-design');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: frontend-design\ndescription: Dupe\n---\n# Dupe');
+
+    let output;
+    try {
+      output = execSync(
+        `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill frontend-design`,
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+    } catch (e) {
+      output = (e.stdout || '') + (e.stderr || '');
+    }
+    assertContains(output, 'already exists');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor rejects nonexistent skill name', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-noexist-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'real-one');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: real-one\ndescription: Real\n---\n# Real');
+
+    let output;
+    try {
+      output = execSync(
+        `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ghost-skill`,
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+    } catch (e) {
+      output = (e.stdout || '') + (e.stderr || '');
+    }
+    assertContains(output, 'not found');
+    assertContains(output, 'real-one');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor exits with error when no source given', () => {
+  let output;
+  try {
+    output = execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')}`,
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+  } catch (e) {
+    output = (e.stdout || '') + (e.stderr || '');
+  }
+  assertContains(output, 'Usage');
+});
+
+test('vendor exits with error when no --skill and no --list', () => {
+  let output;
+  try {
+    output = execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} /tmp`,
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+  } catch (e) {
+    output = (e.stdout || '') + (e.stderr || '');
+  }
+  assertContains(output, '--skill');
+});
+
+test('vendor does not copy .git directory', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-nogit-'));
+  const skillName = `nogit-test-${Date.now()}`;
+  const destFolder = path.join(__dirname, 'skills', skillName);
+
+  try {
+    const skillDir = path.join(tmpDir, 'skills', skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: Git test\n---\n# Test`);
+    // Simulate a .git dir inside the skill
+    fs.mkdirSync(path.join(skillDir, '.git'));
+    fs.writeFileSync(path.join(skillDir, '.git', 'HEAD'), 'ref: refs/heads/main');
+
+    execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test`,
+      { encoding: 'utf8' }
+    );
+
+    assert(fs.existsSync(destFolder), 'Skill folder should exist');
+    assert(!fs.existsSync(path.join(destFolder, '.git')), '.git should NOT be copied');
+  } finally {
+    if (fs.existsSync(destFolder)) fs.rmSync(destFolder, { recursive: true, force: true });
+    const revertData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    revertData.skills = revertData.skills.filter(s => s.name !== skillName);
+    revertData.total = revertData.skills.length;
+    fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(revertData, null, 2) + '\n');
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor copies nested reference files', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-nested-'));
+  const skillName = `nested-test-${Date.now()}`;
+  const destFolder = path.join(__dirname, 'skills', skillName);
+
+  try {
+    const skillDir = path.join(tmpDir, 'skills', skillName);
+    const refsDir = path.join(skillDir, 'references');
+    fs.mkdirSync(refsDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: Nested test\n---\n# Test`);
+    fs.writeFileSync(path.join(refsDir, 'api-guide.md'), '# API Guide');
+    fs.writeFileSync(path.join(refsDir, 'patterns.md'), '# Patterns');
+
+    execSync(
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test`,
+      { encoding: 'utf8' }
+    );
+
+    assert(fs.existsSync(path.join(destFolder, 'references', 'api-guide.md')), 'Nested reference files should be copied');
+    assert(fs.existsSync(path.join(destFolder, 'references', 'patterns.md')), 'All nested files should be copied');
+  } finally {
+    if (fs.existsSync(destFolder)) fs.rmSync(destFolder, { recursive: true, force: true });
+    const revertData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    revertData.skills = revertData.skills.filter(s => s.name !== skillName);
+    revertData.total = revertData.skills.length;
+    fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(revertData, null, 2) + '\n');
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 // ============ SUMMARY ============
 
 console.log('\n' + '─'.repeat(40));

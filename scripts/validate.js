@@ -106,6 +106,17 @@ data.skills.forEach(skill => {
 
 pass(`${data.skills.length} skills, all required fields present`);
 
+// ── Metadata checks ──
+
+if (data.total !== data.skills.length) {
+  error(`skills.json "total" is ${data.total} but actual count is ${data.skills.length}`);
+}
+
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+if (data.version !== pkg.version) {
+  error(`skills.json version "${data.version}" does not match package.json version "${pkg.version}"`);
+}
+
 // ── Folder checks ──
 
 console.log('\nValidating skill folders\n');
