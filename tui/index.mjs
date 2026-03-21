@@ -7,8 +7,12 @@ import htm from 'htm';
 
 const require = createRequire(import.meta.url);
 const {buildCatalog, getInstallCommand, getInstallCommandForAgent, getSiblingRecommendations, getSkillsInstallSpec} = require('./catalog.cjs');
+const {buildReviewQueue} = require('../lib/catalog-mutations.cjs');
+const {loadCatalogData} = require('../lib/catalog-data.cjs');
+const {discoverSkills, getRepoNameFromUrl, parseSource, prepareSource} = require('../lib/source.cjs');
 
 const html = htm.bind(React.createElement);
+const CLI_PATH = require.resolve('../cli.js');
 
 const THEMES = [
   {
@@ -813,7 +817,13 @@ function formatPreviewLines(markdown, maxLines = 12) {
 
 function SearchOverlay({query, setQuery, results, selectedIndex, columns, viewport = null}) {
   const width = clamp(columns - 6, 56, 110);
-  const visibleResults = results.slice(0, viewport?.micro ? 4 : 8);
+  const visibleCount = viewport?.micro ? 4 : 8;
+  const startIndex = clamp(
+    selectedIndex - Math.floor(visibleCount / 2),
+    0,
+    Math.max(0, results.length - visibleCount)
+  );
+  const visibleResults = results.slice(startIndex, startIndex + visibleCount);
   return html`
     <${ModalShell}
       width=${width}
@@ -831,7 +841,7 @@ function SearchOverlay({query, setQuery, results, selectedIndex, columns, viewpo
           : visibleResults.map((result, index) => html`
               <${ModalOption}
                 key=${result.name}
-                selected=${index === selectedIndex}
+                selected=${startIndex + index === selectedIndex}
                 label=${result.title}
                 meta=${compactText(`${result.workAreaTitle} shelf · ${result.branchTitle} · ${result.sourceTitle} · ${getTierLabel(result)} / ${getDistributionLabel(result)}`, viewport?.micro ? 72 : 94)}
                 description=${compactText(result.whyHere || result.description, viewport?.micro ? 72 : 94)}
@@ -853,7 +863,7 @@ function HelpOverlay({viewport = null}) {
       <${Text} color=${COLORS.text}>Arrow keys move between shelves, picks, and source rails.<//>
       <${Text} color=${COLORS.text}>Enter opens the focused shelf or the focused pick.<//>
       <${Text} color=${COLORS.text}>/ opens library search, : opens the command palette, ? closes this help.<//>
-      <${Text} color=${COLORS.text}>b or Esc goes back, i opens install choices, o opens upstream, q quits.<//>
+      <${Text} color=${COLORS.text}>b or Esc goes back, c opens curator actions, i opens install choices, o opens upstream, q quits.<//>
       <${Text} color=${COLORS.text}>t cycles the house themes.<//>
       <${Text} color=${COLORS.muted}>Home is the curator-first shelf poster. Shelves and Sources stay available when you want the taxonomy underneath.<//>
     <//>
@@ -861,7 +871,11 @@ function HelpOverlay({viewport = null}) {
 }
 
 function PaletteOverlay({query, setQuery, items, selectedIndex, viewport = null}) {
-  const visibleItems = viewport?.micro ? items.slice(0, 6) : items;
+  const visibleCount = viewport?.micro ? 6 : items.length;
+  const startIndex = viewport?.micro
+    ? clamp(selectedIndex - Math.floor(visibleCount / 2), 0, Math.max(0, items.length - visibleCount))
+    : 0;
+  const visibleItems = viewport?.micro ? items.slice(startIndex, startIndex + visibleCount) : items;
   return html`
     <${ModalShell}
       width=${viewport?.micro ? 66 : 86}
@@ -879,9 +893,80 @@ function PaletteOverlay({query, setQuery, items, selectedIndex, viewport = null}
           : visibleItems.map((item, index) => html`
               <${ModalOption}
                 key=${item.id}
-                selected=${index === selectedIndex}
+                selected=${startIndex + index === selectedIndex}
                 label=${item.label}
                 description=${item.detail}
+              />
+            `)}
+      <//>
+    <//>
+  `;
+}
+
+function TextEntryOverlay({title, subtitle, value, setValue, viewport = null, footerLines = []}) {
+  return html`
+    <${ModalShell}
+      width=${viewport?.micro ? 64 : 86}
+      title=${title}
+      subtitle=${subtitle}
+      footerLines=${footerLines}
+    >
+      <${Box} marginTop=${1}>
+        <${Text} color=${COLORS.muted}>› <//>
+        <${TextInput} value=${value} onChange=${setValue} />
+      <//>
+    <//>
+  `;
+}
+
+function MenuOverlay({title, subtitle, items, selectedIndex, viewport = null, footerLines = []}) {
+  return html`
+    <${ModalShell}
+      width=${viewport?.micro ? 66 : 88}
+      title=${title}
+      subtitle=${subtitle}
+      footerLines=${footerLines}
+    >
+      <${Box} marginTop=${1} flexDirection="column">
+        ${items.map((item, index) => html`
+          <${ModalOption}
+            key=${item.id}
+            selected=${index === selectedIndex}
+            label=${item.label}
+            meta=${item.meta || ''}
+            description=${item.description || ''}
+          />
+        `)}
+      <//>
+    <//>
+  `;
+}
+
+function ReviewOverlay({entries, selectedIndex, viewport = null}) {
+  const visibleCount = viewport?.micro ? 5 : 9;
+  const startIndex = clamp(
+    selectedIndex - Math.floor(visibleCount / 2),
+    0,
+    Math.max(0, entries.length - visibleCount)
+  );
+  const visibleEntries = entries.slice(startIndex, startIndex + visibleCount);
+  return html`
+    <${ModalShell}
+      width=${viewport?.micro ? 68 : 92}
+      title="Needs Review"
+      subtitle="A derived queue of picks that likely need curator attention."
+      footerLines=${['Enter opens the skill · Esc closes review']}
+    >
+      <${Box} marginTop=${1} flexDirection="column">
+        ${visibleEntries.length === 0
+          ? html`<${Text} color=${COLORS.muted}>Everything looks recently curated.<//>`
+          : visibleEntries.map((entry, index) => html`
+              <${ModalOption}
+                key=${entry.skill.name}
+                selected=${startIndex + index === selectedIndex}
+                label=${entry.skill.title}
+                meta=${`${entry.skill.workAreaTitle} / ${entry.skill.branchTitle}`}
+                description=${entry.reasons.join(' · ')}
               />
             `)}
       <//>
@@ -1513,12 +1598,73 @@ function filterPaletteItems(items, query) {
   return items.filter((item) => `${item.label} ${item.detail}`.toLowerCase().includes(needle));
 }
 
-function App({catalog, scope, agent, onExit}) {
+function runCliMutation(args) {
+  return spawnSync(process.execPath, [CLI_PATH, ...args], {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+}
+
+function maybeRenameRootSkillForRepo(discovered, parsed, rootDir, repoRoot) {
+  if (!Array.isArray(discovered) || discovered.length !== 1) return discovered;
+  if (!discovered[0]?.isRoot) return discovered;
+  if (parsed.type === 'local') return discovered;
+  if (parsed.subpath) return discovered;
+  if (String(rootDir) !== String(repoRoot)) return discovered;
+
+  const repoName = parsed.repo || getRepoNameFromUrl(parsed.url);
+  if (!repoName) return discovered;
+
+  const cleanName = repoName
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  if (cleanName) {
+    discovered[0].name = cleanName;
+  }
+
+  return discovered;
+}
+
+function discoverSourceSkillsForCatalog(source) {
+  const parsed = parseSource(String(source || '').trim());
+  if (!parsed || parsed.type !== 'github') {
+    throw new Error('Add From Repo only accepts GitHub repos like owner/repo.');
+  }
+
+  const prepared = prepareSource(source, {
+    parsed,
+    sparseSubpath: parsed.subpath || null,
+  });
+
+  try {
+    const discovered = maybeRenameRootSkillForRepo(
+      discoverSkills(prepared.rootDir, {repoRoot: prepared.repoRoot}),
+      parsed,
+      prepared.rootDir,
+      prepared.repoRoot
+    );
+    if (discovered.length === 0) {
+      throw new Error('No skills found in that repo.');
+    }
+    return {
+      parsed,
+      discovered,
+    };
+  } finally {
+    prepared.cleanup();
+  }
+}
+
+function App({catalog: initialCatalog, scope, agent, onExit}) {
   const {exit} = useApp();
   const {stdout} = useStdout();
   const {columns, rows} = resolveTerminalSize(stdout);
   const viewport = useMemo(() => getViewportProfile({columns, rows}), [columns, rows]);
   const [bootReady, setBootReady] = useState(false);
+  const [catalog, setCatalog] = useState(initialCatalog);
 
   const [rootMode, setRootMode] = useState('collections');
   const [stack, setStack] = useState([{type: 'home'}]);
@@ -1535,10 +1681,18 @@ function App({catalog, scope, agent, onExit}) {
   const [chooserOpen, setChooserOpen] = useState(false);
   const [chooserIndex, setChooserIndex] = useState(0);
   const [themeIndex, setThemeIndex] = useState(0);
+  const [overlay, setOverlay] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
 
   useEffect(() => {
     applyTheme(themeIndex);
   }, [themeIndex]);
+
+  useEffect(() => {
+    if (!statusMessage) return undefined;
+    const timer = setTimeout(() => setStatusMessage(null), 2600);
+    return () => clearTimeout(timer);
+  }, [statusMessage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1559,6 +1713,22 @@ function App({catalog, scope, agent, onExit}) {
 
   const current = stack[stack.length - 1];
   const activeTheme = THEMES[themeIndex] || THEMES[0];
+  const refreshCatalog = () => setCatalog(buildCatalog());
+  const showStatus = (tone, text) => setStatusMessage({tone, text});
+
+  const runMutation = (args, options = {}) => {
+    const result = runCliMutation(args);
+    if (result.status !== 0) {
+      showStatus('error', (result.stderr || result.stdout || 'Mutation failed.').trim());
+      return false;
+    }
+    refreshCatalog();
+    if (typeof options.afterSuccess === 'function') {
+      options.afterSuccess();
+    }
+    showStatus('success', options.successText || 'Saved.');
+    return true;
+  };
 
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1602,6 +1772,99 @@ function App({catalog, scope, agent, onExit}) {
   const currentSkill = current.type === 'skill'
     ? catalog.skills.find((skill) => skill.name === current.skillName)
     : null;
+  const reviewQueue = useMemo(() => buildReviewQueue(loadCatalogData()), [catalog]);
+
+  const openFieldEditor = (field, title, initialValue = '', subtitle = '') => {
+    setOverlay({
+      type: 'input',
+      field,
+      title,
+      subtitle,
+      value: String(initialValue || ''),
+    });
+  };
+
+  const openCurateMenu = () => {
+    if (!currentSkill) return;
+    setOverlay({type: 'curate-menu', selectedIndex: 0});
+  };
+
+  const curateMenuItems = currentSkill ? [
+    {id: 'move', label: 'Move shelf / branch', description: 'Re-shelve this pick inside the library.'},
+    {id: 'description', label: 'Edit description', description: 'Adjust the short trigger description.'},
+    {id: 'why', label: 'Edit why it belongs', description: 'Rewrite the editorial note.'},
+    {id: 'notes', label: 'Edit notes', description: 'Add curator-only notes.'},
+    {id: 'tags', label: 'Edit tags', description: 'Comma-separated topical search tags.'},
+    {id: 'labels', label: 'Edit labels', description: 'Private curator labels.'},
+    {id: 'trust', label: 'Set trust', description: `Current: ${currentSkill.trust}`},
+    {id: 'featured', label: currentSkill.featured ? 'Unfeature pick' : 'Feature pick', description: 'Toggle whether this pick is featured.'},
+    {id: 'verify', label: currentSkill.lastVerified ? 'Clear verified' : 'Set verified', description: currentSkill.lastVerified ? `Currently ${currentSkill.lastVerified}` : 'Mark this pick as verified today.'},
+    {id: 'remove', label: 'Remove from library', description: 'Delete this pick from shelves and collections.'},
+  ] : [];
+
+  const runCurateAction = (actionId) => {
+    if (!currentSkill) return;
+
+    if (actionId === 'move') {
+      setOverlay({
+        type: 'move-area',
+        value: currentSkill.workArea || '',
+      });
+      return;
+    }
+
+    if (actionId === 'description') {
+      openFieldEditor('description', 'Edit description', currentSkill.description, 'Short trigger text for the skill.');
+      return;
+    }
+
+    if (actionId === 'why') {
+      openFieldEditor('why', 'Edit why it belongs', currentSkill.whyHere || '', 'The curator note comes first on the skill page.');
+      return;
+    }
+
+    if (actionId === 'notes') {
+      openFieldEditor('notes', 'Edit notes', currentSkill.notes || '', 'Private curator notes.');
+      return;
+    }
+
+    if (actionId === 'tags') {
+      openFieldEditor('tags', 'Edit tags', (currentSkill.tags || []).join(', '), 'Comma-separated search tags.');
+      return;
+    }
+
+    if (actionId === 'labels') {
+      openFieldEditor('labels', 'Edit labels', (currentSkill.labels || []).join(', '), 'Private curator labels.');
+      return;
+    }
+
+    if (actionId === 'trust') {
+      setOverlay({type: 'trust-menu', selectedIndex: 0});
+      return;
+    }
+
+    if (actionId === 'featured') {
+      const success = runMutation(
+        ['curate', currentSkill.name, currentSkill.featured ? '--unfeature' : '--feature'],
+        {successText: currentSkill.featured ? 'Removed from featured picks.' : 'Marked as featured.'}
+      );
+      if (success) setOverlay(null);
+      return;
+    }
+
+    if (actionId === 'verify') {
+      const success = runMutation(
+        ['curate', currentSkill.name, currentSkill.lastVerified ? '--clear-verified' : '--verify'],
+        {successText: currentSkill.lastVerified ? 'Cleared verified state.' : 'Marked as verified.'}
+      );
+      if (success) setOverlay(null);
+      return;
+    }
+
+    if (actionId === 'remove') {
+      setOverlay({type: 'confirm-remove', selectedIndex: 0});
+    }
+  };
 
   const breadcrumbs = buildBreadcrumbs(rootMode, stack, catalog);
   const currentSkillsSpec = currentSkill && agent ? getSkillsInstallSpec(currentSkill, agent) : null;
@@ -1726,6 +1989,12 @@ function App({catalog, scope, agent, onExit}) {
       setQuery('');
       setSelectedIndex(0);
     }});
+    items.push({id: 'review-library', label: 'Review Library', detail: 'Open the derived curator review queue', run: () => {
+      setOverlay({type: 'review', selectedIndex: 0});
+    }});
+    items.push({id: 'add-from-repo', label: 'Add From Repo', detail: 'Catalog a new upstream skill from a GitHub repo', run: () => {
+      setOverlay({type: 'repo-input', value: ''});
+    }});
     items.push({id: 'theme-cycle', label: 'Cycle house theme', detail: `Current theme: ${activeTheme.label}`, run: () => {
       setThemeIndex((value) => (value + 1) % THEMES.length);
     }});
@@ -1748,6 +2017,9 @@ function App({catalog, scope, agent, onExit}) {
     }
 
     if (currentSkill) {
+      items.push({id: 'curate', label: 'Curate Skill', detail: 'Edit placement, notes, trust, and labels for the focused pick', run: () => {
+        openCurateMenu();
+      }});
       items.push({id: 'install', label: 'Install Skill', detail: 'Open install choices for the focused skill', run: () => {
         setChooserOpen(true);
         setChooserIndex(0);
@@ -1847,6 +2119,246 @@ function App({catalog, scope, agent, onExit}) {
         item.run();
       }
       return;
+    }
+
+    if (overlay) {
+      if (overlay.type === 'curate-menu') {
+        if (key.escape || input === 'b') {
+          setOverlay(null);
+          return;
+        }
+        if (key.upArrow || input === 'k') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) - 1, 0, Math.max(0, curateMenuItems.length - 1)),
+          }));
+          return;
+        }
+        if (key.downArrow || input === 'j') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) + 1, 0, Math.max(0, curateMenuItems.length - 1)),
+          }));
+          return;
+        }
+        if (key.return) {
+          const item = curateMenuItems[overlay.selectedIndex] || curateMenuItems[0];
+          if (item) runCurateAction(item.id);
+        }
+        return;
+      }
+
+      if (overlay.type === 'trust-menu') {
+        const trustOptions = ['listed', 'reviewed', 'verified'];
+        if (key.escape || input === 'b') {
+          setOverlay(null);
+          return;
+        }
+        if (key.upArrow || input === 'k') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) - 1, 0, trustOptions.length - 1),
+          }));
+          return;
+        }
+        if (key.downArrow || input === 'j') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) + 1, 0, trustOptions.length - 1),
+          }));
+          return;
+        }
+        if (key.return && currentSkill) {
+          const trust = trustOptions[overlay.selectedIndex] || trustOptions[0];
+          const success = runMutation(['curate', currentSkill.name, '--trust', trust], {
+            successText: `Trust set to ${trust}.`,
+            afterSuccess: () => setOverlay(null),
+          });
+          if (success) setOverlay(null);
+        }
+        return;
+      }
+
+      if (overlay.type === 'confirm-remove') {
+        if (key.escape || input === 'b') {
+          setOverlay(null);
+          return;
+        }
+        if (key.upArrow || key.downArrow || input === 'j' || input === 'k') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: currentOverlay?.selectedIndex === 1 ? 0 : 1,
+          }));
+          return;
+        }
+        if (key.return && currentSkill) {
+          if ((overlay.selectedIndex || 0) === 1) {
+            const success = runMutation(['curate', currentSkill.name, '--remove', '--yes'], {
+              successText: 'Removed from the library.',
+              afterSuccess: () => {
+                setOverlay(null);
+                setStack((currentStack) => currentStack.slice(0, -1));
+                setSelectedIndex(0);
+                setPreviewMode(false);
+              },
+            });
+            if (!success) return;
+          } else {
+            setOverlay(null);
+          }
+        }
+        return;
+      }
+
+      if (overlay.type === 'review') {
+        if (key.escape || input === 'b') {
+          setOverlay(null);
+          return;
+        }
+        if (key.upArrow || input === 'k') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) - 1, 0, Math.max(0, reviewQueue.length - 1)),
+          }));
+          return;
+        }
+        if (key.downArrow || input === 'j') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) + 1, 0, Math.max(0, reviewQueue.length - 1)),
+          }));
+          return;
+        }
+        if (key.return && reviewQueue[overlay.selectedIndex]) {
+          setStack((currentStack) => [...currentStack, {type: 'skill', skillName: reviewQueue[overlay.selectedIndex].skill.name}]);
+          setOverlay(null);
+          setPreviewMode(false);
+        }
+        return;
+      }
+
+      if (overlay.type === 'repo-select') {
+        if (key.escape || input === 'b') {
+          setOverlay(null);
+          return;
+        }
+        if (key.upArrow || input === 'k') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) - 1, 0, Math.max(0, (currentOverlay?.skills || []).length - 1)),
+          }));
+          return;
+        }
+        if (key.downArrow || input === 'j') {
+          setOverlay((currentOverlay) => ({
+            ...currentOverlay,
+            selectedIndex: clamp((currentOverlay?.selectedIndex || 0) + 1, 0, Math.max(0, (currentOverlay?.skills || []).length - 1)),
+          }));
+          return;
+        }
+        if (key.return) {
+          const selectedSkill = overlay.skills?.[overlay.selectedIndex] || overlay.skills?.[0];
+          if (!selectedSkill) return;
+          setOverlay({
+            type: 'repo-area',
+            source: overlay.source,
+            skill: selectedSkill,
+            value: '',
+          });
+        }
+        return;
+      }
+
+      if (overlay.type === 'input' || overlay.type === 'move-area' || overlay.type === 'move-branch' || overlay.type === 'repo-input' || overlay.type === 'repo-area' || overlay.type === 'repo-branch' || overlay.type === 'repo-why') {
+        if (key.escape || input === 'b') {
+          setOverlay(null);
+          return;
+        }
+
+        if (key.return) {
+          const rawValue = String(overlay.value || '');
+          const value = rawValue.trim();
+          const allowBlank = overlay.type === 'input' && ['notes', 'tags', 'labels'].includes(overlay.field);
+          if (!value && !allowBlank) return;
+
+          if (overlay.type === 'input' && currentSkill) {
+            const flagByField = {
+              description: '--description',
+              why: '--why',
+              notes: '--notes',
+              tags: '--tags',
+              labels: '--labels',
+            };
+            const flag = flagByField[overlay.field];
+            if (!flag) return;
+            const success = runMutation(['curate', currentSkill.name, flag, value], {
+              successText: 'Curator note saved.',
+              afterSuccess: () => setOverlay(null),
+            });
+            if (success) setOverlay(null);
+          } else if (overlay.type === 'move-area') {
+            setOverlay({
+              type: 'move-branch',
+              workArea: value,
+              value: currentSkill?.branch || '',
+            });
+          } else if (overlay.type === 'move-branch' && currentSkill) {
+            const success = runMutation(['curate', currentSkill.name, '--area', overlay.workArea, '--branch', value], {
+              successText: 'Shelf placement updated.',
+              afterSuccess: () => setOverlay(null),
+            });
+            if (success) setOverlay(null);
+          } else if (overlay.type === 'repo-input') {
+            try {
+              const result = discoverSourceSkillsForCatalog(value);
+              setOverlay({
+                type: 'repo-select',
+                source: value,
+                skills: result.discovered,
+                selectedIndex: 0,
+              });
+            } catch (error) {
+              showStatus('error', error.message);
+            }
+          } else if (overlay.type === 'repo-area') {
+            setOverlay({
+              type: 'repo-branch',
+              source: overlay.source,
+              skill: overlay.skill,
+              workArea: value,
+              value: '',
+            });
+          } else if (overlay.type === 'repo-branch') {
+            setOverlay({
+              type: 'repo-why',
+              source: overlay.source,
+              skill: overlay.skill,
+              workArea: overlay.workArea,
+              branch: value,
+              value: '',
+            });
+          } else if (overlay.type === 'repo-why') {
+            const success = runMutation([
+              'catalog',
+              overlay.source,
+              '--skill', overlay.skill.name,
+              '--area', overlay.workArea,
+              '--branch', overlay.branch,
+              '--why', value,
+            ], {
+              successText: `Added ${overlay.skill.name} from upstream.`,
+              afterSuccess: () => {
+                setOverlay(null);
+                setStack((currentStack) => [...currentStack, {type: 'skill', skillName: overlay.skill.name}]);
+                setSelectedIndex(0);
+                setPreviewMode(false);
+              },
+            });
+            if (success) setOverlay(null);
+          }
+        }
+        return;
+      }
     }
 
     if (chooserOpen && currentSkill) {
@@ -1957,6 +2469,10 @@ function App({catalog, scope, agent, onExit}) {
     }
 
     if (current.type === 'skill' && currentSkill) {
+      if (input === 'c') {
+        openCurateMenu();
+        return;
+      }
       if (input === 'p') {
         setPreviewMode((value) => !value);
         return;
@@ -2495,7 +3011,7 @@ function App({catalog, scope, agent, onExit}) {
             currentSkill.trust,
             activeTheme.label,
           ]}
-          hint="i opens install choices · p toggles preview · o opens upstream"
+          hint="c curates · i installs · p toggles preview · o opens upstream"
           viewport=${viewport}
         />
         <${SkillScreen} skill=${currentSkill} previewMode=${previewMode} scope=${scope} agent=${agent} columns=${columns} viewport=${viewport} relatedSkills=${relatedSkills} />
@@ -2508,10 +3024,10 @@ function App({catalog, scope, agent, onExit}) {
 
   const footerHint = viewport.micro
     ? current.type === 'skill'
-      ? 'i install · p preview · o upstream · b back · q quit'
+      ? 'c curate · i install · p preview · o upstream · b back · q quit'
       : 'Enter open · b back · : commands · q quit'
     : current.type === 'skill'
-      ? '/ search · : palette · b back · i install · p preview · o upstream · t theme · ? help · q quit'
+      ? '/ search · : palette · b back · c curate · i install · p preview · o upstream · t theme · ? help · q quit'
       : '/ search · : palette · Enter open · b back · h/w/r switch root views · t theme · ? help · q quit';
   const footerMode = current.type === 'skill'
     ? 'DETAIL'
@@ -2526,7 +3042,134 @@ function App({catalog, scope, agent, onExit}) {
     <${Box} flexDirection="column">
       ${helpOpen ? html`<${HelpOverlay} viewport=${viewport} />` : null}
       ${paletteOpen ? html`<${PaletteOverlay} query=${paletteQuery} setQuery=${setPaletteQuery} items=${filteredPaletteItems} selectedIndex=${paletteIndex} viewport=${viewport} />` : null}
+      ${overlay?.type === 'curate-menu'
+        ? html`<${MenuOverlay} title="Curate this pick" subtitle="Edit placement, notes, trust, and labels." items=${curateMenuItems} selectedIndex=${overlay.selectedIndex || 0} viewport=${viewport} footerLines=${['Enter chooses · Esc closes']} />`
+        : null}
+      ${overlay?.type === 'trust-menu'
+        ? html`<${MenuOverlay}
+            title="Set trust"
+            subtitle="Choose the curator confidence for this pick."
+            items=${[
+              {id: 'listed', label: 'listed', description: 'Included, but still needs more review.'},
+              {id: 'reviewed', label: 'reviewed', description: 'Curated and checked enough to recommend.'},
+              {id: 'verified', label: 'verified', description: 'Personally verified recently.'},
+            ]}
+            selectedIndex=${overlay.selectedIndex || 0}
+            viewport=${viewport}
+            footerLines=${['Enter chooses · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'confirm-remove'
+        ? html`<${MenuOverlay}
+            title="Remove from library"
+            subtitle="This deletes the pick from shelves and collections."
+            items=${[
+              {id: 'cancel', label: 'Keep it', description: 'Close without changing the library.'},
+              {id: 'remove', label: 'Remove it', description: 'Hard delete this pick from the catalog.'},
+            ]}
+            selectedIndex=${overlay.selectedIndex || 0}
+            viewport=${viewport}
+            footerLines=${['Enter chooses · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'review'
+        ? html`<${ReviewOverlay} entries=${reviewQueue} selectedIndex=${overlay.selectedIndex || 0} viewport=${viewport} />`
+        : null}
+      ${overlay?.type === 'input'
+        ? html`<${TextEntryOverlay}
+            title=${overlay.title}
+            subtitle=${overlay.subtitle}
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter saves · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'move-area'
+        ? html`<${TextEntryOverlay}
+            title="Move shelf"
+            subtitle="Enter the shelf id, like frontend, backend, docs, or workflow."
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter continues to branch · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'move-branch'
+        ? html`<${TextEntryOverlay}
+            title="Move branch"
+            subtitle=${`Shelf: ${overlay.workArea}`}
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter saves placement · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'repo-input'
+        ? html`<${TextEntryOverlay}
+            title="Add From Repo"
+            subtitle="Enter a GitHub repo like openai/skills or anthropics/skills."
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter discovers skills · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'repo-select'
+        ? html`<${MenuOverlay}
+            title="Choose upstream skill"
+            subtitle=${overlay.source}
+            items=${overlay.skills.map((skill) => ({
+              id: skill.name,
+              label: skill.name,
+              description: skill.description || 'No description',
+              meta: skill.relativeDir && skill.relativeDir !== '.' ? skill.relativeDir : 'repo root',
+            }))}
+            selectedIndex=${overlay.selectedIndex || 0}
+            viewport=${viewport}
+            footerLines=${['Enter continues to shelf placement · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'repo-area'
+        ? html`<${TextEntryOverlay}
+            title="Choose shelf"
+            subtitle=${`Upstream pick: ${overlay.skill.name}`}
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter continues · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'repo-branch'
+        ? html`<${TextEntryOverlay}
+            title="Choose branch"
+            subtitle=${`Shelf: ${overlay.workArea}`}
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter continues · Esc closes']}
+          />`
+        : null}
+      ${overlay?.type === 'repo-why'
+        ? html`<${TextEntryOverlay}
+            title="Why it belongs"
+            subtitle="The library only saves fully placed upstream picks."
+            value=${overlay.value}
+            setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
+            viewport=${viewport}
+            footerLines=${['Enter saves to the catalog · Esc closes']}
+          />`
+        : null}
       ${body}
+      ${statusMessage
+        ? html`
+            <${Box} marginTop=${1}>
+              <${Text} color=${statusMessage.tone === 'error' ? COLORS.warning : COLORS.success}>
+                ${statusMessage.text}
+              <//>
+            <//>
+          `
+        : null}
       <${FooterBar} hint=${footerHint} mode=${footerMode} detail=${footerDetail} columns=${columns} viewport=${viewport} />
     <//>
   `;

@@ -6,105 +6,104 @@ The repo folders stay flat under `skills/<name>/` for house copies. The catalog 
 
 ## Frontend
 
-5 skills. The shelf for interface systems, implementation quality, and web product execution.
+4 skills. Interface systems, web product craft, and frontend execution.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
-| React | `frontend-design` | Anthropic |
-| UI | `frontend-skill` | OpenAI |
 | Components | `shadcn` | shadcn-ui |
-| Design Engineering | `emil-design-eng` | Emil Kowalski |
-| Implementation | `figma-implement-design` | OpenAI |
-
-## AI
-
-6 skills. The shelf for MCP, LLM app work, prompting, and skill-building.
-
-| Branch | Skills | Source |
-| --- | --- | --- |
-| MCP | `mcp-builder` | Anthropic |
-| Skills | `skill-creator` | Anthropic |
-| LLMs | `llm-application-dev` | wshobson |
-| Agent Behavior | `ask-questions-if-underspecified` | Moiz |
-| Prompting | `best-practices` | Moiz |
-| OpenAI | `openai-docs` | OpenAI |
-
-## Docs
-
-6 skills. The shelf for file-heavy work, writing, and long-form output.
-
-| Branch | Skills | Source |
-| --- | --- | --- |
-| PDF | `pdf` | Anthropic |
-| Spreadsheets | `xlsx` | Anthropic |
-| Documents | `docx` | Anthropic |
-| Presentations | `pptx` | Anthropic |
-| Writing | `doc-coauthoring`, `code-documentation` | Anthropic, wshobson |
+| Design Engineering | `emil-design-eng` | emilkowalski |
+| UI | `frontend-skill` | openai |
+| UI Craft | `frontend-design` | anthropics |
 
 ## Backend
 
-3 skills. The shelf for architecture, databases, and secure system work.
+3 skills. Infra, tooling, application architecture, and codebase depth.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
 | Architecture | `backend-development` | wshobson |
 | Database | `database-design` | wshobson |
-| Security | `security-best-practices` | OpenAI |
+| Security | `security-best-practices` | openai |
 
-## Design
+## Docs
 
-4 skills. The shelf for visual systems, creative direction, and design craft.
-
-| Branch | Skills | Source |
-| --- | --- | --- |
-| Canvas | `canvas-design` | Anthropic |
-| Generative Art | `algorithmic-art` | Anthropic |
-| Figma | `figma` | OpenAI |
-| Video | `video-downloader` | Composio |
-
-## DevOps
-
-2 skills. The shelf for release infrastructure and production health.
+6 skills. Documents, specs, file handling, and long-form output.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
-| CI | `gh-fix-ci` | OpenAI |
-| Observability | `sentry` | OpenAI |
+| Documents | `docx` | anthropics |
+| PDF | `pdf` | anthropics |
+| Presentations | `pptx` | anthropics |
+| Spreadsheets | `xlsx` | anthropics |
+| Writing | `doc-coauthoring`, `code-documentation` | anthropics, wshobson |
 
 ## Testing
 
-2 skills. The shelf for QA and browser-driven product verification.
+2 skills. Review, QA, regression work, and keeping product quality sharp.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
-| Browser Automation | `playwright` | OpenAI |
-| Web QA | `webapp-testing` | Anthropic |
+| Browser Automation | `playwright` | openai |
+| Web QA | `webapp-testing` | anthropics |
 
 ## Workflow
 
-3 skills. The shelf for plans, tickets, specs, and execution rhythm.
+3 skills. Execution patterns, prompting, ticketing, and operating rhythm.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
-| Linear | `linear` | OpenAI |
-| Planning | `notion-spec-to-implementation` | OpenAI |
-| Release Notes | `changelog-generator` | Composio |
+| Linear | `linear` | openai |
+| Planning | `notion-spec-to-implementation` | openai |
+| Release Notes | `changelog-generator` | composio |
 
 ## Research
 
-2 skills. The shelf for discovery work that turns into something usable.
+2 skills. Competitive scans, discovery work, and synthesis that helps decisions.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
-| Writing | `content-research-writer` | Composio |
-| Lead Research | `lead-research-assistant` | Composio |
+| Lead Research | `lead-research-assistant` | composio |
+| Writing | `content-research-writer` | composio |
+
+## Design
+
+4 skills. Visual systems, thematic work, creative direction, and media craft.
+
+| Branch | Skills | Source |
+| --- | --- | --- |
+| Canvas | `canvas-design` | anthropics |
+| Figma | `figma` | openai |
+| Generative Art | `algorithmic-art` | anthropics |
+| Video | `video-downloader` | composio |
 
 ## Business
 
-3 skills. The shelf for adjacent operating work around the product.
+3 skills. Brand, hiring, ops, and communication work around the product.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
-| Brand | `brand-guidelines` | Anthropic |
-| Communication | `internal-comms` | Anthropic |
-| Career | `job-application` | Moiz |
+| Brand | `brand-guidelines` | anthropics |
+| Career | `job-application` | MoizIbnYousaf |
+| Communication | `internal-comms` | anthropics |
+
+## AI
+
+6 skills. LLM applications, MCP servers, agent building, prompt engineering, and skills development.
+
+| Branch | Skills | Source |
+| --- | --- | --- |
+| Agent Behavior | `ask-questions-if-underspecified` | thsottiaux |
+| LLMs | `llm-application-dev` | wshobson |
+| MCP | `mcp-builder` | anthropics |
+| OpenAI | `openai-docs` | openai |
+| Prompting | `best-practices` | MoizIbnYousaf |
+| Skills | `skill-creator` | anthropics |
+
+## DevOps
+
+2 skills. CI/CD, observability, deployment, and release infrastructure.
+
+| Branch | Skills | Source |
+| --- | --- | --- |
+| CI | `gh-fix-ci` | openai |
+| Observability | `sentry` | openai |

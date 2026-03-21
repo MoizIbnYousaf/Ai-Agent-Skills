@@ -9,6 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync, execFileSync } = require('child_process');
+const { loadCatalogData } = require('./lib/catalog-data.cjs');
+const { buildUpstreamCatalogEntry } = require('./lib/catalog-mutations.cjs');
+const { generatedDocsAreInSync, renderGeneratedDocs } = require('./lib/render-docs.cjs');
 const { buildCatalog, getGitHubInstallSpec, getSkillsInstallSpec } = require('./tui/catalog.cjs');
 
 const colors = {
@@ -84,6 +87,73 @@ function runModule(source) {
   } catch (e) {
     return e.stdout || e.stderr || e.message;
   }
+}
+
+function runCommandResult(args, options = {}) {
+  try {
+    const stdout = execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), ...args], {
+      encoding: 'utf8',
+      cwd: options.cwd || __dirname,
+      env: options.env || process.env,
+      input: options.input,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return { status: 0, stdout, stderr: '' };
+  } catch (e) {
+    return {
+      status: typeof e.status === 'number' ? e.status : 1,
+      stdout: e.stdout || '',
+      stderr: e.stderr || '',
+    };
+  }
+}
+
+function copyValidateFixtureFiles(tmpDir) {
+  const tmpScripts = path.join(tmpDir, 'scripts');
+  const tmpLib = path.join(tmpDir, 'lib');
+  fs.mkdirSync(tmpScripts, { recursive: true });
+  fs.mkdirSync(tmpLib, { recursive: true });
+  fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
+  fs.copyFileSync(path.join(__dirname, 'lib', 'catalog-data.cjs'), path.join(tmpLib, 'catalog-data.cjs'));
+  fs.copyFileSync(path.join(__dirname, 'lib', 'frontmatter.cjs'), path.join(tmpLib, 'frontmatter.cjs'));
+  fs.copyFileSync(path.join(__dirname, 'lib', 'paths.cjs'), path.join(tmpLib, 'paths.cjs'));
+  fs.copyFileSync(path.join(__dirname, 'lib', 'render-docs.cjs'), path.join(tmpLib, 'render-docs.cjs'));
+}
+
+function writeFixtureDocs(tmpDir, data) {
+  const readmeTemplate = [
+    '# Test Library',
+    '',
+    '<!-- GENERATED:library-stats:start -->',
+    '<!-- GENERATED:library-stats:end -->',
+    '',
+    '<!-- GENERATED:shelf-table:start -->',
+    '<!-- GENERATED:shelf-table:end -->',
+    '',
+    '<!-- GENERATED:collection-table:start -->',
+    '<!-- GENERATED:collection-table:end -->',
+    '',
+    '<!-- GENERATED:source-table:start -->',
+    '<!-- GENERATED:source-table:end -->',
+    '',
+  ].join('\n');
+  const rendered = renderGeneratedDocs(data, readmeTemplate);
+  fs.writeFileSync(path.join(tmpDir, 'README.md'), rendered.readme);
+  fs.writeFileSync(path.join(tmpDir, 'WORK_AREAS.md'), rendered.workAreas);
+}
+
+function snapshotCatalogFiles() {
+  return {
+    skills: fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'),
+    readme: fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8'),
+    workAreas: fs.readFileSync(path.join(__dirname, 'WORK_AREAS.md'), 'utf8'),
+  };
+}
+
+function restoreCatalogFiles(snapshot) {
+  fs.writeFileSync(path.join(__dirname, 'skills.json'), snapshot.skills);
+  fs.writeFileSync(path.join(__dirname, 'README.md'), snapshot.readme);
+  fs.writeFileSync(path.join(__dirname, 'WORK_AREAS.md'), snapshot.workAreas);
 }
 
 console.log('\n🧪 Running tests...\n');
@@ -330,7 +400,7 @@ test('search command works', () => {
 });
 
 test('search ranks stronger curated matches first', () => {
-  const output = run('search react');
+  const output = run('search frontend');
   assertContains(output, 'frontend-design');
   assertContains(output, '{My Picks, Build Apps}');
 });
@@ -1035,33 +1105,30 @@ test('vendored skills have folders, non-vendored do not', () => {
   });
 });
 
-test('batch-fill template whyHere count is tracked (15 remaining, fix in v3.1)', () => {
+test('batch-fill template whyHere entries are gone', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const templatePattern = /without diluting the library's focus/;
   const templateSkills = data.skills.filter(s => templatePattern.test(s.whyHere));
   assertEqual(templateSkills.length, 0, `Expected no batch-fill whyHere entries, found ${templateSkills.length}`);
 });
 
+test('generated docs are in sync with skills.json', () => {
+  const status = generatedDocsAreInSync(loadCatalogData());
+  assert(status.readmeMatches, 'README generated sections drifted from skills.json');
+  assert(status.workAreasMatches, 'WORK_AREAS.md drifted from skills.json');
+});
+
 // ============ VALIDATE SCRIPT TESTS ============
 
 test('validate script catches version mismatch', () => {
   // Create a temporary skills.json with wrong version
-  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const tmpDir = fs.mkdtempSync(path.join(__dirname, '.validate-ver-'));
   const tmpCatalog = path.join(tmpDir, 'skills.json');
   const tmpPkg = path.join(tmpDir, 'package.json');
-  const tmpScripts = path.join(tmpDir, 'scripts');
-  const tmpLib = path.join(tmpDir, 'lib');
   const tmpSkills = path.join(tmpDir, 'skills');
 
   try {
-    // Copy validate script
-    fs.mkdirSync(tmpScripts, { recursive: true });
-    fs.mkdirSync(tmpLib, { recursive: true });
-    fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
-    fs.copyFileSync(path.join(__dirname, 'lib', 'catalog-data.cjs'), path.join(tmpLib, 'catalog-data.cjs'));
-    fs.copyFileSync(path.join(__dirname, 'lib', 'frontmatter.cjs'), path.join(tmpLib, 'frontmatter.cjs'));
-    fs.copyFileSync(path.join(__dirname, 'lib', 'paths.cjs'), path.join(tmpLib, 'paths.cjs'));
+    copyValidateFixtureFiles(tmpDir);
 
     // Create minimal skills dir with one skill
     const skillDir = path.join(tmpSkills, 'test-skill');
@@ -1069,7 +1136,7 @@ test('validate script catches version mismatch', () => {
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: test-skill\ndescription: Test\n---\n# Test');
 
     // Write mismatched version
-    fs.writeFileSync(tmpCatalog, JSON.stringify({
+    const fixtureData = {
       version: '0.0.0',
       updated: '2026-01-01T00:00:00Z',
       total: 1,
@@ -1082,7 +1149,9 @@ test('validate script catches version mismatch', () => {
         origin: 'authored', trust: 'verified', syncMode: 'authored',
         whyHere: 'This is a real whyHere with enough length to pass validation.'
       }]
-    }));
+    };
+    fs.writeFileSync(tmpCatalog, JSON.stringify(fixtureData, null, 2));
+    writeFixtureDocs(tmpDir, fixtureData);
     fs.writeFileSync(tmpPkg, JSON.stringify({ version: '9.9.9' }));
 
     let output;
@@ -1099,23 +1168,16 @@ test('validate script catches version mismatch', () => {
 
 test('validate script catches total mismatch', () => {
   const tmpDir = fs.mkdtempSync(path.join(__dirname, '.validate-total-'));
-  const tmpScripts = path.join(tmpDir, 'scripts');
-  const tmpLib = path.join(tmpDir, 'lib');
   const tmpSkills = path.join(tmpDir, 'skills');
 
   try {
-    fs.mkdirSync(tmpScripts, { recursive: true });
-    fs.mkdirSync(tmpLib, { recursive: true });
-    fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
-    fs.copyFileSync(path.join(__dirname, 'lib', 'catalog-data.cjs'), path.join(tmpLib, 'catalog-data.cjs'));
-    fs.copyFileSync(path.join(__dirname, 'lib', 'frontmatter.cjs'), path.join(tmpLib, 'frontmatter.cjs'));
-    fs.copyFileSync(path.join(__dirname, 'lib', 'paths.cjs'), path.join(tmpLib, 'paths.cjs'));
+    copyValidateFixtureFiles(tmpDir);
 
     const skillDir = path.join(tmpSkills, 'test-skill');
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: test-skill\ndescription: Test\n---\n# Test');
 
-    fs.writeFileSync(path.join(tmpDir, 'skills.json'), JSON.stringify({
+    const fixtureData = {
       version: '1.0.0',
       updated: '2026-01-01T00:00:00Z',
       total: 999,
@@ -1128,7 +1190,9 @@ test('validate script catches total mismatch', () => {
         origin: 'authored', trust: 'verified', syncMode: 'authored',
         whyHere: 'This is a real whyHere with enough length to pass validation.'
       }]
-    }));
+    };
+    fs.writeFileSync(path.join(tmpDir, 'skills.json'), JSON.stringify(fixtureData, null, 2));
+    writeFixtureDocs(tmpDir, fixtureData);
     fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ version: '1.0.0' }));
 
     let output;
@@ -1151,6 +1215,146 @@ test('validate script passes on the real catalog', () => {
   } catch (e) {
     const output = (e.stdout || '') + (e.stderr || '');
     assert(false, `Validate should pass on real catalog. Output: ${output.slice(0, 200)}`);
+  }
+});
+
+test('validate script catches generated doc drift', () => {
+  const tmpDir = fs.mkdtempSync(path.join(__dirname, '.validate-docs-'));
+  const tmpSkills = path.join(tmpDir, 'skills');
+
+  try {
+    copyValidateFixtureFiles(tmpDir);
+    const skillDir = path.join(tmpSkills, 'test-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: test-skill\ndescription: Test\n---\n# Test');
+
+    const fixtureData = {
+      version: '1.0.0',
+      updated: '2026-01-01T00:00:00Z',
+      total: 1,
+      workAreas: [{ id: 'test', title: 'Test', description: 'Test area' }],
+      collections: [],
+      skills: [{
+        name: 'test-skill', description: 'Use when testing', category: 'development',
+        workArea: 'test', branch: 'Test', author: 'test', license: 'MIT',
+        source: 'test/test', sourceUrl: 'https://github.com/test/test',
+        origin: 'authored', trust: 'verified', syncMode: 'authored',
+        whyHere: 'This is a real whyHere with enough length to pass validation.'
+      }]
+    };
+    fs.writeFileSync(path.join(tmpDir, 'skills.json'), JSON.stringify(fixtureData, null, 2));
+    writeFixtureDocs(tmpDir, fixtureData);
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ version: '1.0.0' }));
+    const readmePath = path.join(tmpDir, 'README.md');
+    const driftedReadme = fs.readFileSync(readmePath, 'utf8').replace('- 1 skills total', '- 999 skills total');
+    fs.writeFileSync(readmePath, driftedReadme);
+
+    let output = '';
+    let status = 0;
+    try {
+      output = execFileSync(process.execPath, ['scripts/validate.js'], { encoding: 'utf8', cwd: tmpDir, stdio: 'pipe' });
+    } catch (e) {
+      status = typeof e.status === 'number' ? e.status : 1;
+      output = `${e.stdout || ''}${e.stderr || ''}`;
+    }
+    assert(status !== 0, 'validate should fail on README drift');
+    assertContains(output, 'README.md generated sections are out of sync');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('catalog command fails fast when --skill is missing', () => {
+  const result = runCommandResult(['catalog', 'openai/skills']);
+  assert(result.status !== 0, 'catalog should fail without --skill');
+  assertContains(`${result.stdout}${result.stderr}`, 'requires --skill');
+});
+
+test('upstream catalog entries are forced to upstream/live metadata', () => {
+  const data = loadCatalogData();
+  const entry = buildUpstreamCatalogEntry({
+    source: 'openai/skills',
+    parsed: { type: 'github', owner: 'openai', repo: 'skills', url: 'https://github.com/openai/skills' },
+    discoveredSkill: {
+      name: 'tmp-upstream-skill',
+      description: 'Use when testing upstream metadata construction.',
+      relativeDir: 'skills/tmp-upstream-skill',
+      frontmatter: { author: 'OpenAI', license: 'MIT' },
+    },
+    fields: {
+      workArea: 'frontend',
+      branch: 'Testing',
+      whyHere: 'This is a real whyHere long enough to satisfy the editorial placement rules.',
+      trust: 'reviewed',
+      tags: 'test,upstream',
+      labels: 'editorial',
+    },
+    existingCatalog: data,
+  });
+
+  assertEqual(entry.tier, 'upstream');
+  assertEqual(entry.distribution, 'live');
+  assertEqual(entry.vendored, false);
+  assertEqual(entry.installSource, 'openai/skills/skills/tmp-upstream-skill');
+});
+
+test('curate review command prints the derived queue', () => {
+  const result = runCommandResult(['curate', 'review']);
+  assertEqual(result.status, 0, 'curate review should succeed');
+  assertContains(result.stdout, 'Needs Review');
+});
+
+test('curate command updates a skill field and regenerates docs', () => {
+  const snapshot = snapshotCatalogFiles();
+
+  try {
+    const result = runCommandResult(['curate', 'frontend-design', '--notes', 'Temporary test note from the CLI suite.']);
+    assertEqual(result.status, 0, 'curate should succeed');
+
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    const skill = data.skills.find((entry) => entry.name === 'frontend-design');
+    assertEqual(skill.notes, 'Temporary test note from the CLI suite.');
+
+    const sync = generatedDocsAreInSync(loadCatalogData());
+    assert(sync.readmeMatches, 'README should stay synced after curate');
+    assert(sync.workAreasMatches, 'WORK_AREAS should stay synced after curate');
+  } finally {
+    restoreCatalogFiles(snapshot);
+  }
+});
+
+test('curate --remove --yes removes a temporary vendored skill', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'curate-remove-'));
+  const skillName = `curate-remove-${Date.now()}`;
+  const destFolder = path.join(__dirname, 'skills', skillName);
+  const snapshot = snapshotCatalogFiles();
+
+  try {
+    const skillDir = path.join(tmpDir, 'skills', skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: Temporary curated remove test\n---\n# Test`);
+
+    const vendorResult = runCommandResult([
+      'vendor', tmpDir, '--skill', skillName,
+      '--area', 'frontend',
+      '--branch', 'Testing',
+      '--why', 'This is a real whyHere long enough to support the temporary remove test.',
+    ]);
+    assertEqual(vendorResult.status, 0, 'vendor should succeed before remove');
+    assert(fs.existsSync(destFolder), 'vendored folder should exist before remove');
+
+    const removeResult = runCommandResult(['curate', skillName, '--remove', '--yes']);
+    assertEqual(removeResult.status, 0, 'curate remove should succeed');
+
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    assert(!data.skills.some((entry) => entry.name === skillName), 'temporary skill should be removed from skills.json');
+    assert(!fs.existsSync(destFolder), 'temporary vendored folder should be removed');
+  } finally {
+    if (fs.existsSync(destFolder)) {
+      fs.rmSync(destFolder, { recursive: true, force: true });
+    }
+    restoreCatalogFiles(snapshot);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
@@ -1212,7 +1416,7 @@ test('vendor --dry-run shows what would be done without writing', () => {
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: dry-test-skill\ndescription: Dry test\n---\n# Dry');
 
     const output = execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill dry-test-skill --area frontend --branch Test --dry-run`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill dry-test-skill --area frontend --branch Test --why "A real curator note for the dry run." --dry-run`,
       { encoding: 'utf8' }
     );
     assertContains(output, 'Dry run');
@@ -1234,7 +1438,7 @@ test('vendor dry-run sets addedDate to today', () => {
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: date-test\ndescription: Date test\n---\n# Date');
 
     const output = execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill date-test --dry-run`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill date-test --area frontend --branch Test --why "A real curator note for the date test." --dry-run`,
       { encoding: 'utf8' }
     );
     const today = new Date().toISOString().split('T')[0];
@@ -1252,7 +1456,7 @@ test('vendor dry-run defaults to trust: listed and origin: curated', () => {
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: trust-test\ndescription: Trust test\n---\n# Trust');
 
     const output = execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill trust-test --dry-run`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill trust-test --area frontend --branch Test --why "A real curator note for the trust test." --dry-run`,
       { encoding: 'utf8' }
     );
     assertContains(output, '"trust": "listed"');
@@ -1271,10 +1475,10 @@ test('vendor applies --area, --branch, --category, --tags flags', () => {
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: flag-test\ndescription: Flag test\n---\n# Flags');
 
     const output = execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill flag-test --area mobile --branch Swift --category development --tags "swift,ios" --dry-run`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill flag-test --area frontend --branch Swift --category development --tags "swift,ios" --why "A real curator note for the flags test." --dry-run`,
       { encoding: 'utf8' }
     );
-    assertContains(output, '"workArea": "mobile"');
+    assertContains(output, '"workArea": "frontend"');
     assertContains(output, '"branch": "Swift"');
     assertContains(output, '"category": "development"');
     assertContains(output, '"swift"');
@@ -1288,6 +1492,7 @@ test('vendor actually copies skill folder and updates skills.json', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-real-'));
   const skillName = `vendor-test-${Date.now()}`;
   const destFolder = path.join(__dirname, 'skills', skillName);
+  const snapshot = snapshotCatalogFiles();
 
   try {
     // Create source skill
@@ -1297,12 +1502,12 @@ test('vendor actually copies skill folder and updates skills.json', () => {
     fs.writeFileSync(path.join(skillDir, 'extra.txt'), 'reference content');
 
     // Take a snapshot of current catalog
-    const beforeData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    const beforeData = JSON.parse(snapshot.skills);
     const beforeCount = beforeData.skills.length;
 
     // Run vendor
     execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test --why "A real curator note for the end to end vendor test."`,
       { encoding: 'utf8' }
     );
 
@@ -1328,10 +1533,7 @@ test('vendor actually copies skill folder and updates skills.json', () => {
     if (fs.existsSync(destFolder)) {
       fs.rmSync(destFolder, { recursive: true, force: true });
     }
-    const revertData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-    revertData.skills = revertData.skills.filter(s => s.name !== skillName);
-    revertData.total = revertData.skills.length;
-    fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(revertData, null, 2) + '\n');
+    restoreCatalogFiles(snapshot);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
@@ -1347,7 +1549,7 @@ test('vendor rejects skill that already exists in catalog', () => {
     let output;
     try {
       output = execSync(
-        `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill frontend-design`,
+        `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill frontend-design --area frontend --branch Test --why "A real curator note for the duplicate test."`,
         { encoding: 'utf8', stdio: 'pipe' }
       );
     } catch (e) {
@@ -1392,7 +1594,7 @@ test('vendor exits with error when no source given', () => {
   } catch (e) {
     output = (e.stdout || '') + (e.stderr || '');
   }
-  assertContains(output, 'Usage');
+  assertContains(output, 'Provide a source');
 });
 
 test('vendor exits with error when no --skill and no --list', () => {
@@ -1412,6 +1614,7 @@ test('vendor does not copy .git directory', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-nogit-'));
   const skillName = `nogit-test-${Date.now()}`;
   const destFolder = path.join(__dirname, 'skills', skillName);
+  const snapshot = snapshotCatalogFiles();
 
   try {
     const skillDir = path.join(tmpDir, 'skills', skillName);
@@ -1422,7 +1625,7 @@ test('vendor does not copy .git directory', () => {
     fs.writeFileSync(path.join(skillDir, '.git', 'HEAD'), 'ref: refs/heads/main');
 
     execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test --why "A real curator note for the dot git copy test."`,
       { encoding: 'utf8' }
     );
 
@@ -1430,10 +1633,7 @@ test('vendor does not copy .git directory', () => {
     assert(!fs.existsSync(path.join(destFolder, '.git')), '.git should NOT be copied');
   } finally {
     if (fs.existsSync(destFolder)) fs.rmSync(destFolder, { recursive: true, force: true });
-    const revertData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-    revertData.skills = revertData.skills.filter(s => s.name !== skillName);
-    revertData.total = revertData.skills.length;
-    fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(revertData, null, 2) + '\n');
+    restoreCatalogFiles(snapshot);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
@@ -1442,6 +1642,7 @@ test('vendor copies nested reference files', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-nested-'));
   const skillName = `nested-test-${Date.now()}`;
   const destFolder = path.join(__dirname, 'skills', skillName);
+  const snapshot = snapshotCatalogFiles();
 
   try {
     const skillDir = path.join(tmpDir, 'skills', skillName);
@@ -1452,7 +1653,7 @@ test('vendor copies nested reference files', () => {
     fs.writeFileSync(path.join(refsDir, 'patterns.md'), '# Patterns');
 
     execSync(
-      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test`,
+      `node ${path.join(__dirname, 'scripts', 'vendor.js')} ${tmpDir} --skill ${skillName} --area frontend --branch Test --why "A real curator note for the nested reference copy test."`,
       { encoding: 'utf8' }
     );
 
@@ -1460,10 +1661,7 @@ test('vendor copies nested reference files', () => {
     assert(fs.existsSync(path.join(destFolder, 'references', 'patterns.md')), 'All nested files should be copied');
   } finally {
     if (fs.existsSync(destFolder)) fs.rmSync(destFolder, { recursive: true, force: true });
-    const revertData = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-    revertData.skills = revertData.skills.filter(s => s.name !== skillName);
-    revertData.total = revertData.skills.length;
-    fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(revertData, null, 2) + '\n');
+    restoreCatalogFiles(snapshot);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });

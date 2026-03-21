@@ -4,10 +4,12 @@ My curated agent skills library.
 
 There are a lot of skills now. These are the ones I actually keep around.
 
-- 36 skills total
+<!-- GENERATED:library-stats:start -->
+- 35 skills total
 - 10 shelves
 - 11 house copies
-- 25 cataloged upstream
+- 24 cataloged upstream
+<!-- GENERATED:library-stats:end -->
 
 The point is not to be a registry. The point is to be a bookshelf.
 
@@ -80,18 +82,20 @@ There are four useful views:
 
 These are the shelves. They are the product.
 
+<!-- GENERATED:shelf-table:start -->
 | Shelf | Skills | What it covers |
-| --- | ---: | --- |
-| Frontend | 5 | Interface systems, React work, and web product execution |
-| AI | 6 | LLM apps, MCP, prompting, agent-building, and skills work |
-| Docs | 6 | Documents, specs, file handling, and long-form output |
-| Backend | 3 | Architecture, databases, security, and deeper code work |
-| Design | 4 | Visual systems, creative direction, and design craft |
-| DevOps | 2 | CI, observability, deployment, and release infrastructure |
-| Testing | 2 | QA, browser automation, and regression work |
-| Workflow | 3 | Planning, ticketing, prompting, and operating rhythm |
-| Research | 2 | Discovery, lead research, and synthesis |
-| Business | 3 | Brand, communication, and career-adjacent work |
+| --- | --- | --- |
+| Frontend | 4 | Interface systems, web product craft, and frontend execution. |
+| Backend | 3 | Infra, tooling, application architecture, and codebase depth. |
+| Docs | 6 | Documents, specs, file handling, and long-form output. |
+| Testing | 2 | Review, QA, regression work, and keeping product quality sharp. |
+| Workflow | 3 | Execution patterns, prompting, ticketing, and operating rhythm. |
+| Research | 2 | Competitive scans, discovery work, and synthesis that helps decisions. |
+| Design | 4 | Visual systems, thematic work, creative direction, and media craft. |
+| Business | 3 | Brand, hiring, ops, and communication work around the product. |
+| AI | 6 | LLM applications, MCP servers, agent building, prompt engineering, and skills development. |
+| DevOps | 2 | CI/CD, observability, deployment, and release infrastructure. |
+<!-- GENERATED:shelf-table:end -->
 
 The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
 
@@ -99,13 +103,15 @@ The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
 
 Collections still exist, but they are secondary. They are small cross-shelf reading lists, not the main taxonomy.
 
+<!-- GENERATED:collection-table:start -->
 | Collection | Why it exists | Start here |
 | --- | --- | --- |
-| `my-picks` | The smallest cross-shelf starter stack | `frontend-design`, `mcp-builder`, `pdf` |
-| `build-apps` | Frontend and design implementation work | `frontend-design`, `frontend-skill`, `shadcn` |
-| `build-systems` | Architecture, MCP, backend, and security | `mcp-builder`, `backend-development`, `database-design` |
-| `test-and-debug` | QA, observability, and debugging discipline | `playwright`, `webapp-testing`, `gh-fix-ci` |
-| `docs-and-research` | File-heavy work, docs, and research | `pdf`, `doc-coauthoring`, `openai-docs` |
+| `my-picks` | The smallest cross-shelf starter stack: the skills I would reach for first on a fresh setup. | `frontend-design`, `mcp-builder`, `pdf` |
+| `build-apps` | Frontend and design implementation skills for shipping polished product work. | `frontend-design`, `frontend-skill`, `shadcn` |
+| `build-systems` | Architecture, MCP, backend, and security picks for deeper engineering work. | `mcp-builder`, `backend-development`, `database-design` |
+| `test-and-debug` | The shelf for QA, regression, CI cleanup, observability, and debugging discipline. | `playwright`, `webapp-testing`, `gh-fix-ci` |
+| `docs-and-research` | File-heavy work, writing, docs, and research flows that end in something usable. | `pdf`, `doc-coauthoring`, `docx` |
+<!-- GENERATED:collection-table:end -->
 
 ## Catalog Curation
 
@@ -126,19 +132,35 @@ It adds metadata and editorial placement:
 - why it earned a place
 - how it should install later
 
+For existing picks, `curate` is the fast loop:
+
+```bash
+npx ai-agent-skills curate frontend-design --branch "UI Craft"
+npx ai-agent-skills curate frontend-design --why "A stronger note that matches how I actually use it."
+npx ai-agent-skills curate review
+```
+
+When I explicitly want a new house copy, `vendor` is the only path that does it:
+
+```bash
+npx ai-agent-skills vendor <repo-or-path> --skill <name> --area <shelf> --branch <branch> --why "Why this deserves a local copy."
+```
+
 ## Source Repos
 
 Current source mix:
 
+<!-- GENERATED:source-table:start -->
 | Source repo | Skills |
-| --- | ---: |
+| --- | --- |
 | `anthropics/skills` | 13 |
-| `openai/skills` | 10 |
-| `wshobson/agents` | 4 |
+| `openai/skills` | 9 |
 | `ComposioHQ/awesome-claude-skills` | 4 |
+| `wshobson/agents` | 4 |
 | `MoizIbnYousaf/Ai-Agent-Skills` | 3 |
-| `shadcn-ui/ui` | 1 |
 | `emilkowalski/skill` | 1 |
+| `shadcn-ui/ui` | 1 |
+<!-- GENERATED:source-table:end -->
 
 The two major upstream publishers in this library are Anthropic and OpenAI.
 I do not import everything they ship. I browse, pick, and shelve.
@@ -175,7 +197,10 @@ npx ai-agent-skills validate [path]
 
 # Curate
 npx ai-agent-skills catalog <owner/repo> --list
-npx ai-agent-skills catalog <owner/repo> --skill <name> --area <shelf> --branch <branch>
+npx ai-agent-skills catalog <owner/repo> --skill <name> --area <shelf> --branch <branch> --why "<editorial note>"
+npx ai-agent-skills curate <skill-name> --branch "<branch>"
+npx ai-agent-skills curate review
+npx ai-agent-skills vendor <repo-or-path> --skill <name> --area <shelf> --branch <branch> --why "<editorial note>"
 ```
 
 ## Testing

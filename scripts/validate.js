@@ -8,7 +8,9 @@
 const path = require('path');
 
 const { loadCatalogData, validateCatalogData } = require('../lib/catalog-data.cjs');
-const { SKILLS_DIR, ROOT_DIR, SKILLS_JSON_PATH } = require('../lib/paths.cjs');
+const { parseSkillMarkdown } = require('../lib/frontmatter.cjs');
+const { generatedDocsAreInSync } = require('../lib/render-docs.cjs');
+const { SKILLS_DIR, ROOT_DIR, SKILLS_JSON_PATH, README_PATH, WORK_AREAS_PATH } = require('../lib/paths.cjs');
 
 const root = ROOT_DIR;
 const skillsDir = SKILLS_DIR;
@@ -121,25 +123,17 @@ folders.forEach(folder => {
   if (!fs.existsSync(skillMd)) return;
 
   const content = fs.readFileSync(skillMd, 'utf8');
-
-  if (!content.startsWith('---')) {
-    error(`${folder}/SKILL.md missing frontmatter`);
+  const parsed = parseSkillMarkdown(content);
+  if (!parsed) {
+    error(`${folder}/SKILL.md has invalid frontmatter`);
     return;
   }
 
-  const endIndex = content.indexOf('---', 3);
-  if (endIndex === -1) {
-    error(`${folder}/SKILL.md has unclosed frontmatter`);
-    return;
-  }
-
-  const frontmatter = content.slice(3, endIndex);
-
-  if (!frontmatter.includes('name:')) {
+  if (!String(parsed.frontmatter.name || '').trim()) {
     error(`${folder}/SKILL.md missing name in frontmatter`);
   }
 
-  if (!frontmatter.includes('description:')) {
+  if (!String(parsed.frontmatter.description || '').trim()) {
     error(`${folder}/SKILL.md missing description in frontmatter`);
   }
 });
@@ -162,6 +156,27 @@ if (Array.isArray(data.collections)) {
     }
   });
   pass(`${data.collections.length} collections valid`);
+}
+
+// ── Generated docs checks ──
+
+console.log('\nValidating generated docs\n');
+
+const docsSync = generatedDocsAreInSync(data, {
+  readmeSource: fs.readFileSync(README_PATH, 'utf8'),
+  workAreasSource: fs.readFileSync(WORK_AREAS_PATH, 'utf8'),
+});
+
+if (!docsSync.readmeMatches) {
+  error('README.md generated sections are out of sync with skills.json');
+}
+
+if (!docsSync.workAreasMatches) {
+  error('WORK_AREAS.md is out of sync with skills.json');
+}
+
+if (docsSync.readmeMatches && docsSync.workAreasMatches) {
+  pass('README.md and WORK_AREAS.md match generated catalog output');
 }
 
 // ── Summary ──

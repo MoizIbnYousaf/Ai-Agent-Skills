@@ -2,7 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [3.4.0] - 2026-03-21
+
+### Added
+- Added a first-class `curate` command for editing shelf placement, editorial notes, tags, labels, trust, verification state, and removals without hand-editing `skills.json`.
+- Added a shared catalog mutation engine so CLI cataloging, curator edits, vendoring, and generated docs all run through the same validation and write path.
+- Added generated-doc rendering with drift checks for `README.md` and `WORK_AREAS.md`, plus an internal `render:docs` maintenance script.
+- Added a TUI curator loop with inline overlays for reviewing the library, editing the focused skill, and adding new upstream picks from GitHub repos.
+
+### Changed
+- Locked normal intake to upstream-only behavior: `catalog` now accepts GitHub repos, requires full shelf placement, and refuses partial or blank editorial entries.
+- Tightened `vendor` into the explicit house-copy path, with the same editorial metadata requirements as the upstream catalog flow.
+- Reclassified Anthropic's `frontend-design` skill from a React lane to `UI Craft` and rewrote its editorial metadata to match the actual upstream skill.
+- Synced the README and work-area map from the catalog so shelf counts and tables stop drifting.
+
+### Removed
+- Removed `figma-implement-design` from the curated library and the frontend shelf.
 
 ## [3.3.0] - 2026-03-21
 

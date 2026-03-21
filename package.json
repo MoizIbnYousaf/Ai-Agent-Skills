@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-skills",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "My curated agent skills library, with a CLI that installs from any source.",
   "main": "cli.js",
   "bin": {
@@ -13,6 +13,7 @@
     "test": "node test.js",
     "test:live": "node scripts/test-live.js",
     "test:live:quick": "node scripts/test-live.js --quick",
+    "render:docs": "node scripts/render-docs.js",
     "validate": "node scripts/validate.js",
     "vendor": "node scripts/vendor.js"
   },

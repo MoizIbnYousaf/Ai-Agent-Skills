@@ -1,12 +1,12 @@
 {
-  "version": "3.3.0",
+  "version": "3.4.0",
   "updated": "2026-03-21T00:00:00Z",
-  "total": 36,
+  "total": 35,
   "workAreas": [
     {
       "id": "frontend",
       "title": "Frontend",
-      "description": "Interface systems, React work, and web product execution."
+      "description": "Interface systems, web product craft, and frontend execution."
     },
     {
       "id": "backend",
@@ -76,8 +76,7 @@
         "frontend-design",
         "frontend-skill",
         "shadcn",
-        "emil-design-eng",
-        "figma-implement-design"
+        "emil-design-eng"
       ]
     },
     {
@@ -125,17 +124,17 @@
   "skills": [
     {
       "name": "frontend-design",
-      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use for building web components, pages, dashboards, React components, HTML/CSS layouts, or styling any web UI.",
+      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use for building web components, pages, dashboards, HTML/CSS layouts, or styling any web UI.",
       "category": "development",
       "workArea": "frontend",
-      "branch": "React",
+      "branch": "UI Craft",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
       "tags": [
-        "react",
-        "typescript",
-        "nextjs"
+        "frontend",
+        "ui",
+        "design"
       ],
       "featured": true,
       "verified": true,
@@ -143,7 +142,7 @@
       "trust": "verified",
       "syncMode": "live",
       "sourceUrl": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
-      "whyHere": "Kept because Anthropic's React guidance is still high-signal for interface work and front-end execution quality, and the library ships a stable snapshot so installs stay deterministic.",
+      "whyHere": "Kept because Anthropic's frontend design guidance is still high-signal for interface craft, visual direction, and polished product execution without collapsing into generic app UI.",
       "lastVerified": "2026-03-13",
       "vendored": false,
       "installSource": "anthropics/skills/skills/frontend-design",
@@ -944,7 +943,7 @@
       "trust": "listed",
       "syncMode": "live",
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/frontend-skill",
-      "whyHere": "Kept because OpenAI's frontend taste is distinct from Anthropic's React guidance; together they make the frontend shelf feel like a real set instead of one repo repeated.",
+      "whyHere": "Kept because OpenAI's frontend taste is distinct from Anthropic's interface-craft guidance; together they make the frontend shelf feel like a real set instead of one repo repeated.",
       "addedDate": "2026-03-21",
       "tier": "upstream",
       "distribution": "live",
@@ -1002,32 +1001,6 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
-    },
-    {
-      "name": "figma-implement-design",
-      "description": "Translate Figma nodes into production-ready code with 1:1 visual fidelity using the Figma MCP workflow (design context, screenshots, assets, and project-convention translation). Trigger when the user provides Figma URLs or node IDs, or asks to implement designs or components that must match Figma specs. Requires a working Figma MCP server connection.",
-      "category": "development",
-      "workArea": "frontend",
-      "branch": "Implementation",
-      "author": "openai",
-      "source": "openai/skills",
-      "license": "MIT",
-      "tier": "upstream",
-      "distribution": "live",
-      "vendored": false,
-      "installSource": "openai/skills/skills/.curated/figma-implement-design",
-      "tags": [],
-      "featured": false,
-      "verified": false,
-      "origin": "curated",
-      "trust": "listed",
-      "syncMode": "live",
-      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/figma-implement-design",
-      "whyHere": "Kept because it closes the gap between design files and implementation, which makes the frontend shelf more complete in day-to-day product work.",
-      "notes": "",
-      "labels": [],
-      "addedDate": "2026-03-21",
       "path": ""
     },
     {
