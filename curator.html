@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ai-Agent-Skills Curator v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0e1117;--surface:#161b22;--surface2:#1c2333;--border:#2d333b;--text:#e6edf3;--muted:#7d8590;--accent:#d4a24c;--green:#3fb950;--red:#f85149;--blue:#58a6ff;--orange:#d29922;--purple:#bc8cff;--cyan:#39d4e0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr auto;height:100vh}
+.header{grid-column:1/-1;padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;background:var(--surface)}
+.header h1{font-size:18px;font-weight:600;color:var(--accent)}
+.header .badge{font-size:11px;color:var(--muted);padding:2px 8px;border:1px solid var(--border);border-radius:12px}
+.tabs{display:flex;gap:2px;margin-left:auto}
+.tab{padding:6px 16px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;font-family:inherit;border-radius:6px}
+.tab.active{background:var(--accent);color:#000;font-weight:600}
+.tab:hover:not(.active){background:var(--surface2);color:var(--text)}
+.sidebar{border-right:1px solid var(--border);padding:12px;overflow-y:auto;background:var(--surface);font-size:13px}
+.sidebar h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+.sidebar h3:first-child{margin-top:0}
+.fbtn{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:5px 8px;border-radius:5px;cursor:pointer;font-size:12px;font-family:inherit}
+.fbtn:hover{background:var(--surface2)}
+.fbtn.active{background:var(--accent);color:#000;font-weight:600}
+.fbtn .c{float:right;color:var(--muted);font-size:11px}
+.fbtn.active .c{color:rgba(0,0,0,0.5)}
+.main{overflow-y:auto;padding:0}
+.tally-bar{grid-column:1/-1;padding:10px 24px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:20px;align-items:center;flex-wrap:wrap;font-size:13px}
+.tally{font-weight:600;display:flex;align-items:center;gap:5px}
+.tally .d{width:7px;height:7px;border-radius:50%;display:inline-block}
+.export-btn{margin-left:auto;background:var(--accent);color:#000;border:none;padding:5px 14px;border-radius:5px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit}
+.search-bar{padding:10px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.search-bar input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-size:12px;font-family:inherit;outline:none}
+.search-bar input:focus{border-color:var(--accent)}
+.section-hdr{padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-weight:700;position:sticky;top:0;z-index:1;display:flex;justify-content:space-between}
+.row{display:grid;grid-template-columns:1fr auto;border-bottom:1px solid var(--border);padding:10px 24px;gap:10px;transition:background 0.1s}
+.row:hover{background:var(--surface2)}
+.row.keep{border-left:3px solid var(--green)}
+.row.remove{border-left:3px solid var(--red);opacity:0.5}
+.row.remove:hover{opacity:1}
+.row.add{border-left:3px solid var(--cyan)}
+.sname{font-weight:600;font-size:13px}
+.smeta{font-size:11px;color:var(--muted);margin-top:1px;display:flex;gap:10px;flex-wrap:wrap}
+.sdesc{font-size:11px;color:var(--muted);margin-top:3px;max-width:680px}
+.b{display:inline-block;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;margin-left:4px}
+.b.v{background:rgba(63,185,80,0.15);color:var(--green)}.b.r{background:rgba(88,166,255,0.15);color:var(--blue)}.b.l{background:rgba(125,133,144,0.15);color:var(--muted)}
+.b.up{background:rgba(57,212,224,0.12);color:var(--cyan)}.b.house{background:rgba(212,162,76,0.15);color:var(--accent)}
+.btns{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.btns button{border:1px solid var(--border);background:var(--surface);color:var(--muted);padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all 0.12s}
+.btns button:hover{border-color:var(--text);color:var(--text)}
+.btns button.ak{background:var(--green);color:#000;border-color:var(--green)}
+.btns button.ar{background:var(--red);color:#fff;border-color:var(--red)}
+.btns button.aa{background:var(--cyan);color:#000;border-color:var(--cyan)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.vis{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:15px;margin-bottom:10px;color:var(--accent)}
+.modal pre{background:var(--bg);padding:14px;border-radius:6px;font-size:11px;overflow-x:auto;white-space:pre-wrap;color:var(--text);border:1px solid var(--border)}
+.modal button{margin-top:12px;padding:6px 16px;border-radius:5px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;border:none}
+.modal .copy{background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-left:6px}
+.modal .close{background:var(--accent);color:#000}
+.area-suggest{font-size:11px;color:var(--cyan);margin-left:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Curator v2</h1>
+    <span class="badge">v3.1 build</span>
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('current')">Current Library (30)</button>
+      <button class="tab" onclick="setTab('openai')">openai/skills (28 new)</button>
+      <button class="tab" onclick="setTab('anthropic')">anthropics/skills</button>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar"></div>
+  <div style="display:flex;flex-direction:column;overflow:hidden">
+    <div class="search-bar"><input type="text" id="search" placeholder="Search..."></div>
+    <div class="main" id="main"></div>
+  </div>
+  <div class="tally-bar" id="tally"></div>
+</div>
+<div class="modal-overlay" id="modal"><div class="modal"><h2>Export</h2><pre id="mc"></pre><button class="copy" onclick="copyE()">Copy</button> <button class="close" onclick="document.getElementById('modal').classList.remove('vis')">Close</button></div></div>
+<script>
+const CURRENT=[{"name":"frontend-design","description":"Create distinctive, production-grade frontend interfaces with high design quality.","workArea":"frontend","branch":"React","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"pdf","description":"Comprehensive PDF manipulation toolkit.","workArea":"docs","branch":"PDF","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"xlsx","description":"Comprehensive spreadsheet creation, editing, and analysis.","workArea":"docs","branch":"Spreadsheets","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"docx","description":"Comprehensive document creation, editing, and analysis.","workArea":"docs","branch":"Documents","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"pptx","description":"Presentation creation, editing, and analysis for PowerPoint files.","workArea":"docs","branch":"Presentations","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"mcp-builder","description":"Guide for creating high-quality MCP servers.","workArea":"ai","branch":"MCP","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"skill-creator","description":"Guide for creating effective skills that extend Claude's capabilities.","workArea":"ai","branch":"Skills","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"doc-coauthoring","description":"Structured workflow for co-authoring documentation, proposals, technical specs.","workArea":"docs","branch":"Writing","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"canvas-design","description":"Create beautiful visual art in .png and .pdf documents.","workArea":"design","branch":"Canvas","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"algorithmic-art","description":"Creating algorithmic art using p5.js with seeded randomness.","workArea":"design","branch":"Generative Art","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"webapp-testing","description":"Toolkit for testing local web applications using Playwright.","workArea":"testing","branch":"Web QA","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"brand-guidelines","description":"Applies official brand colors, typography, and styling.","workArea":"business","branch":"Brand","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"internal-comms","description":"Write internal communications using company formats.","workArea":"business","branch":"Communication","source":"anthropics/skills","trust":"verified","origin":"curated"},{"name":"backend-development","description":"Backend API design, database architecture, microservices patterns.","workArea":"backend","branch":"Architecture","source":"wshobson/agents","trust":"listed","origin":"curated"},{"name":"database-design","description":"Database schema design, optimization, and migration patterns.","workArea":"backend","branch":"Database","source":"wshobson/agents","trust":"listed","origin":"curated"},{"name":"llm-application-dev","description":"Building applications with LLMs - prompt engineering, RAG patterns.","workArea":"ai","branch":"LLMs","source":"wshobson/agents","trust":"reviewed","origin":"curated"},{"name":"code-documentation","description":"Writing effective code documentation - API docs, README files.","workArea":"docs","branch":"Writing","source":"wshobson/agents","trust":"listed","origin":"curated"},{"name":"job-application","description":"Write tailored cover letters and job applications.","workArea":"business","branch":"Career","source":"MoizIbnYousaf/Ai-Agent-Skills","trust":"verified","origin":"authored"},{"name":"ask-questions-if-underspecified","description":"Clarify requirements before implementing.","workArea":"ai","branch":"Agent Behavior","source":"MoizIbnYousaf/Ai-Agent-Skills","trust":"verified","origin":"adapted"},{"name":"best-practices","description":"Transform vague prompts into optimized Claude Code instructions.","workArea":"ai","branch":"Prompting","source":"MoizIbnYousaf/Ai-Agent-Skills","trust":"verified","origin":"authored"},{"name":"changelog-generator","description":"Create user-facing changelogs from git commits.","workArea":"workflow","branch":"Release Notes","source":"ComposioHQ/awesome-claude-skills","trust":"listed","origin":"curated"},{"name":"content-research-writer","description":"Research and write high-quality content with citations.","workArea":"research","branch":"Writing","source":"ComposioHQ/awesome-claude-skills","trust":"listed","origin":"curated"},{"name":"lead-research-assistant","description":"Identify and qualify high-quality leads.","workArea":"research","branch":"Lead Research","source":"ComposioHQ/awesome-claude-skills","trust":"listed","origin":"curated"},{"name":"video-downloader","description":"Download videos from YouTube and other platforms.","workArea":"design","branch":"Video","source":"ComposioHQ/awesome-claude-skills","trust":"listed","origin":"curated"},{"name":"openai-docs","description":"Build with OpenAI products or APIs with up-to-date documentation.","workArea":"ai","branch":"OpenAI","source":"openai/skills","trust":"reviewed","origin":"curated"},{"name":"gh-fix-ci","description":"Debug failing GitHub Actions checks.","workArea":"devops","branch":"CI","source":"openai/skills","trust":"reviewed","origin":"curated"},{"name":"figma","description":"Use the Figma MCP server to fetch design context from Figma.","workArea":"design","branch":"Figma","source":"openai/skills","trust":"reviewed","origin":"curated"},{"name":"figma-implement-design","description":"Translate Figma nodes into production-ready code.","workArea":"frontend","branch":"Figma","source":"openai/skills","trust":"reviewed","origin":"curated"},{"name":"sentry","description":"Inspect Sentry issues and events, summarize production errors.","workArea":"devops","branch":"Observability","source":"openai/skills","trust":"listed","origin":"curated"},{"name":"playwright","description":"Automate a real browser from the terminal with playwright-cli.","workArea":"testing","branch":"Browser Automation","source":"openai/skills","trust":"reviewed","origin":"curated"}];
+
+const OPENAI_NEW=[
+{name:"security-best-practices",desc:"Language and framework specific security reviews (Python, JS/TS, Go). OWASP patterns, auth, input validation.",files:13,area:"backend",branch:"Security"},
+{name:"security-threat-model",desc:"Repository-grounded threat modeling. Trust boundaries, assets, attacker capabilities, abuse paths, mitigations.",files:5,area:"backend",branch:"Security"},
+{name:"security-ownership-map",desc:"Git-based security ownership topology. Bus factor, sensitive-code ownership, CSV/JSON export.",files:8,area:"backend",branch:"Security"},
+{name:"linear",desc:"Manage Linear issues, projects, and team workflows. Read, create, update tickets.",files:5,area:"workflow",branch:"Linear"},
+{name:"vercel-deploy",desc:"Deploy applications to Vercel. Preview deployments, push live, get deployment links.",files:6,area:"devops",branch:"Deployment"},
+{name:"cloudflare-deploy",desc:"Deploy to Cloudflare Workers, Pages, and platform services. 312 files, massive skill.",files:312,area:"devops",branch:"Deployment"},
+{name:"netlify-deploy",desc:"Deploy web projects to Netlify using the CLI.",files:8,area:"devops",branch:"Deployment"},
+{name:"render-deploy",desc:"Deploy applications to Render with render.yaml Blueprints and Dashboard deeplinks.",files:21,area:"devops",branch:"Deployment"},
+{name:"gh-address-comments",desc:"Address review/issue comments on GitHub PRs using gh CLI.",files:6,area:"workflow",branch:"GitHub"},
+{name:"slides",desc:"Create and edit .pptx slide decks with PptxGenJS, layout helpers, render/validation. 20 files.",files:20,area:"docs",branch:"Presentations"},
+{name:"jupyter-notebook",desc:"Create, scaffold, or edit Jupyter notebooks for experiments and tutorials.",files:12,area:"docs",branch:"Notebooks"},
+{name:"screenshot",desc:"Desktop or system screenshots. Full screen, specific app, or pixel region.",files:11,area:"workflow",branch:"Screenshots"},
+{name:"playwright-interactive",desc:"Persistent browser and Electron interaction through js_repl for iterative UI debugging.",files:6,area:"testing",branch:"Browser Automation"},
+{name:"transcribe",desc:"Transcribe audio to text with diarization and speaker hints. OpenAI Audio API.",files:7,area:"ai",branch:"Audio"},
+{name:"speech",desc:"Text-to-speech narration via OpenAI Audio API. Built-in voices, batch generation.",files:16,area:"ai",branch:"Audio"},
+{name:"imagegen",desc:"Generate or edit images via OpenAI Image API. Inpaint, background removal, product shots.",files:11,area:"ai",branch:"Images"},
+{name:"sora",desc:"Generate, edit, extend Sora videos. Character references, batch queues.",files:14,area:"ai",branch:"Video"},
+{name:"yeet",desc:"Stage, commit, push, and open a GitHub PR in one flow using gh CLI.",files:5,area:"workflow",branch:"GitHub"},
+{name:"develop-web-game",desc:"Build and iterate on web games (HTML/JS) with Playwright testing loop.",files:7,area:"frontend",branch:"Games"},
+{name:"chatgpt-apps",desc:"Build ChatGPT Apps SDK applications combining MCP server and widget UI.",files:11,area:"ai",branch:"ChatGPT"},
+{name:"aspnet-core",desc:"Build ASP.NET Core web applications. Blazor, .NET guidance.",files:17,area:"backend",branch:".NET"},
+{name:"winui-app",desc:"WinUI 3 desktop applications with C# and Windows App SDK.",files:21,area:"frontend",branch:"Windows"},
+{name:"doc",desc:"Read, create, or edit .docx documents with python-docx.",files:6,area:"docs",branch:"Documents"},
+{name:"pdf-openai",desc:"Read, create, or review PDF files. Poppler rendering, layout checks.",files:4,area:"docs",branch:"PDF"},
+{name:"spreadsheet",desc:"Create, edit, analyze spreadsheets (.xlsx, .csv) with formula-aware workflows.",files:9,area:"docs",branch:"Spreadsheets"},
+{name:"notion-knowledge-capture",desc:"Capture conversations and decisions into structured Notion pages.",files:18,area:"workflow",branch:"Notion"},
+{name:"notion-meeting-intelligence",desc:"Prepare meeting materials with Notion context and research.",files:19,area:"workflow",branch:"Notion"},
+{name:"notion-research-documentation",desc:"Research across Notion and synthesize into structured documentation.",files:23,area:"workflow",branch:"Notion"},
+{name:"frontend-skill",desc:"Visually strong landing pages, websites, prototypes, demos, game UI. Restrained composition.",files:3,area:"frontend",branch:"UI"}
+];
+
+const ANTHROPIC_NEW=[
+{name:"claude-api",desc:"Building applications with the Claude API and Anthropic SDK.",files:1,area:"ai",branch:"Claude",source:"anthropics/skills"}
+];
+
+let tab='current', filter='all', query='';
+const decisions = {};
+
+function setTab(t){tab=t;document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');render();}
+function setFilter(f){filter=f;render();}
+function decide(name,d){decisions[name]===d?delete decisions[name]:decisions[name]=d;render();}
+
+function render(){
+  renderSidebar();renderMain();renderTally();
+}
+
+function renderSidebar(){
+  const sb=document.getElementById('sidebar');
+  let items=tab==='current'?CURRENT:tab==='openai'?OPENAI_NEW:ANTHROPIC_NEW;
+  const areas={},sources={};
+  items.forEach(s=>{
+    const a=s.workArea||s.area||'other';areas[a]=(areas[a]||0)+1;
+    const src=(s.source||'openai/skills').split('/')[0];sources[src]=(sources[src]||0)+1;
+  });
+  let h=`<h3>Filter</h3>`;
+  h+=`<button class="fbtn ${filter==='all'?'active':''}" onclick="setFilter('all')">All<span class="c">${items.length}</span></button>`;
+  if(tab!=='current'){
+    const added=items.filter(s=>decisions[s.name]==='add').length;
+    const skipped=items.filter(s=>decisions[s.name]==='skip').length;
+    h+=`<button class="fbtn ${filter==='undecided'?'active':''}" onclick="setFilter('undecided')">Undecided<span class="c">${items.length-added-skipped}</span></button>`;
+    h+=`<button class="fbtn ${filter==='added'?'active':''}" onclick="setFilter('added')">Added<span class="c">${added}</span></button>`;
+  }
+  h+=`<h3>Area</h3>`;
+  Object.entries(areas).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{
+    h+=`<button class="fbtn ${filter===k?'active':''}" onclick="setFilter('${k}')">${k}<span class="c">${v}</span></button>`;
+  });
+  sb.innerHTML=h;
+}
+
+function renderMain(){
+  const main=document.getElementById('main');
+  let items=tab==='current'?CURRENT:tab==='openai'?OPENAI_NEW:ANTHROPIC_NEW;
+  const q=query.toLowerCase();
+  items=items.filter(s=>{
+    if(q&&![s.name,s.description||s.desc||'',s.branch||'',s.workArea||s.area||''].some(f=>f.toLowerCase().includes(q)))return false;
+    const area=s.workArea||s.area||'other';
+    if(filter==='all')return true;
+    if(filter==='undecided')return!decisions[s.name];
+    if(filter==='added')return decisions[s.name]==='add';
+    return area===filter;
+  });
+  const grouped={};
+  items.forEach(s=>{const a=s.workArea||s.area||'other';(grouped[a]=grouped[a]||[]).push(s);});
+  let h='';
+  if(tab==='current'){
+    for(const[area,skills]of Object.entries(grouped)){
+      h+=`<div class="section-hdr">${area} <span>${skills.length}</span></div>`;
+      skills.forEach(s=>{
+        const trust=s.trust==='verified'?'v':s.trust==='reviewed'?'r':'l';
+        h+=`<div class="row"><div><div class="sname">${s.name} <span class="b house">house</span> <span class="b ${trust}">${s.trust}</span></div><div class="smeta"><span>${s.workArea} / ${s.branch}</span><span>${s.source}</span></div><div class="sdesc">${s.description}</div></div></div>`;
+      });
+    }
+  } else {
+    for(const[area,skills]of Object.entries(grouped)){
+      h+=`<div class="section-hdr">${area} <span>${skills.length}</span></div>`;
+      skills.forEach(s=>{
+        const d=decisions[s.name]||'';
+        const cls=d==='add'?'add':d==='skip'?'remove':'';
+        h+=`<div class="row ${cls}"><div><div class="sname">${s.name} <span class="b up">upstream</span> <span style="font-size:11px;color:var(--muted)">${s.files} files</span></div><div class="smeta"><span>${s.area} / ${s.branch}</span><span>${tab==='anthropic'?'anthropics/skills':'openai/skills'}</span></div><div class="sdesc">${s.desc}</div></div><div class="btns"><button class="${d==='add'?'aa':''}" onclick="decide('${s.name}','add')">Add</button><button class="${d==='skip'?'ar':''}" onclick="decide('${s.name}','skip')">Skip</button></div></div>`;
+      });
+    }
+  }
+  main.innerHTML=h;
+}
+
+function renderTally(){
+  const added=Object.entries(decisions).filter(([,d])=>d==='add');
+  const skipped=Object.entries(decisions).filter(([,d])=>d==='skip');
+  document.getElementById('tally').innerHTML=`
+    <span class="tally"><span class="d" style="background:var(--accent)"></span>Current: 30 house copies</span>
+    <span class="tally"><span class="d" style="background:var(--cyan)"></span>Adding: ${added.length} upstream</span>
+    <span class="tally"><span class="d" style="background:var(--red)"></span>Skipped: ${skipped.length}</span>
+    <span style="font-size:12px;color:var(--muted)">Projected total: ${30+added.length}</span>
+    <button class="export-btn" onclick="exportJ()">Export</button>`;
+}
+
+function exportJ(){
+  const add=Object.entries(decisions).filter(([,d])=>d==='add').map(([n])=>{
+    const s=OPENAI_NEW.find(x=>x.name===n)||ANTHROPIC_NEW.find(x=>x.name===n);
+    return{name:n,source:s&&s.source?s.source:'openai/skills',area:s?s.area:'',branch:s?s.branch:''};
+  });
+  const skip=Object.entries(decisions).filter(([,d])=>d==='skip').map(([n])=>n);
+  const out={exported:new Date().toISOString(),catalogedUpstream:add,skipped:skip,summary:{current:30,adding:add.length,total:30+add.length}};
+  document.getElementById('mc').textContent=JSON.stringify(out,null,2);
+  document.getElementById('modal').classList.add('vis');
+}
+function copyE(){navigator.clipboard.writeText(document.getElementById('mc').textContent);event.target.textContent='Copied!';setTimeout(()=>event.target.textContent='Copy',1500);}
+
+document.getElementById('search').addEventListener('input',e=>{query=e.target.value;renderMain();});
+render();
+</script>
+</body>
+</html>

@@ -517,18 +517,32 @@ function printCollectionSuggestions(data) {
 }
 
 function getAvailableSkills() {
-  if (!fs.existsSync(SKILLS_DIR)) return [];
+  const skills = [];
 
-  try {
-    return fs.readdirSync(SKILLS_DIR).filter(name => {
-      const skillPath = path.join(SKILLS_DIR, name);
-      return fs.statSync(skillPath).isDirectory() &&
-             fs.existsSync(path.join(skillPath, 'SKILL.md'));
-    });
-  } catch (e) {
-    error(`Failed to read skills directory: ${e.message}`);
-    return [];
+  // Vendored skills (local folders)
+  if (fs.existsSync(SKILLS_DIR)) {
+    try {
+      skills.push(...fs.readdirSync(SKILLS_DIR).filter(name => {
+        const skillPath = path.join(SKILLS_DIR, name);
+        return fs.statSync(skillPath).isDirectory() &&
+               fs.existsSync(path.join(skillPath, 'SKILL.md'));
+      }));
+    } catch (e) {
+      error(`Failed to read skills directory: ${e.message}`);
+    }
   }
+
+  // Non-vendored cataloged skills (from skills.json)
+  try {
+    const data = loadSkillsJson();
+    for (const skill of data.skills) {
+      if (skill.vendored === false && !skills.includes(skill.name)) {
+        skills.push(skill.name);
+      }
+    }
+  } catch {}
+
+  return skills;
 }
 
 // ============ ARGUMENT PARSING ============
@@ -780,6 +794,21 @@ function installSkill(skillName, agent = 'claude', dryRun = false, targetPath = 
   const sourcePath = path.join(SKILLS_DIR, skillName);
 
   if (!fs.existsSync(sourcePath)) {
+    // Check if this is a non-vendored cataloged skill
+    try {
+      const data = loadSkillsJson();
+      const cataloged = data.skills.find(s => s.name === skillName && s.vendored === false);
+      if (cataloged) {
+        const installSource = cataloged.installSource || cataloged.source;
+        if (installSource) {
+          info(`"${skillName}" is a cataloged upstream skill. Installing live from ${installSource}...`);
+          const parsed = parseSource(installSource);
+          const installPaths = targetPath ? [targetPath] : [AGENT_PATHS[agent] || SCOPES.global];
+          return installFromSource(installSource, parsed, installPaths, [skillName], false, true, dryRun);
+        }
+      }
+    } catch {}
+
     error(`Skill "${skillName}" not found.`);
 
     // Suggest similar skills
@@ -990,16 +1019,20 @@ function runDoctor(agentsToCheck = Object.keys(AGENT_PATHS)) {
 
   try {
     const data = loadSkillsJson();
-    const missingSkills = (data.skills || []).filter((skill) => {
+    const vendoredSkills = (data.skills || []).filter(s => s.vendored !== false);
+    const catalogedSkills = (data.skills || []).filter(s => s.vendored === false);
+    const missingSkills = vendoredSkills.filter((skill) => {
       const skillPath = path.join(SKILLS_DIR, skill.name, 'SKILL.md');
       return !fs.existsSync(skillPath);
     });
 
+    const vendoredCount = vendoredSkills.length;
+    const catalogedCount = catalogedSkills.length;
     checks.push({
       name: 'Bundled library',
       pass: missingSkills.length === 0,
       detail: missingSkills.length === 0
-        ? `${data.skills.length} skills across ${getCollections(data).length} collections`
+        ? `${vendoredCount} vendored + ${catalogedCount} cataloged upstream across ${getCollections(data).length} collections`
         : `Missing bundled SKILL.md for ${missingSkills.map((skill) => skill.name).join(', ')}`,
     });
   } catch (e) {
@@ -1505,6 +1538,7 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
       sortSkillsByCuration(data, byWorkArea[areaId]).forEach(skill => {
         const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
         const verified = skill.verified ? ` ${colors.green}✓${colors.reset}` : '';
+        const upstream = skill.vendored === false ? ` ${colors.magenta}[upstream]${colors.reset}` : '';
         const tagStr = skill.tags && skill.tags.length > 0
           ? ` ${colors.dim}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
           : '';
@@ -1512,7 +1546,7 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
           ? ` ${colors.dim}{${getCollectionBadgeText(data, skill)}}${colors.reset}`
           : '';
 
-        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}${collectionBadge}`);
+        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${upstream}${tagStr}${collectionBadge}`);
         log(`    ${colors.dim}${getSkillMeta(skill, false)}${colors.reset}`);
 
         const desc = skill.description.length > 65
@@ -1659,7 +1693,25 @@ function getSkillFilePath(skillName) {
 
 function showPreview(skillName) {
   const skillPath = getSkillFilePath(skillName);
-  if (!skillPath) return;
+
+  if (!skillPath) {
+    // Check if it's a non-vendored cataloged skill
+    try {
+      const data = loadSkillsJson();
+      const cataloged = data.skills.find(s => s.name === skillName && s.vendored === false);
+      if (cataloged) {
+        log(`\n${colors.bold}Preview:${colors.reset} ${skillName}\n`);
+        log(cataloged.description);
+        if (cataloged.whyHere) {
+          log(`\n${colors.dim}${cataloged.whyHere}${colors.reset}`);
+        }
+        const src = cataloged.installSource || cataloged.source;
+        log(`\n${colors.dim}Cataloged upstream skill. Install pulls live from: ${src}${colors.reset}`);
+        return;
+      }
+    } catch {}
+    return;
+  }
 
   log(`\n${colors.bold}Preview:${colors.reset} ${skillName}\n`);
   log(fs.readFileSync(skillPath, 'utf8'));
@@ -1732,7 +1784,7 @@ function levenshteinDistance(a, b) {
 // v3: sanitize subpath segments (reject path traversal)
 function sanitizeSubpath(subpath) {
   if (!subpath) return null;
-  const segments = String(subpath).split('/').filter(Boolean);
+  const segments = String(subpath).replace(/\\/g, '/').split('/').filter(Boolean);
   for (const seg of segments) {
     if (seg === '..') {
       throw new Error(`Path traversal rejected: "${subpath}" contains ".." segment`);
@@ -1944,6 +1996,11 @@ function expandPath(p) {
     return path.join(os.homedir(), p.slice(1));
   }
   return path.resolve(p);
+}
+
+function getArgValue(argv, flag) {
+  const i = argv.indexOf(flag);
+  return i !== -1 && i + 1 < argv.length ? argv[i + 1] : null;
 }
 
 // Validate GitHub owner/repo names (alphanumeric, hyphens, underscores, dots)
@@ -2207,6 +2264,160 @@ function discoverSkills(rootDir) {
   }
 
   return skills;
+}
+
+// ============ CATALOG COMMAND ============
+
+function catalogSkills(source, options = {}) {
+  const { execFileSync } = require('child_process');
+  const parsed = parseSource(source);
+
+  if (!parsed || parsed.type === 'catalog') {
+    error('Provide a GitHub repo: npx ai-agent-skills catalog owner/repo');
+    return;
+  }
+
+  let rootDir = null;
+  let tempDir = null;
+
+  try {
+    // Resolve source
+    if (parsed.type === 'local') {
+      rootDir = expandPath(parsed.url);
+      if (!fs.existsSync(rootDir)) {
+        error(`Path not found: ${rootDir}`);
+        return;
+      }
+    } else {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'catalog-'));
+      rootDir = tempDir;
+      const cloneUrl = parsed.type === 'github' ? `${parsed.url}.git` : parsed.url;
+      info(`Discovering skills in ${source}...`);
+      try {
+        execFileSync('git', ['clone', '--depth', '1', cloneUrl, tempDir], {
+          stdio: 'pipe',
+          timeout: 60000,
+          env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+        });
+      } catch (cloneErr) {
+        error(classifyGitError(cloneErr.message || cloneErr.stderr));
+        return;
+      }
+      if (parsed.subpath) {
+        const subDir = path.join(tempDir, parsed.subpath);
+        if (fs.existsSync(subDir)) rootDir = subDir;
+      }
+    }
+
+    const discovered = discoverSkills(rootDir);
+    if (discovered.length === 0) {
+      warn('No skills found in source.');
+      return;
+    }
+
+    // Load catalog once for both --list and catalog operations
+    const data = loadSkillsJson();
+    const existingNames = new Set(data.skills.map(s => s.name));
+
+    // --list mode
+    if (options.list) {
+      log(`\n${colors.bold}Available skills in ${source}${colors.reset} (${discovered.length} found)\n`);
+      for (const s of discovered) {
+        const badge = existingNames.has(s.name) ? ` ${colors.dim}(already in catalog)${colors.reset}` : '';
+        log(`  ${colors.green}${s.name}${colors.reset}${badge}`);
+        if (s.description) log(`    ${colors.dim}${s.description.slice(0, 90)}${colors.reset}`);
+      }
+      log('');
+      return;
+    }
+
+    // Filter skills
+    let targets = discovered;
+    if (options.skillFilter) {
+      const match = discovered.find(s => s.name.toLowerCase() === options.skillFilter.toLowerCase());
+      if (!match) {
+        error(`Skill "${options.skillFilter}" not found. Available:`);
+        for (const s of discovered) log(`  ${colors.green}${s.name}${colors.reset}`);
+        return;
+      }
+      targets = [match];
+    }
+    const sourceLabel = parsed.owner && parsed.repo ? `${parsed.owner}/${parsed.repo}` : source;
+
+    let added = 0;
+    let skipped = 0;
+
+    for (const skill of targets) {
+      if (existingNames.has(skill.name)) {
+        if (targets.length === 1) {
+          warn(`"${skill.name}" is already in the catalog.`);
+        }
+        skipped++;
+        continue;
+      }
+
+      // Validate skill name before cataloging
+      try { validateSkillName(skill.name); } catch {
+        warn(`Skipping "${skill.name}": invalid skill name`);
+        skipped++;
+        continue;
+      }
+
+      // Build the relative path for installSource
+      const relPath = path.relative(tempDir || rootDir, skill.dir).replace(/\\/g, '/');
+      const installSource = relPath && relPath !== '.' && relPath !== skill.dirName
+        ? `${sourceLabel}/${relPath}`
+        : sourceLabel;
+
+      const entry = {
+        name: skill.name,
+        description: skill.description || '',
+        category: options.category || 'development',
+        workArea: options.area || '',
+        branch: options.branch || '',
+        author: parsed.owner || 'unknown',
+        source: sourceLabel,
+        license: 'MIT',
+        vendored: false,
+        installSource,
+        tags: options.tags ? options.tags.split(',').map(t => t.trim()) : [],
+        featured: false,
+        verified: false,
+        origin: 'curated',
+        trust: 'listed',
+        syncMode: 'live',
+        sourceUrl: parsed.url ? `${parsed.url}/tree/main/${relPath}` : '',
+        whyHere: '',
+        addedDate: new Date().toISOString().split('T')[0],
+      };
+
+      data.skills.push(entry);
+      existingNames.add(skill.name);
+      added++;
+
+      const areaLabel = entry.workArea ? ` ${colors.dim}(${entry.workArea}${entry.branch ? ' > ' + entry.branch : ''})${colors.reset}` : '';
+      log(`  ${colors.green}+${colors.reset} ${skill.name}${areaLabel}`);
+    }
+
+    if (added > 0) {
+      data.total = data.skills.length;
+      data.updated = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+      fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(data, null, 2) + '\n');
+      log(`\n${colors.green}Cataloged ${added} skill${added !== 1 ? 's' : ''}${colors.reset} from ${sourceLabel} (${skipped} already existed)`);
+      log(`${colors.dim}Total: ${data.total} skills in catalog${colors.reset}`);
+
+      if (!options.area) {
+        log(`\n${colors.dim}Tip: set work area with --area <name> --branch <name>${colors.reset}`);
+      }
+    } else {
+      info(`All skills from ${sourceLabel} are already in the catalog.`);
+    }
+
+  } finally {
+    if (tempDir) {
+      safeTempCleanup(tempDir);
+    }
+  }
 }
 
 // v3: classify git clone errors for actionable messages
@@ -2871,6 +3082,7 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}check${colors.reset}                 Check for available updates
   ${colors.green}init [name]${colors.reset}           Create a new SKILL.md template
   ${colors.green}config${colors.reset}                Manage CLI settings
+  ${colors.green}catalog <source>${colors.reset}     Add upstream skills to the catalog (no local copy)
   ${colors.green}doctor${colors.reset}                Diagnose install issues
   ${colors.green}validate [path]${colors.reset}       Validate a skill directory
 
@@ -2900,7 +3112,7 @@ ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
 
 ${colors.bold}Work areas:${colors.reset}
-  frontend, backend, docs, testing, workflow, research, design, business
+  frontend, backend, docs, testing, workflow, research, design, business, mobile, ai, devops
 
 ${colors.bold}Collections:${colors.reset}
   my-picks, build-apps, build-systems, test-and-debug, docs-and-research
@@ -2958,6 +3170,7 @@ ${colors.bold}${skill.name}${colors.reset}${skill.featured ? ` ${colors.yellow}(
 
 ${colors.dim}${skill.description}${colors.reset}
 
+${colors.bold}Tier:${colors.reset}        ${skill.vendored === false ? 'Cataloged upstream (install pulls live from ' + (skill.installSource || skill.source) + ')' : 'Vendored house copy'}
 ${colors.bold}Work Area:${colors.reset}   ${skill.workArea ? formatWorkAreaTitle(skill.workArea) : 'n/a'}
 ${colors.bold}Branch:${colors.reset}      ${skill.branch || 'n/a'}
 ${colors.bold}Category:${colors.reset}    ${skill.category}
@@ -3248,7 +3461,6 @@ async function main() {
       return;
 
     case 'collections':
-    case 'catalog':
       showCollections();
       return;
 
@@ -3335,6 +3547,27 @@ async function main() {
       }
       showPreview(param);
       return;
+
+    case 'catalog': {
+      if (!param) {
+        error('Provide a source: npx ai-agent-skills catalog owner/repo');
+        log(`\n${colors.dim}Examples:${colors.reset}`);
+        log(`  npx ai-agent-skills catalog openai/skills --list`);
+        log(`  npx ai-agent-skills catalog openai/skills --skill linear --area workflow --branch Linear`);
+        log(`  npx ai-agent-skills catalog shadcn-ui/ui --skill shadcn --area design`);
+        log(`  npx ai-agent-skills catalog anthropics/skills`);
+        return;
+      }
+      catalogSkills(param, {
+        list: listMode,
+        skillFilter: skillFilters.length > 0 ? skillFilters[0] : null,
+        area: workArea || getArgValue(process.argv, '--area'),
+        branch: getArgValue(process.argv, '--branch'),
+        category: category || getArgValue(process.argv, '--category'),
+        tags: tags || getArgValue(process.argv, '--tags'),
+      });
+      return;
+    }
 
     case 'doctor': {
       const doctorAgents = explicitAgent ? agents : Object.keys(AGENT_PATHS);

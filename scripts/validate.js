@@ -37,17 +37,20 @@ if (!Array.isArray(data.skills)) {
 
 // ── Schema checks ──
 
-const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode', 'whyHere'];
+const baseRequired = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode'];
+const vendoredRequired = [...baseRequired, 'whyHere'];
 const validCategories = ['development', 'document', 'creative', 'business', 'productivity'];
 const validOrigins = ['authored', 'curated', 'adapted'];
-const validSyncModes = ['authored', 'mirror', 'snapshot', 'adapted'];
+const validSyncModes = ['authored', 'mirror', 'snapshot', 'adapted', 'live'];
 const validTrust = ['verified', 'reviewed', 'listed'];
 const names = new Set();
 
 const workAreaIds = (data.workAreas || []).map(a => a.id);
 
 data.skills.forEach(skill => {
-  required.forEach(field => {
+  const isVendored = skill.vendored !== false;
+  const fields = isVendored ? vendoredRequired : baseRequired;
+  fields.forEach(field => {
     if (!skill[field]) error(`${skill.name || '(unnamed)'} missing ${field}`);
   });
 
@@ -121,13 +124,23 @@ if (data.version !== pkg.version) {
 
 console.log('\nValidating skill folders\n');
 
+const vendoredNames = new Set();
+const catalogedNames = new Set();
+data.skills.forEach(skill => {
+  if (skill.vendored === false) {
+    catalogedNames.add(skill.name);
+  } else {
+    vendoredNames.add(skill.name);
+  }
+});
+
 const folders = fs.readdirSync(skillsDir).filter(f =>
   fs.statSync(path.join(skillsDir, f)).isDirectory()
 );
 
 folders.forEach(folder => {
-  if (!names.has(folder)) {
-    error(`Folder "${folder}" exists but not in skills.json`);
+  if (!vendoredNames.has(folder)) {
+    error(`Folder "${folder}" exists but not in skills.json as vendored`);
   }
 
   const skillMd = path.join(skillsDir, folder, 'SKILL.md');
@@ -136,13 +149,21 @@ folders.forEach(folder => {
   }
 });
 
-names.forEach(name => {
+vendoredNames.forEach(name => {
   if (!folders.includes(name)) {
-    error(`skills.json has "${name}" but folder missing`);
+    error(`Vendored skill "${name}" but folder missing`);
   }
 });
 
-pass(`${folders.length} folders match skills.json`);
+// Non-vendored skills must have an install source
+catalogedNames.forEach(name => {
+  const skill = data.skills.find(s => s.name === name);
+  if (!skill.installSource && !skill.source) {
+    error(`Cataloged skill "${name}" has no installSource or source`);
+  }
+});
+
+pass(`${folders.length} vendored folders, ${catalogedNames.size} cataloged upstream`);
 
 // ── Rich skills count ──
 

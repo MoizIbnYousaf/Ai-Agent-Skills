@@ -69,8 +69,12 @@ function readSkillsJson() {
 }
 
 function readSkillMarkdown(skillName) {
-  const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md');
-  return fs.readFileSync(skillPath, 'utf8');
+  try {
+    const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md');
+    return fs.readFileSync(skillPath, 'utf8');
+  } catch {
+    return null;
+  }
 }
 
 function buildSearchText(parts) {
@@ -329,13 +333,16 @@ function buildCatalog() {
       description: '',
     };
     const branchTitle = humanizeSlug(skill.branch || 'misc');
-    const markdown = readSkillMarkdown(skill.name);
+    const isVendored = skill.vendored !== false;
+    const markdown = isVendored ? readSkillMarkdown(skill.name) : null;
     const source = skill.source;
     const title = humanizeSlug(skill.name);
 
     return {
       ...skill,
       title,
+      vendored: isVendored,
+      tier: isVendored ? 'house' : 'upstream',
       workAreaTitle: workArea.title,
       workAreaDescription: workArea.description,
       branchTitle,

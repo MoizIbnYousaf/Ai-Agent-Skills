@@ -15,7 +15,13 @@ scripts/
 # Documentation (README is auto-included)
 CONTRIBUTING.md
 CHANGELOG.md
+CURATION.md
+WORK_AREAS.md
 docs/
+
+# Dev tools
+curator.html
+atlas.html
 
 # OS files
 .DS_Store

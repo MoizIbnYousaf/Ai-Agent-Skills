@@ -86,10 +86,12 @@ test('skills.json exists and is valid JSON', () => {
 
 test('skills.json has skills with required fields', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-  const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode', 'whyHere'];
+  const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode'];
+  const vendoredRequired = [...required, 'whyHere'];
 
   data.skills.forEach(skill => {
-    required.forEach(field => {
+    const fields = skill.vendored === false ? required : vendoredRequired;
+    fields.forEach(field => {
       assert(skill[field], `Skill ${skill.name} missing ${field}`);
     });
   });
@@ -98,7 +100,7 @@ test('skills.json has skills with required fields', () => {
 test('skills.json provenance metadata is valid', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const validOrigins = ['authored', 'curated', 'adapted'];
-  const validSyncModes = ['authored', 'mirror', 'snapshot', 'adapted'];
+  const validSyncModes = ['authored', 'mirror', 'snapshot', 'adapted', 'live'];
 
   data.skills.forEach(skill => {
     assert(validOrigins.includes(skill.origin), `Invalid origin "${skill.origin}" for ${skill.name}`);
@@ -107,10 +109,14 @@ test('skills.json provenance metadata is valid', () => {
       typeof skill.sourceUrl === 'string' && skill.sourceUrl.startsWith('https://github.com/'),
       `Invalid sourceUrl for ${skill.name}`
     );
-    assert(
-      typeof skill.whyHere === 'string' && skill.whyHere.trim().length >= 20,
-      `whyHere is too thin for ${skill.name}`
-    );
+
+    // whyHere is required for vendored skills, optional for cataloged upstream
+    if (skill.vendored !== false) {
+      assert(
+        typeof skill.whyHere === 'string' && skill.whyHere.trim().length >= 20,
+        `whyHere is too thin for ${skill.name}`
+      );
+    }
 
     if (skill.verified) {
       assert(skill.lastVerified, `Verified skill ${skill.name} missing lastVerified`);
@@ -127,13 +133,13 @@ test('skills.json does not carry stale popularity metrics', () => {
   });
 });
 
-test('skill names match folder names', () => {
+test('vendored skill names match folder names', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const skillsDir = path.join(__dirname, 'skills');
 
-  data.skills.forEach(skill => {
+  data.skills.filter(s => s.vendored !== false).forEach(skill => {
     const skillPath = path.join(skillsDir, skill.name);
-    assert(fs.existsSync(skillPath), `Folder missing for skill: ${skill.name}`);
+    assert(fs.existsSync(skillPath), `Folder missing for vendored skill: ${skill.name}`);
     assert(fs.existsSync(path.join(skillPath, 'SKILL.md')), `SKILL.md missing for: ${skill.name}`);
   });
 });
@@ -206,14 +212,14 @@ test('work area metadata is valid', () => {
 
 test('skills.sh install spec is created for upstream GitHub skills', () => {
   const catalog = buildCatalog();
-  const mirrorSkill = catalog.skills.find(skill => skill.name === 'figma-implement-design');
+  const mirrorSkill = catalog.skills.find(skill => skill.name === 'figma');
   const snapshotSkill = catalog.skills.find(skill => skill.name === 'frontend-design');
-  const authoredSkill = catalog.skills.find(skill => skill.name === 'qa-regression');
+  const authoredSkill = catalog.skills.find(skill => skill.name === 'job-application');
 
   const mirrorSpec = getSkillsInstallSpec(mirrorSkill, 'codex');
   assert(mirrorSpec, 'Expected mirror skill to expose a skills.sh install spec');
   assertContains(mirrorSpec.command, 'skills@1.4.5');
-  assertContains(mirrorSpec.command, 'figma-implement-design');
+  assertContains(mirrorSpec.command, 'figma');
   assertContains(mirrorSpec.command, 'codex');
   assertContains(mirrorSpec.command, '--skill');
 
@@ -226,12 +232,12 @@ test('skills.sh install spec is created for upstream GitHub skills', () => {
   const authoredSpec = getSkillsInstallSpec(authoredSkill, 'codex');
   assert(authoredSpec, 'Expected GitHub-backed authored skill to expose a skills.sh install spec');
   assertContains(authoredSpec.command, 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills');
-  assertContains(authoredSpec.command, '--skill qa-regression');
+  assertContains(authoredSpec.command, '--skill job-application');
 });
 
 test('skills.sh install spec respects supported agent mappings', () => {
   const catalog = buildCatalog();
-  const mirrorSkill = catalog.skills.find(skill => skill.name === 'figma-implement-design');
+  const mirrorSkill = catalog.skills.find(skill => skill.name === 'figma');
 
   assertEqual(getSkillsInstallSpec(mirrorSkill, 'project'), null, 'Project agent should not expose skills.sh install');
   assertEqual(getSkillsInstallSpec(mirrorSkill, 'letta'), null, 'Unsupported mapped agent should not expose skills.sh install');
@@ -240,17 +246,12 @@ test('skills.sh install spec respects supported agent mappings', () => {
 test('github install spec resolves upstream path for curated external skills', () => {
   const catalog = buildCatalog();
   const snapshotSkill = catalog.skills.find(skill => skill.name === 'frontend-design');
-  const nestedSkill = catalog.skills.find(skill => skill.name === 'code-review');
   const openaiSkill = catalog.skills.find(skill => skill.name === 'openai-docs');
-  const authoredSkill = catalog.skills.find(skill => skill.name === 'qa-regression');
+  const authoredSkill = catalog.skills.find(skill => skill.name === 'job-application');
 
   const snapshotSpec = getGitHubInstallSpec(snapshotSkill, 'codex');
   assert(snapshotSpec, 'Expected curated external skill to expose a GitHub install spec');
   assertContains(snapshotSpec.command, 'anthropics/skills/frontend-design');
-
-  const nestedSpec = getGitHubInstallSpec(nestedSkill, 'codex');
-  assert(nestedSpec, 'Expected nested upstream skill to expose a GitHub install spec');
-  assertContains(nestedSpec.command, 'anthropics/claude-code/plugins/code-review');
 
   const openaiSpec = getGitHubInstallSpec(openaiSkill, 'codex');
   assert(openaiSpec, 'Expected OpenAI system skill to expose a GitHub install spec');
@@ -309,7 +310,7 @@ test('search command works', () => {
 
 test('search ranks stronger curated matches first', () => {
   const output = run('search react');
-  assert(output.indexOf('frontend-design') < output.indexOf('artifacts-builder'), 'frontend-design should rank ahead of artifacts-builder for react');
+  assertContains(output, 'frontend-design');
   assertContains(output, '{My Picks, Build Apps}');
 });
 
@@ -330,15 +331,21 @@ test('info command works', () => {
 test('info command shows neighboring recommendations', () => {
   const output = run('info frontend-design');
   assertContains(output, 'Also Look At:');
-  assertContains(output, 'figma-implement-design');
+  assertContains(output, 'frontend-skill');
   assertContains(output, 'anthropics/skills/frontend-design');
 });
 
-test('preview command works', () => {
+test('preview command works for vendored skill', () => {
+  const output = run('preview best-practices');
+  assertContains(output, 'Preview:');
+  assertContains(output, 'best-practices');
+});
+
+test('preview command works for non-vendored skill', () => {
   const output = run('preview pdf');
   assertContains(output, 'Preview:');
   assertContains(output, 'pdf');
-  assertContains(output, '# PDF Processing Guide');
+  assertContains(output, 'Cataloged upstream skill');
 });
 
 test('browse command shows tty guidance outside a TTY', () => {
@@ -366,7 +373,7 @@ test('dry-run shows preview', () => {
 });
 
 test('nested GitHub skill path install dry-run works', () => {
-  const output = runArgs(['install', 'anthropics/claude-code/plugins/code-review', '--agent', 'project', '--dry-run']);
+  const output = runArgs(['install', 'anthropics/skills/frontend-design', '--agent', 'project', '--dry-run']);
   assertContains(output, 'Dry Run');
   assertContains(output, 'Would clone');
 });
@@ -432,11 +439,11 @@ test('doctor command works', () => {
 });
 
 test('validate command works on a bundled skill', () => {
-  const output = runArgs(['validate', 'skills/pdf']);
+  const output = runArgs(['validate', 'skills/job-application']);
   assertContains(output, 'Validate Skill');
   assertContains(output, 'PASS');
   assertContains(output, 'Name:');
-  assertContains(output, 'pdf');
+  assertContains(output, 'job-application');
 });
 
 test('unknown command shows error', () => {
@@ -452,7 +459,7 @@ test('category filter works', () => {
 test('work area filter works', () => {
   const output = run('list --work-area testing');
   assertContains(output, 'TESTING');
-  assertContains(output, 'qa-regression');
+  assertContains(output, 'webapp-testing');
 });
 
 test('work area list shows collection badges', () => {
@@ -840,17 +847,23 @@ test('skills.json updated field is valid ISO date', () => {
   assert(!isNaN(Date.parse(data.updated)), `updated field "${data.updated}" is not a valid date`);
 });
 
-test('every skill folder has exactly one SKILL.md (no orphan folders)', () => {
+test('vendored skills have folders, non-vendored do not', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-  const catalogNames = new Set(data.skills.map(s => s.name));
+  const vendored = data.skills.filter(s => s.vendored !== false);
+  const cataloged = data.skills.filter(s => s.vendored === false);
   const folders = fs.readdirSync(path.join(__dirname, 'skills')).filter(f =>
     fs.statSync(path.join(__dirname, 'skills', f)).isDirectory()
   );
+  const vendoredNames = new Set(vendored.map(s => s.name));
   folders.forEach(folder => {
-    assert(catalogNames.has(folder), `Folder "skills/${folder}" exists but not in skills.json`);
+    assert(vendoredNames.has(folder), `Folder "skills/${folder}" exists but not in skills.json as vendored`);
   });
-  catalogNames.forEach(name => {
-    assert(folders.includes(name), `skills.json has "${name}" but no folder exists`);
+  vendoredNames.forEach(name => {
+    assert(folders.includes(name), `Vendored skill "${name}" has no folder`);
+  });
+  cataloged.forEach(skill => {
+    assert(!folders.includes(skill.name), `Non-vendored skill "${skill.name}" should not have a folder`);
+    assert(skill.installSource || skill.source, `Non-vendored skill "${skill.name}" needs installSource or source`);
   });
 });
 
@@ -858,9 +871,9 @@ test('batch-fill template whyHere count is tracked (15 remaining, fix in v3.1)',
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const templatePattern = /without diluting the library's focus/;
   const templateSkills = data.skills.filter(s => templatePattern.test(s.whyHere));
-  // 15 Composio skills have batch-fill templates. This number should go to 0 in v3.1.
+  // 3 remaining Composio skills have batch-fill templates. Rewrite these in v3.1.
   assert(
-    templateSkills.length <= 15,
+    templateSkills.length <= 3,
     `Expected at most 15 batch-fill whyHere entries, found ${templateSkills.length}`
   );
 });

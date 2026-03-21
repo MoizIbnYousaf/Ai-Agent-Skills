@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas — Ai-Agent-Skills</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--paper:#faf8f5;--ink:#1a1612;--stone:#6b6560;--warm:#c4b5a0;--sand:#e8e0d4;--amber:#b8860b;--rust:#9e4a2f;--sage:#5a7a60;--slate:#3a4a5a;--cream:#f0ebe3;--ghost:rgba(26,22,18,.04)}
+html{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+::selection{background:var(--amber);color:var(--paper)}
+
+/* Layout */
+.shell{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+
+/* Masthead */
+.mast{grid-column:1/-1;padding:20px 32px;border-bottom:1px solid var(--sand);display:flex;align-items:baseline;gap:16px}
+.mast h1{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--ink)}
+.mast h1 span{color:var(--amber);font-weight:300;margin-left:6px}
+.mast .pills{display:flex;gap:6px;margin-left:auto}
+.pill{font-size:11px;font-weight:500;color:var(--stone);padding:4px 10px;background:var(--cream);border-radius:4px;font-family:'JetBrains Mono',monospace;letter-spacing:-.2px}
+.pill b{color:var(--ink);font-weight:500}
+
+/* Rail */
+.rail{border-right:1px solid var(--sand);padding:20px 0;overflow-y:auto;background:var(--paper)}
+.rail-section{padding:0 16px;margin-bottom:20px}
+.rail-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--warm);font-weight:700;margin-bottom:8px;padding:0 4px}
+.rail-btn{display:block;width:100%;text-align:left;border:none;background:none;font-family:inherit;font-size:12px;color:var(--stone);padding:6px 10px;border-radius:5px;cursor:pointer;transition:all .1s}
+.rail-btn:hover{background:var(--cream);color:var(--ink)}
+.rail-btn.on{background:var(--ink);color:var(--paper);font-weight:500}
+.rail-btn .c{float:right;font-family:'JetBrains Mono',monospace;font-size:10px;opacity:.5}
+.rail-btn.on .c{opacity:.7}
+.rail-search{width:100%;border:1px solid var(--sand);background:var(--cream);padding:7px 10px;border-radius:5px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;margin-bottom:12px}
+.rail-search:focus{border-color:var(--amber)}
+.rail-search::placeholder{color:var(--warm)}
+
+/* Main */
+.main{padding:24px 32px;overflow-y:auto}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--warm);font-weight:700;padding:0 12px 10px;border-bottom:1px solid var(--sand)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--ghost);font-size:13px;vertical-align:middle}
+.tbl tr{transition:background .08s}
+.tbl tr:hover{background:var(--cream)}
+.tbl tr.selected{background:rgba(184,134,11,.06)}
+.tbl .skill-name{font-weight:500;color:var(--ink);cursor:pointer}
+.tbl .skill-name:hover{color:var(--amber)}
+.tier-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+.tier-dot.house{background:var(--amber)}
+.tier-dot.upstream{background:var(--sage)}
+.tier-label{font-size:11px;color:var(--stone)}
+.src-tag{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--slate);background:var(--cream);padding:2px 6px;border-radius:3px}
+.trust-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:3px}
+.trust-tag.verified{color:var(--sage);background:rgba(90,122,96,.1)}
+.trust-tag.reviewed{color:var(--slate);background:rgba(58,74,90,.08)}
+.trust-tag.listed{color:var(--warm);background:var(--ghost)}
+.area-tag{font-size:10px;color:var(--stone)}
+
+/* Actions column */
+.acts{display:flex;gap:2px;opacity:0;transition:opacity .1s}
+tr:hover .acts{opacity:1}
+.act{border:none;background:none;cursor:pointer;padding:4px 6px;border-radius:4px;font-size:11px;font-family:inherit;color:var(--stone);transition:all .1s}
+.act:hover{background:var(--cream);color:var(--ink)}
+.act.danger:hover{color:var(--rust);background:rgba(158,74,47,.08)}
+
+/* Detail drawer */
+.drawer{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--paper);border-left:1px solid var(--sand);padding:28px;overflow-y:auto;transform:translateX(100%);transition:transform .2s ease-out;z-index:10;box-shadow:-8px 0 32px rgba(0,0,0,.04)}
+.drawer.open{transform:translateX(0)}
+.drawer-close{position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;color:var(--stone);cursor:pointer;padding:4px 8px;border-radius:4px}
+.drawer-close:hover{background:var(--cream);color:var(--ink)}
+.drawer h2{font-size:18px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}
+.drawer .subtitle{font-size:12px;color:var(--stone);margin-bottom:20px}
+.drawer-field{margin-bottom:14px}
+.drawer-field .k{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--warm);font-weight:700;margin-bottom:3px}
+.drawer-field .v{font-size:13px}
+.drawer-sep{height:1px;background:var(--sand);margin:16px 0}
+.drawer-cmd{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sage);background:var(--cream);padding:10px 14px;border-radius:6px;position:relative;margin-top:8px;line-height:1.6}
+.drawer-cmd .cp{position:absolute;top:6px;right:6px;border:1px solid var(--sand);background:var(--paper);color:var(--stone);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:9px;font-family:inherit}
+.drawer-cmd .cp:hover{border-color:var(--amber);color:var(--ink)}
+.flow-steps{margin-top:8px}
+.flow-step{display:flex;gap:10px;padding:5px 0;font-size:12px;color:var(--stone)}
+.flow-step .n{width:18px;height:18px;border-radius:50%;background:var(--cream);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;border:1px solid var(--sand)}
+
+/* Drawer actions */
+.drawer-actions{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap}
+.drawer-act{border:1px solid var(--sand);background:var(--paper);padding:6px 14px;border-radius:5px;font-size:11px;font-family:inherit;color:var(--stone);cursor:pointer;transition:all .1s}
+.drawer-act:hover{border-color:var(--ink);color:var(--ink)}
+.drawer-act.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.drawer-act.primary:hover{background:var(--amber);border-color:var(--amber)}
+.drawer-act.danger{color:var(--rust);border-color:rgba(158,74,47,.3)}
+.drawer-act.danger:hover{background:rgba(158,74,47,.06);border-color:var(--rust)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:8px;font-size:12px;font-weight:500;opacity:0;transition:all .25s ease-out;z-index:20;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Empty */
+.empty{text-align:center;padding:60px 20px;color:var(--warm)}
+.empty p{font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="mast">
+  <h1>Atlas<span>v3.1</span></h1>
+  <div class="pills" id="pills"></div>
+</div>
+<div class="rail">
+  <div class="rail-section">
+    <input class="rail-search" id="search" placeholder="Search skills...">
+  </div>
+  <div class="rail-section">
+    <div class="rail-label">Work Areas</div>
+    <div id="areas"></div>
+  </div>
+  <div class="rail-section">
+    <div class="rail-label">Tier</div>
+    <div id="tiers"></div>
+  </div>
+  <div class="rail-section">
+    <div class="rail-label">Source</div>
+    <div id="sources"></div>
+  </div>
+</div>
+<div class="main">
+  <table class="tbl">
+    <thead><tr><th style="width:28px"></th><th>Skill</th><th>Area / Branch</th><th>Source</th><th>Trust</th><th style="width:100px"></th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+</div>
+<div class="drawer" id="drawer"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const S=[
+{name:"frontend-design",area:"frontend",branch:"React",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"figma-implement-design",area:"frontend",branch:"Figma",source:"openai/skills",trust:"reviewed",tier:"upstream"},
+{name:"backend-development",area:"backend",branch:"Architecture",source:"wshobson/agents",trust:"listed",tier:"house"},
+{name:"database-design",area:"backend",branch:"Database",source:"wshobson/agents",trust:"listed",tier:"house"},
+{name:"pdf",area:"docs",branch:"PDF",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"xlsx",area:"docs",branch:"Spreadsheets",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"docx",area:"docs",branch:"Documents",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"pptx",area:"docs",branch:"Presentations",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"doc-coauthoring",area:"docs",branch:"Writing",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"code-documentation",area:"docs",branch:"Writing",source:"wshobson/agents",trust:"listed",tier:"house"},
+{name:"webapp-testing",area:"testing",branch:"Web QA",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"playwright",area:"testing",branch:"Browser Automation",source:"openai/skills",trust:"reviewed",tier:"upstream"},
+{name:"changelog-generator",area:"workflow",branch:"Release Notes",source:"ComposioHQ/awesome-claude-skills",trust:"listed",tier:"house"},
+{name:"linear",area:"workflow",branch:"Linear",source:"openai/skills",trust:"listed",tier:"upstream"},
+{name:"content-research-writer",area:"research",branch:"Writing",source:"ComposioHQ/awesome-claude-skills",trust:"listed",tier:"house"},
+{name:"lead-research-assistant",area:"research",branch:"Lead Research",source:"ComposioHQ/awesome-claude-skills",trust:"listed",tier:"house"},
+{name:"canvas-design",area:"design",branch:"Canvas",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"algorithmic-art",area:"design",branch:"Generative Art",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"figma",area:"design",branch:"Figma",source:"openai/skills",trust:"reviewed",tier:"upstream"},
+{name:"video-downloader",area:"design",branch:"Video",source:"ComposioHQ/awesome-claude-skills",trust:"listed",tier:"house"},
+{name:"brand-guidelines",area:"business",branch:"Brand",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"internal-comms",area:"business",branch:"Communication",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"job-application",area:"business",branch:"Career",source:"MoizIbnYousaf/Ai-Agent-Skills",trust:"verified",tier:"house"},
+{name:"mcp-builder",area:"ai",branch:"MCP",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"skill-creator",area:"ai",branch:"Skills",source:"anthropics/skills",trust:"verified",tier:"upstream"},
+{name:"llm-application-dev",area:"ai",branch:"LLMs",source:"wshobson/agents",trust:"reviewed",tier:"house"},
+{name:"best-practices",area:"ai",branch:"Prompting",source:"MoizIbnYousaf/Ai-Agent-Skills",trust:"verified",tier:"house"},
+{name:"ask-questions-if-underspecified",area:"ai",branch:"Agent Behavior",source:"MoizIbnYousaf/Ai-Agent-Skills",trust:"verified",tier:"house"},
+{name:"openai-docs",area:"ai",branch:"OpenAI",source:"openai/skills",trust:"reviewed",tier:"upstream"},
+{name:"gh-fix-ci",area:"devops",branch:"CI",source:"openai/skills",trust:"reviewed",tier:"upstream"},
+{name:"sentry",area:"devops",branch:"Observability",source:"openai/skills",trust:"listed",tier:"upstream"},
+];
+
+const AREAS=['all','frontend','backend','docs','testing','workflow','research','design','business','mobile','ai','devops'];
+let state={area:'all',tier:'all',source:'all',query:'',selected:null};
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+
+function filtered(){
+  return S.filter(s=>{
+    if(state.area!=='all'&&s.area!==state.area)return false;
+    if(state.tier!=='all'&&s.tier!==state.tier)return false;
+    if(state.source!=='all'&&s.source!==state.source)return false;
+    if(state.query){const q=state.query.toLowerCase();if(![s.name,s.area,s.branch,s.source].some(f=>f.toLowerCase().includes(q)))return false;}
+    return true;
+  });
+}
+
+function render(){
+  const house=S.filter(s=>s.tier==='house').length;
+  const up=S.filter(s=>s.tier==='upstream').length;
+  document.getElementById('pills').innerHTML=`<span class="pill"><b>${S.length}</b> skills</span><span class="pill"><b>${house}</b> house</span><span class="pill"><b>${up}</b> upstream</span>`;
+
+  // Areas
+  const areaCounts={};S.forEach(s=>areaCounts[s.area]=(areaCounts[s.area]||0)+1);
+  document.getElementById('areas').innerHTML=AREAS.map(a=>{
+    const c=a==='all'?S.length:(areaCounts[a]||0);
+    return `<button class="rail-btn ${state.area===a?'on':''}" onclick="state.area='${a}';render()">${a}<span class="c">${c}</span></button>`;
+  }).join('');
+
+  // Tiers
+  document.getElementById('tiers').innerHTML=['all','house','upstream'].map(t=>{
+    const c=t==='all'?S.length:S.filter(s=>s.tier===t).length;
+    return `<button class="rail-btn ${state.tier===t?'on':''}" onclick="state.tier='${t}';render()">${t==='all'?'all':t==='house'?'house copies':'upstream'}<span class="c">${c}</span></button>`;
+  }).join('');
+
+  // Sources
+  const srcs={};S.forEach(s=>{const k=s.source.split('/')[0];srcs[k]=(srcs[k]||0)+1;});
+  document.getElementById('sources').innerHTML=`<button class="rail-btn ${state.source==='all'?'on':''}" onclick="state.source='all';render()">all<span class="c">${S.length}</span></button>`+
+    Object.entries(srcs).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<button class="rail-btn ${state.source===k?'on':''}" onclick="state.source='${k}';render()">${k}<span class="c">${v}</span></button>`).join('');
+
+  // Table
+  const items=filtered();
+  const tb=document.getElementById('tbody');
+  if(items.length===0){tb.innerHTML='<tr><td colspan="6"><div class="empty"><p>No skills match these filters.</p></div></td></tr>';return;}
+  tb.innerHTML=items.map(s=>`<tr class="${state.selected===s.name?'selected':''}">
+    <td><span class="tier-dot ${s.tier}"></span></td>
+    <td><span class="skill-name" onclick="openDrawer('${s.name}')">${s.name}</span></td>
+    <td><span class="area-tag">${s.area} / ${s.branch}</span></td>
+    <td><span class="src-tag">${s.source.split('/')[0]}</span></td>
+    <td><span class="trust-tag ${s.trust}">${s.trust}</span></td>
+    <td><div class="acts">
+      <button class="act" onclick="openDrawer('${s.name}')" title="Inspect">inspect</button>
+      <button class="act" onclick="copyCmd('${s.name}')" title="Copy install">install</button>
+      <button class="act danger" onclick="confirmRemove('${s.name}')" title="Remove">remove</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openDrawer(name){
+  state.selected=name;
+  const s=S.find(x=>x.name===name);
+  if(!s)return;
+  const d=document.getElementById('drawer');
+  const isH=s.tier==='house';
+  const steps=isH?[
+    'Check local skills/'+s.name+'/',
+    'Copy SKILL.md to ~/.claude/skills/'+s.name+'/',
+    'Skill active immediately',
+  ]:[
+    'Look up '+s.name+' in skills.json',
+    'git clone --depth 1 '+s.source,
+    'Extract '+s.name+' from clone',
+    'Copy to ~/.claude/skills/'+s.name+'/',
+    'Clean up. Done.',
+  ];
+  d.innerHTML=`<button class="drawer-close" onclick="closeDrawer()">×</button>
+    <h2>${s.name}</h2>
+    <div class="subtitle">${isH?'House copy':'Cataloged upstream'} · ${s.area} / ${s.branch}</div>
+    <div class="drawer-field"><div class="k">Source</div><div class="v">${s.source}</div></div>
+    <div class="drawer-field"><div class="k">Trust</div><div class="v">${s.trust}</div></div>
+    <div class="drawer-field"><div class="k">Tier</div><div class="v">${isH?'Vendored local folder. Fast, offline, you own the content.':'Metadata in skills.json. Install pulls live from GitHub.'}</div></div>
+    <div class="drawer-sep"></div>
+    <div class="drawer-field"><div class="k">Install Flow</div><div class="flow-steps">${steps.map((st,i)=>`<div class="flow-step"><span class="n">${i+1}</span>${st}</div>`).join('')}</div></div>
+    <div class="drawer-cmd">$ npx ai-agent-skills install ${s.name}<button class="cp" onclick="navigator.clipboard.writeText('npx ai-agent-skills install ${s.name}');toast('Copied')">copy</button></div>
+    <div class="drawer-sep"></div>
+    <div class="drawer-field"><div class="k">Actions</div></div>
+    <div class="drawer-actions">
+      <button class="drawer-act primary" onclick="copyCmd('${s.name}')">Copy install</button>
+      <button class="drawer-act" onclick="toast('Moved to area picker')">Move area</button>
+      <button class="drawer-act" onclick="toast('Trust updated')">Change trust</button>
+      <button class="drawer-act" onclick="toast('Converted to ${isH?'upstream':'house copy'}')">Convert to ${isH?'upstream':'house'}</button>
+      <button class="drawer-act" onclick="toast('Archived: ${s.name}')">Archive</button>
+      <button class="drawer-act danger" onclick="confirmRemove('${s.name}')">Remove from catalog</button>
+    </div>`;
+  d.classList.add('open');
+  render();
+}
+
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');state.selected=null;render();}
+function copyCmd(name){navigator.clipboard.writeText('npx ai-agent-skills install '+name);toast('Copied: npx ai-agent-skills install '+name);}
+function confirmRemove(name){if(confirm('Remove '+name+' from the catalog?')){const i=S.findIndex(s=>s.name===name);if(i>-1){S.splice(i,1);closeDrawer();render();toast('Removed: '+name);}}}
+
+document.getElementById('search').addEventListener('input',e=>{state.query=e.target.value;render();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
+render();
+</script>
+</body>
+</html>
