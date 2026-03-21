@@ -224,7 +224,7 @@ function getReservedRows(screen, viewport, {showInspector = false} = {}) {
   const screenExtra = (() => {
     switch (screen) {
       case 'home-grid':
-        return viewport.compact ? 0 : 1;
+        return viewport.compact ? 2 : 3;
       case 'collection':
       case 'skill-grid':
         return viewport.compact ? 2 : 6;
@@ -1459,15 +1459,17 @@ function getCollectionItems(catalog) {
 }
 
 function getHomeItems(catalog) {
-  return catalog.areas.map((area) => ({
-    id: area.id,
-    title: area.title,
-    count: `${area.skillCount} skills`,
-    description: area.description,
-    chips: area.branches.slice(0, 2).map((branch) => branch.title),
-    footerLeft: `${area.repoCount} repos · ${area.branches.length} branches`,
-    footerRight: 'Enter to open',
-  }));
+  return catalog.areas
+    .filter((area) => area.skillCount > 0)
+    .map((area) => ({
+      id: area.id,
+      title: area.title,
+      count: `${area.skillCount} skills`,
+      description: area.description,
+      chips: area.branches.slice(0, 2).map((branch) => branch.title),
+      footerLeft: `${area.repoCount} repos · ${area.branches.length} branches`,
+      footerRight: 'Enter to open',
+    }));
 }
 
 function getSourceItems(catalog) {
