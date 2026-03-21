@@ -4,12 +4,57 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## [3.3.0] - 2026-03-21
+
 ### Changed
-- Removed six low-signal pointer skills from the catalog and kept the stronger sourced skills.
-- Dropped static per-skill `stars` and `downloads` fields from `skills.json`.
-- Added `origin` and `trust` metadata to catalog entries for clearer provenance.
-- Added `sourceUrl`, `syncMode`, `whyHere`, and `lastVerified` fields to make curation and provenance easier to inspect.
-- Synced repo metadata around version `1.9.2`.
+- Reworked the TUI home into a poster-style shelf browser with one dominant lead block, quieter neighboring shelves, and calmer chrome across the header, tabs, and footer.
+- Reordered skill detail screens so the editorial note leads before install actions, with provenance and neighboring shelf picks kept visible without crowding the first frame.
+- Polished `list` and `info` so the CLI reads like the same curated library as the TUI instead of a diagnostic catalog dump.
+
+### Fixed
+- Restored bundled `SKILL.md` loading in the TUI catalog so vendored skills can actually show real preview content again.
+- Tightened the publish surface with an explicit npm `files` allowlist so temporary live-test reports and other local artifacts do not leak into the package tarball.
+
+## [3.2.0] - 2026-03-21
+
+### Added
+- Added explicit `tier`, `distribution`, `notes`, and `labels` support to the catalog model.
+- Added three new OpenAI skills: `figma-implement-design`, `security-best-practices`, and `notion-spec-to-implementation`.
+- Added regression coverage for nested upstream installs, update-after-install, sparse upstream dry runs, and explicit tier metadata.
+- Added a no-mock live verification suite that clones real upstream repos, captures raw source snapshots, exercises install/update/uninstall flows, and smoke-tests the TUI through a PTY.
+
+### Changed
+- Reframed the library around 10 shelves and rebuilt the collections around the current catalog.
+- Normalized upstream install sources to exact repo subpaths so single-skill installs can use sparse checkout.
+- Redesigned the CLI list output and TUI home around the bookshelf model instead of a flat catalog view.
+- Rewrote the README, work-area map, and changelog to match the current two-tier architecture.
+- Bumped the package and catalog version to `3.2.0`.
+
+### Fixed
+- Fixed nested upstream installs for cataloged skills such as `frontend-skill`, `shadcn`, and `emil-design-eng`.
+- Fixed upstream installs so `update` works immediately after install with normalized `.skill-meta.json` metadata.
+- Fixed TUI scope installs so upstream skills install correctly in both global and project scopes.
+- Fixed project-scope lifecycle commands so `list --installed`, `update`, and `uninstall` now work against `.agents/skills/`, not only legacy agent targets.
+- Fixed `preview` so upstream skills no longer print a false "not found" error before showing the fallback preview.
+- Fixed root-skill renaming so local root skills keep their frontmatter name instead of inheriting a temp directory name.
+- Fixed the TUI skill screen so upstream skills without bundled markdown no longer crash when opened from search.
+
+## [3.1.0] - 2026-03-21
+
+### Added
+- Introduced the two-tier library model: house copies plus cataloged upstream skills.
+- Added the `catalog` command for curating skills from GitHub repos without vendoring them.
+- Added the React + Ink terminal browser and the curation atlas in `tui/`.
+- Added validation for folder parity, schema integrity, and catalog totals.
+
+### Changed
+- Reduced the library from the older 48-skill set to a tighter curated shelf of 33 skills.
+- Shifted the product from a generic installer toward an editorial library with provenance, trust, and `whyHere` notes.
+- Moved the default install model to two scopes: global and project.
+
+### Fixed
+- Hardened install paths against traversal and unsafe name handling.
+- Improved source parsing across GitHub shorthand, full URLs, local paths, and `@skill` filters.
 
 ## [1.9.2] - 2026-01-23
 

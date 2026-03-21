@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { loadCatalogData } = require('../lib/catalog-data.cjs');
 
 const ROOT_DIR = path.join(__dirname, '..');
-const SKILLS_JSON = path.join(ROOT_DIR, 'skills.json');
 const SKILLS_DIR = path.join(ROOT_DIR, 'skills');
 const SKILLS_CLI_VERSION = 'skills@1.4.5';
 
@@ -65,7 +65,7 @@ function sourceTitle(source) {
 }
 
 function readSkillsJson() {
-  return JSON.parse(fs.readFileSync(SKILLS_JSON, 'utf8'));
+  return loadCatalogData();
 }
 
 function readSkillMarkdown(skillName) {
@@ -281,6 +281,10 @@ function getGitHubInstallSource(skill) {
   if (skill.source === 'MoizIbnYousaf/Ai-Agent-Skills') return null;
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(skill.source)) return null;
 
+  if (skill.installSource) {
+    return skill.installSource;
+  }
+
   const upstreamPath = getGitHubTreePath(skill.sourceUrl, skill.source);
   if (upstreamPath === null) return null;
 
@@ -333,7 +337,7 @@ function buildCatalog() {
       description: '',
     };
     const branchTitle = humanizeSlug(skill.branch || 'misc');
-    const isVendored = skill.vendored !== false;
+    const isVendored = skill.tier !== 'upstream';
     const markdown = isVendored ? readSkillMarkdown(skill.name) : null;
     const source = skill.source;
     const title = humanizeSlug(skill.name);
@@ -342,7 +346,8 @@ function buildCatalog() {
       ...skill,
       title,
       vendored: isVendored,
-      tier: isVendored ? 'house' : 'upstream',
+      tier: skill.tier || (isVendored ? 'house' : 'upstream'),
+      distribution: skill.distribution || (isVendored ? 'bundled' : 'live'),
       workAreaTitle: workArea.title,
       workAreaDescription: workArea.description,
       branchTitle,
@@ -500,6 +505,8 @@ function buildCatalog() {
   return {
     updated: data.updated,
     total: data.total,
+    houseCount: skills.filter((skill) => skill.tier === 'house').length,
+    upstreamCount: skills.filter((skill) => skill.tier === 'upstream').length,
     skills: sortSkillsByCuration(data, skills),
     collections,
     areas,

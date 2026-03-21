@@ -5,11 +5,14 @@
  * Checks skills.json integrity, folder structure, and SKILL.md frontmatter.
  */
 
-const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..');
-const skillsDir = path.join(root, 'skills');
+const { loadCatalogData, validateCatalogData } = require('../lib/catalog-data.cjs');
+const { SKILLS_DIR, ROOT_DIR, SKILLS_JSON_PATH } = require('../lib/paths.cjs');
+
+const root = ROOT_DIR;
+const skillsDir = SKILLS_DIR;
+const fs = require('fs');
 
 let errors = 0;
 let warnings = 0;
@@ -21,8 +24,11 @@ function pass(msg) { console.log(`  \x1b[32m✓\x1b[0m ${msg}`); }
 // ── Load skills.json ──
 
 let data;
+let validation;
 try {
-  data = JSON.parse(fs.readFileSync(path.join(root, 'skills.json'), 'utf8'));
+  const rawData = JSON.parse(fs.readFileSync(SKILLS_JSON_PATH, 'utf8'));
+  validation = validateCatalogData(rawData);
+  data = validation.data;
 } catch (e) {
   console.error('Failed to parse skills.json:', e.message);
   process.exit(1);
@@ -37,83 +43,14 @@ if (!Array.isArray(data.skills)) {
 
 // ── Schema checks ──
 
-const baseRequired = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode'];
-const vendoredRequired = [...baseRequired, 'whyHere'];
-const validCategories = ['development', 'document', 'creative', 'business', 'productivity'];
-const validOrigins = ['authored', 'curated', 'adapted'];
-const validSyncModes = ['authored', 'mirror', 'snapshot', 'adapted', 'live'];
-const validTrust = ['verified', 'reviewed', 'listed'];
 const names = new Set();
-
-const workAreaIds = (data.workAreas || []).map(a => a.id);
-
-data.skills.forEach(skill => {
-  const isVendored = skill.vendored !== false;
-  const fields = isVendored ? vendoredRequired : baseRequired;
-  fields.forEach(field => {
-    if (!skill[field]) error(`${skill.name || '(unnamed)'} missing ${field}`);
-  });
-
-  if (skill.category && !validCategories.includes(skill.category)) {
-    error(`Invalid category "${skill.category}" for ${skill.name}`);
-  }
-
-  if (skill.origin && !validOrigins.includes(skill.origin)) {
-    error(`Invalid origin "${skill.origin}" for ${skill.name}`);
-  }
-
-  if (skill.syncMode && !validSyncModes.includes(skill.syncMode)) {
-    error(`Invalid syncMode "${skill.syncMode}" for ${skill.name}`);
-  }
-
-  if (skill.trust && !validTrust.includes(skill.trust)) {
-    error(`Invalid trust "${skill.trust}" for ${skill.name}`);
-  }
-
-  if (skill.workArea && workAreaIds.length > 0 && !workAreaIds.includes(skill.workArea)) {
-    error(`Invalid workArea "${skill.workArea}" for ${skill.name}`);
-  }
-
-  if (names.has(skill.name)) {
-    error(`Duplicate skill name: ${skill.name}`);
-  }
-  names.add(skill.name);
-
-  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(skill.name)) {
-    error(`Invalid name format: ${skill.name}`);
-  }
-
-  if (skill.whyHere && skill.whyHere.trim().length < 20) {
-    warn(`whyHere is thin for ${skill.name}`);
-  }
-
-  if (skill.sourceUrl && !skill.sourceUrl.startsWith('https://github.com/')) {
-    error(`Invalid sourceUrl for ${skill.name}`);
-  }
-
-  if (skill.verified && !skill.lastVerified) {
-    warn(`Verified skill ${skill.name} has no lastVerified date`);
-  }
-
-  // Description quality check: descriptions should tell the model WHEN to trigger,
-  // not just summarize what the skill does. Action-oriented descriptions contain
-  // words like "when", "use", "trigger", "if", "before", "after", "during".
-  if (skill.description) {
-    const desc = skill.description.toLowerCase();
-    const actionPatterns = /\b(when|use |use$|trigger|if |before|after|during|whenever|upon|while)\b/;
-    if (!actionPatterns.test(desc)) {
-      warn(`${skill.name}: description reads like a summary, not a trigger condition. Consider starting with "Use when..." or similar action-oriented language.`);
-    }
-  }
-});
+validation.errors.forEach(error);
+validation.warnings.forEach(warn);
+data.skills.forEach((skill) => names.add(skill.name));
 
 pass(`${data.skills.length} skills, all required fields present`);
 
 // ── Metadata checks ──
-
-if (data.total !== data.skills.length) {
-  error(`skills.json "total" is ${data.total} but actual count is ${data.skills.length}`);
-}
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (data.version !== pkg.version) {
@@ -127,7 +64,7 @@ console.log('\nValidating skill folders\n');
 const vendoredNames = new Set();
 const catalogedNames = new Set();
 data.skills.forEach(skill => {
-  if (skill.vendored === false) {
+  if (skill.tier === 'upstream') {
     catalogedNames.add(skill.name);
   } else {
     vendoredNames.add(skill.name);
@@ -158,8 +95,8 @@ vendoredNames.forEach(name => {
 // Non-vendored skills must have an install source
 catalogedNames.forEach(name => {
   const skill = data.skills.find(s => s.name === name);
-  if (!skill.installSource && !skill.source) {
-    error(`Cataloged skill "${name}" has no installSource or source`);
+  if (!skill.installSource) {
+    error(`Cataloged skill "${name}" has no installSource`);
   }
 });
 

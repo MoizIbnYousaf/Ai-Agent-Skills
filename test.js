@@ -66,6 +66,18 @@ function runArgs(args) {
   }
 }
 
+function runArgsWithOptions(args, options = {}) {
+  try {
+    return execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), ...args], {
+      encoding: 'utf8',
+      cwd: options.cwd || __dirname,
+      env: options.env || process.env,
+    });
+  } catch (e) {
+    return e.stdout || e.stderr || e.message;
+  }
+}
+
 function runModule(source) {
   try {
     return execFileSync(process.execPath, ['--input-type=module', '-e', source], { encoding: 'utf8', cwd: __dirname });
@@ -251,11 +263,11 @@ test('github install spec resolves upstream path for curated external skills', (
 
   const snapshotSpec = getGitHubInstallSpec(snapshotSkill, 'codex');
   assert(snapshotSpec, 'Expected curated external skill to expose a GitHub install spec');
-  assertContains(snapshotSpec.command, 'anthropics/skills/frontend-design');
+  assertContains(snapshotSpec.command, 'anthropics/skills/skills/frontend-design');
 
   const openaiSpec = getGitHubInstallSpec(openaiSkill, 'codex');
   assert(openaiSpec, 'Expected OpenAI system skill to expose a GitHub install spec');
-  assertContains(openaiSpec.command, 'openai/skills/.system/openai-docs');
+  assertContains(openaiSpec.command, 'openai/skills/skills/.system/openai-docs');
 
   assertEqual(getGitHubInstallSpec(authoredSkill, 'codex'), null, 'Authored skills should not expose an upstream GitHub install spec');
 });
@@ -278,10 +290,19 @@ test('package exposes only the ai-agent-skills binary', () => {
   assert(!pkg.bin.skills, 'skills binary alias should be removed');
 });
 
+test('package uses a positive files allowlist', () => {
+  const pkg = require('./package.json');
+  assert(Array.isArray(pkg.files), 'Expected package.json to declare files');
+  assertContains(pkg.files.join(' '), 'cli.js');
+  assertContains(pkg.files.join(' '), 'tui/');
+  assertContains(pkg.files.join(' '), 'lib/');
+});
+
 test('list command works', () => {
   const output = run('list');
-  assertContains(output, 'Available Skills');
+  assertContains(output, 'Curated Library');
   assertContains(output, 'FRONTEND');
+  assertContains(output, 'Small enough to scan. Opinionated enough to trust.');
 });
 
 test('no-arg command falls back to help outside a TTY', () => {
@@ -317,22 +338,22 @@ test('search ranks stronger curated matches first', () => {
 test('info command works', () => {
   const output = run('info pdf');
   assertContains(output, 'pdf');
-  assertContains(output, 'Work Area:');
-  assertContains(output, 'Branch:');
+  assertContains(output, 'Why Here:');
+  assertContains(output, 'Provenance:');
   assertContains(output, 'Category:');
   assertContains(output, 'Trust:');
   assertContains(output, 'Source Repo:');
   assertContains(output, 'Source URL:');
   assertContains(output, 'Sync Mode:');
-  assertContains(output, 'Why Here:');
   assertContains(output, 'Collections:');
+  assertContains(output, 'Neighboring Shelf Picks:');
 });
 
 test('info command shows neighboring recommendations', () => {
   const output = run('info frontend-design');
-  assertContains(output, 'Also Look At:');
+  assertContains(output, 'Neighboring Shelf Picks:');
   assertContains(output, 'frontend-skill');
-  assertContains(output, 'anthropics/skills/frontend-design');
+  assertContains(output, 'anthropics/skills/skills/frontend-design');
 });
 
 test('preview command works for vendored skill', () => {
@@ -346,6 +367,7 @@ test('preview command works for non-vendored skill', () => {
   assertContains(output, 'Preview:');
   assertContains(output, 'pdf');
   assertContains(output, 'Cataloged upstream skill');
+  assertNotContains(output, 'not found');
 });
 
 test('browse command shows tty guidance outside a TTY', () => {
@@ -373,9 +395,9 @@ test('dry-run shows preview', () => {
 });
 
 test('nested GitHub skill path install dry-run works', () => {
-  const output = runArgs(['install', 'anthropics/skills/frontend-design', '--agent', 'project', '--dry-run']);
+  const output = runArgs(['install', 'anthropics/skills/skills/frontend-design', '--agent', 'project', '--dry-run']);
   assertContains(output, 'Dry Run');
-  assertContains(output, 'Would clone');
+  assertContains(output, 'anthropics/skills/skills/frontend-design');
 });
 
 test('git url install works', () => {
@@ -515,10 +537,33 @@ test('home screen visibility collapses on compact terminals', () => {
     }));
   `);
   const data = JSON.parse(output);
-  assertEqual(data.micro.length, 1, 'micro view should only show the active shelf');
-  assertEqual(data.micro[0], 2, 'micro view should keep the active shelf');
+  assert(data.micro.length >= 2, 'micro view should keep the active shelf and supporting previews');
+  assertContains(data.micro.join(','), '2');
   assert(data.compact.length <= 3, 'compact view should keep the shelf list short');
   assertContains(data.compact.join(','), '2');
+});
+
+test('vendored catalog skills carry real markdown into the TUI catalog', () => {
+  const catalog = buildCatalog();
+  const skill = catalog.skills.find((candidate) => candidate.name === 'best-practices');
+  assert(skill, 'Expected best-practices in catalog');
+  assert(typeof skill.markdown === 'string' && skill.markdown.includes('#'), 'Expected vendored markdown to be loaded');
+});
+
+test('npm pack --dry-run excludes tmp reports from the tarball', () => {
+  const output = execFileSync('npm', ['pack', '--dry-run'], { encoding: 'utf8', cwd: __dirname });
+  assertNotContains(output, 'tmp/live-test-report.json');
+  assertNotContains(output, 'tmp/live-quick-report.json');
+});
+
+test('preview formatter handles missing markdown for upstream skills', () => {
+  const output = runModule(`
+    import {__test} from './tui/index.mjs';
+    console.log(JSON.stringify(__test.formatPreviewLines(null, 4)));
+  `);
+  const data = JSON.parse(output);
+  assert(Array.isArray(data), 'Expected preview formatter to return an array');
+  assertEqual(data.length, 0, 'Expected no preview lines for missing markdown');
 });
 
 // ============ SECURITY TESTS ============
@@ -539,26 +584,97 @@ test('backslash path traversal blocked', () => {
 test('install defaults to global scope (dry-run)', () => {
   const output = run('install pdf --dry-run');
   assertContains(output, 'Dry Run');
+  assertContains(output, 'Targets:');
   assertContains(output, path.join('.claude', 'skills'));
 });
 
 test('install -p targets project scope (dry-run)', () => {
   const output = run('install pdf -p --dry-run');
   assertContains(output, 'Dry Run');
+  assertContains(output, 'Targets:');
   assertContains(output, path.join('.agents', 'skills'));
 });
 
 test('install --agent cursor still works (legacy path)', () => {
   const output = runArgs(['install', 'pdf', '--agent', 'cursor', '--dry-run']);
   assertContains(output, 'Dry Run');
+  assertContains(output, 'Targets:');
   assertContains(output, '.cursor');
 });
 
 test('install --all targets both global and project scopes (dry-run)', () => {
   const output = run('install pdf --all --dry-run');
   assertContains(output, 'Dry Run');
+  assertContains(output, 'Targets:');
   assertContains(output, '.claude');
   assertContains(output, '.agents');
+});
+
+test('list --installed --project shows project-scope installs', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-installed-list-'));
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'project-installed-home-'));
+  try {
+    runArgsWithOptions(['install', 'best-practices', '--project'], {
+      cwd: tmpDir,
+      env: {...process.env, HOME: tempHome},
+    });
+
+    const output = runArgsWithOptions(['list', '--installed', '--project'], {
+      cwd: tmpDir,
+      env: {...process.env, HOME: tempHome},
+    });
+
+    assertContains(output, 'best-practices');
+    assertContains(output, '.agents/skills');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('update --project refreshes project-scope upstream installs', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-scope-update-'));
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'project-scope-home-'));
+  try {
+    runArgsWithOptions(['install', 'frontend-design', '--project'], {
+      cwd: tmpDir,
+      env: {...process.env, HOME: tempHome},
+    });
+
+    const output = runArgsWithOptions(['update', 'frontend-design', '--project'], {
+      cwd: tmpDir,
+      env: {...process.env, HOME: tempHome},
+    });
+
+    assertContains(output, 'Updated: frontend-design');
+    assertContains(output, 'Target: project');
+    assert(fs.existsSync(path.join(tmpDir, '.agents', 'skills', 'frontend-design', 'SKILL.md')), 'Expected project-scope install to remain in .agents/skills');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('uninstall --project removes project-scope installs', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-scope-uninstall-'));
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'project-scope-home-'));
+  try {
+    runArgsWithOptions(['install', 'best-practices', '--project'], {
+      cwd: tmpDir,
+      env: {...process.env, HOME: tempHome},
+    });
+
+    const output = runArgsWithOptions(['uninstall', 'best-practices', '--project'], {
+      cwd: tmpDir,
+      env: {...process.env, HOME: tempHome},
+    });
+
+    assertContains(output, 'Uninstalled: best-practices');
+    assert(!fs.existsSync(path.join(tmpDir, '.agents', 'skills', 'best-practices')), 'Expected project-scope uninstall to remove the skill');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
 });
 
 // ============ V3 SOURCE PARSING TESTS ============
@@ -566,7 +682,7 @@ test('install --all targets both global and project scopes (dry-run)', () => {
 test('source parser: owner/repo parses as github shorthand (dry-run)', () => {
   const output = runArgs(['install', 'anthropics/skills', '--dry-run']);
   assertContains(output, 'Dry Run');
-  assertContains(output, 'github.com/anthropics/skills');
+  assertContains(output, 'Cloning anthropics/skills');
 });
 
 test('source parser: full github URL parses correctly (dry-run)', () => {
@@ -707,6 +823,58 @@ test('source-repo install writes .skill-meta.json', () => {
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+test('cataloged upstream nested install succeeds for project agent', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'catalog-nested-'));
+  try {
+    const output = execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), 'install', 'frontend-skill', '--agent', 'project'], {
+      encoding: 'utf8',
+      cwd: tmpDir,
+    });
+    assertContains(output, 'Installed 1 skill');
+    const installDir = path.join(tmpDir, '.skills', 'frontend-skill');
+    assert(fs.existsSync(path.join(installDir, 'SKILL.md')), 'Expected frontend-skill to install into the project agent path');
+    const meta = JSON.parse(fs.readFileSync(path.join(installDir, '.skill-meta.json'), 'utf8'));
+    assertEqual(meta.sourceType, 'github');
+    assertEqual(meta.subpath, 'skills/.curated/frontend-skill');
+    assertContains(meta.installSource, 'openai/skills/skills/.curated/frontend-skill');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('cataloged upstream update succeeds immediately after install', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'catalog-update-'));
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), 'install', 'frontend-design', '--agent', 'project'], {
+      encoding: 'utf8',
+      cwd: tmpDir,
+    });
+    const output = execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), 'update', 'frontend-design', '--agent', 'project'], {
+      encoding: 'utf8',
+      cwd: tmpDir,
+    });
+    assertContains(output, 'Updated: frontend-design');
+    assertContains(output, 'github:anthropics/skills');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('cataloged upstream dry-run reports sparse checkout path', () => {
+  const output = run('install frontend-skill --dry-run');
+  assertContains(output, 'Clone mode: sparse checkout');
+  assertContains(output, 'openai/skills/skills/.curated/frontend-skill');
+});
+
+test('skills.json keeps explicit tier, vendored, and distribution fields', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  data.skills.forEach((skill) => {
+    assert(skill.tier === 'house' || skill.tier === 'upstream', `Skill ${skill.name} missing explicit tier`);
+    assert(typeof skill.vendored === 'boolean', `Skill ${skill.name} missing explicit vendored boolean`);
+    assert(skill.distribution === 'bundled' || skill.distribution === 'live', `Skill ${skill.name} missing explicit distribution`);
+  });
 });
 
 // ============ V3 INIT COMMAND TESTS ============
@@ -871,11 +1039,7 @@ test('batch-fill template whyHere count is tracked (15 remaining, fix in v3.1)',
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const templatePattern = /without diluting the library's focus/;
   const templateSkills = data.skills.filter(s => templatePattern.test(s.whyHere));
-  // 3 remaining Composio skills have batch-fill templates. Rewrite these in v3.1.
-  assert(
-    templateSkills.length <= 3,
-    `Expected at most 15 batch-fill whyHere entries, found ${templateSkills.length}`
-  );
+  assertEqual(templateSkills.length, 0, `Expected no batch-fill whyHere entries, found ${templateSkills.length}`);
 });
 
 // ============ VALIDATE SCRIPT TESTS ============
@@ -883,16 +1047,21 @@ test('batch-fill template whyHere count is tracked (15 remaining, fix in v3.1)',
 test('validate script catches version mismatch', () => {
   // Create a temporary skills.json with wrong version
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-ver-'));
+  const tmpDir = fs.mkdtempSync(path.join(__dirname, '.validate-ver-'));
   const tmpCatalog = path.join(tmpDir, 'skills.json');
   const tmpPkg = path.join(tmpDir, 'package.json');
   const tmpScripts = path.join(tmpDir, 'scripts');
+  const tmpLib = path.join(tmpDir, 'lib');
   const tmpSkills = path.join(tmpDir, 'skills');
 
   try {
     // Copy validate script
     fs.mkdirSync(tmpScripts, { recursive: true });
+    fs.mkdirSync(tmpLib, { recursive: true });
     fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
+    fs.copyFileSync(path.join(__dirname, 'lib', 'catalog-data.cjs'), path.join(tmpLib, 'catalog-data.cjs'));
+    fs.copyFileSync(path.join(__dirname, 'lib', 'frontmatter.cjs'), path.join(tmpLib, 'frontmatter.cjs'));
+    fs.copyFileSync(path.join(__dirname, 'lib', 'paths.cjs'), path.join(tmpLib, 'paths.cjs'));
 
     // Create minimal skills dir with one skill
     const skillDir = path.join(tmpSkills, 'test-skill');
@@ -929,13 +1098,18 @@ test('validate script catches version mismatch', () => {
 });
 
 test('validate script catches total mismatch', () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-total-'));
+  const tmpDir = fs.mkdtempSync(path.join(__dirname, '.validate-total-'));
   const tmpScripts = path.join(tmpDir, 'scripts');
+  const tmpLib = path.join(tmpDir, 'lib');
   const tmpSkills = path.join(tmpDir, 'skills');
 
   try {
     fs.mkdirSync(tmpScripts, { recursive: true });
+    fs.mkdirSync(tmpLib, { recursive: true });
     fs.copyFileSync(path.join(__dirname, 'scripts', 'validate.js'), path.join(tmpScripts, 'validate.js'));
+    fs.copyFileSync(path.join(__dirname, 'lib', 'catalog-data.cjs'), path.join(tmpLib, 'catalog-data.cjs'));
+    fs.copyFileSync(path.join(__dirname, 'lib', 'frontmatter.cjs'), path.join(tmpLib, 'frontmatter.cjs'));
+    fs.copyFileSync(path.join(__dirname, 'lib', 'paths.cjs'), path.join(tmpLib, 'paths.cjs'));
 
     const skillDir = path.join(tmpSkills, 'test-skill');
     fs.mkdirSync(skillDir, { recursive: true });

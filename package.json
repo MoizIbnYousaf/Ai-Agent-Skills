@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-skills",
-  "version": "3.1.0",
+  "version": "3.3.0",
   "description": "My curated agent skills library, with a CLI that installs from any source.",
   "main": "cli.js",
   "bin": {
@@ -11,6 +11,8 @@
   },
   "scripts": {
     "test": "node test.js",
+    "test:live": "node scripts/test-live.js",
+    "test:live:quick": "node scripts/test-live.js --quick",
     "validate": "node scripts/validate.js",
     "vendor": "node scripts/vendor.js"
   },
@@ -18,8 +20,16 @@
     "htm": "^3.1.1",
     "ink": "^4.4.1",
     "ink-text-input": "^5.0.1",
-    "react": "^18.3.1"
+    "react": "^18.3.1",
+    "yaml": "^2.8.3"
   },
+  "files": [
+    "cli.js",
+    "lib/",
+    "skills/",
+    "skills.json",
+    "tui/"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MoizIbnYousaf/Ai-Agent-Skills.git"

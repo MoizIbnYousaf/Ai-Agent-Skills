@@ -1,7 +1,7 @@
 {
-  "version": "3.1.0",
+  "version": "3.3.0",
   "updated": "2026-03-21T00:00:00Z",
-  "total": 33,
+  "total": 36,
   "workAreas": [
     {
       "id": "frontend",
@@ -44,11 +44,6 @@
       "description": "Brand, hiring, ops, and communication work around the product."
     },
     {
-      "id": "mobile",
-      "title": "Mobile",
-      "description": "Native and cross-platform mobile development. iOS, Swift, React Native, Expo."
-    },
-    {
       "id": "ai",
       "title": "AI",
       "description": "LLM applications, MCP servers, agent building, prompt engineering, and skills development."
@@ -63,65 +58,67 @@
     {
       "id": "my-picks",
       "title": "My Picks",
-      "description": "The skills I would install first on a fresh setup.",
+      "description": "The smallest cross-shelf starter stack: the skills I would reach for first on a fresh setup.",
       "skills": [
         "frontend-design",
         "mcp-builder",
         "pdf",
-        "doc-coauthoring",
-        "ask-questions-if-underspecified",
-        "best-practices"
+        "best-practices",
+        "playwright",
+        "linear"
       ]
     },
     {
       "id": "build-apps",
       "title": "Build Apps",
-      "description": "The core skills for building web products and polished interfaces with a strong design bar.",
+      "description": "Frontend and design implementation skills for shipping polished product work.",
       "skills": [
         "frontend-design",
-        "canvas-design",
-        "figma"
+        "frontend-skill",
+        "shadcn",
+        "emil-design-eng",
+        "figma-implement-design"
       ]
     },
     {
       "id": "build-systems",
       "title": "Build Systems",
-      "description": "The skills I reach for when the work is backend, architectural, or deeper in the codebase.",
+      "description": "Architecture, MCP, backend, and security picks for deeper engineering work.",
       "skills": [
         "mcp-builder",
         "backend-development",
         "database-design",
         "llm-application-dev",
-        "skill-creator"
+        "skill-creator",
+        "security-best-practices"
       ]
     },
     {
       "id": "test-and-debug",
       "title": "Test & Debug",
-      "description": "The skills for review, QA, debugging, and keeping real work from getting sloppy.",
+      "description": "The shelf for QA, regression, CI cleanup, observability, and debugging discipline.",
       "skills": [
-        "webapp-testing",
-        "changelog-generator",
-        "ask-questions-if-underspecified",
-        "best-practices",
-        "gh-fix-ci",
         "playwright",
-        "sentry"
+        "webapp-testing",
+        "gh-fix-ci",
+        "sentry",
+        "best-practices"
       ]
     },
     {
       "id": "docs-and-research",
       "title": "Docs & Research",
-      "description": "The skills for documents, file-heavy work, and research that actually helps execution.",
+      "description": "File-heavy work, writing, docs, and research flows that end in something usable.",
       "skills": [
         "pdf",
-        "xlsx",
-        "docx",
-        "pptx",
         "doc-coauthoring",
+        "docx",
+        "xlsx",
+        "pptx",
         "code-documentation",
         "content-research-writer",
-        "openai-docs"
+        "openai-docs",
+        "notion-spec-to-implementation"
       ]
     }
   ],
@@ -135,7 +132,6 @@
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/frontend-design",
       "tags": [
         "react",
         "typescript",
@@ -150,18 +146,22 @@
       "whyHere": "Kept because Anthropic's React guidance is still high-signal for interface work and front-end execution quality, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/frontend-design",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "pdf",
-      "description": "Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms.",
+      "description": "Use when the task involves reading, extracting from, merging, splitting, or generating PDF files.",
       "category": "document",
       "workArea": "docs",
       "branch": "PDF",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/pdf",
       "tags": [
         "python"
       ],
@@ -174,18 +174,22 @@
       "whyHere": "Kept because Anthropic's PDF guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/pdf",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "xlsx",
-      "description": "Comprehensive spreadsheet creation, editing, and analysis with support for formulas, formatting, data analysis, and visualization.",
+      "description": "Use when the task involves spreadsheets, XLSX files, tabular cleanup, or exporting structured data.",
       "category": "document",
       "workArea": "docs",
       "branch": "Spreadsheets",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/xlsx",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -195,18 +199,22 @@
       "whyHere": "Kept because Anthropic's Spreadsheets guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/xlsx",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "docx",
-      "description": "Comprehensive document creation, editing, and analysis with support for tracked changes, comments, formatting preservation, and text extraction.",
+      "description": "Use when the task involves Word documents, DOCX files, templated reports, or document extraction.",
       "category": "document",
       "workArea": "docs",
       "branch": "Documents",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/docx",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -216,18 +224,22 @@
       "whyHere": "Kept because Anthropic's Documents guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/docx",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "pptx",
-      "description": "Presentation creation, editing, and analysis for PowerPoint files including layouts, formatting, speaker notes, and content modification.",
+      "description": "Use when the task involves PowerPoint files, slide decks, or generating presentation output.",
       "category": "document",
       "workArea": "docs",
       "branch": "Presentations",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/pptx",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -237,18 +249,22 @@
       "whyHere": "Kept because Anthropic's Presentations guidance is still high-signal for docs, file-heavy tasks, and long-form output, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/pptx",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "mcp-builder",
-      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools.",
+      "description": "Use when building, debugging, or shipping MCP servers, tools, and local integrations.",
       "category": "development",
       "workArea": "ai",
       "branch": "MCP",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/mcp-builder",
       "tags": [
         "python",
         "typescript",
@@ -263,18 +279,22 @@
       "whyHere": "Kept because Anthropic's MCP guidance is still high-signal for systems, architecture, and deeper codebase work, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/mcp-builder",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "skill-creator",
-      "description": "Guide for creating effective skills that extend Claude's capabilities with specialized knowledge, workflows, or tool integrations.",
+      "description": "Use when creating, updating, or reviewing SKILL.md-based agent skills.",
       "category": "development",
       "workArea": "ai",
       "branch": "Skills",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/skill-creator",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -284,18 +304,22 @@
       "whyHere": "Kept because Anthropic's Skills guidance is still high-signal for execution, planning, and day-to-day operating flow, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/skill-creator",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "doc-coauthoring",
-      "description": "Structured workflow for co-authoring documentation, proposals, technical specs, and decision docs. Three-stage process: context gathering, iterative refinement, and reader testing.",
+      "description": "Use when drafting, revising, or coauthoring long-form docs, specs, or written deliverables with the user.",
       "category": "productivity",
       "workArea": "docs",
       "branch": "Writing",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/doc-coauthoring",
       "featured": true,
       "verified": true,
       "origin": "curated",
@@ -305,7 +329,12 @@
       "whyHere": "Kept because Anthropic's Writing skill remains one of the strongest starting points for docs, file-heavy tasks, and long-form output.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/doc-coauthoring",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "canvas-design",
@@ -316,7 +345,6 @@
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/canvas-design",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -326,7 +354,12 @@
       "whyHere": "Kept because Anthropic's Canvas guidance is still high-signal for visual direction and design craft, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/canvas-design",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "algorithmic-art",
@@ -337,7 +370,6 @@
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/algorithmic-art",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -347,18 +379,22 @@
       "whyHere": "Kept because Anthropic's Generative Art guidance is still high-signal for visual direction and design craft, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/algorithmic-art",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "webapp-testing",
-      "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, and capturing screenshots.",
+      "description": "Use when QAing a web app, checking regressions, or turning manual test flows into concrete repros.",
       "category": "development",
       "workArea": "testing",
       "branch": "Web QA",
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/webapp-testing",
       "tags": [
         "typescript",
         "node",
@@ -373,7 +409,12 @@
       "whyHere": "Kept because Anthropic's Web QA guidance is still high-signal for review, QA, and product-quality work, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/webapp-testing",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "brand-guidelines",
@@ -384,7 +425,6 @@
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/brand-guidelines",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -394,7 +434,12 @@
       "whyHere": "Kept because Anthropic's Brand guidance is still high-signal for adjacent business and operating work, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/brand-guidelines",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "internal-comms",
@@ -405,7 +450,6 @@
       "author": "anthropics",
       "source": "anthropics/skills",
       "license": "Apache-2.0",
-      "path": "skills/internal-comms",
       "featured": false,
       "verified": true,
       "origin": "curated",
@@ -415,7 +459,12 @@
       "whyHere": "Kept because Anthropic's Communication guidance is still high-signal for adjacent business and operating work, and the library ships a stable snapshot so installs stay deterministic.",
       "lastVerified": "2026-03-13",
       "vendored": false,
-      "installSource": "anthropics/skills"
+      "installSource": "anthropics/skills/skills/internal-comms",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "backend-development",
@@ -426,7 +475,6 @@
       "author": "wshobson",
       "source": "wshobson/agents",
       "license": "MIT",
-      "path": "skills/backend-development",
       "tags": [
         "node",
         "python",
@@ -438,7 +486,14 @@
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/backend-development",
-      "whyHere": "Covers API design patterns, service architecture, and error handling at the backend layer. Fills a gap that frontend-focused skill sets leave open."
+      "whyHere": "Covers API design patterns, service architecture, and error handling at the backend layer. Fills a gap that frontend-focused skill sets leave open.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/backend-development"
     },
     {
       "name": "database-design",
@@ -449,14 +504,20 @@
       "author": "wshobson",
       "source": "wshobson/agents",
       "license": "MIT",
-      "path": "skills/database-design",
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/database-design",
-      "whyHere": "Gives agents real schema design guidance: normalization, indexing strategy, migration patterns. Most general skills treat the database as an afterthought."
+      "whyHere": "Gives agents real schema design guidance: normalization, indexing strategy, migration patterns. Most general skills treat the database as an afterthought.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/database-design"
     },
     {
       "name": "llm-application-dev",
@@ -467,7 +528,6 @@
       "author": "wshobson",
       "source": "wshobson/agents",
       "license": "MIT",
-      "path": "skills/llm-application-dev",
       "tags": [
         "python",
         "typescript",
@@ -479,7 +539,14 @@
       "trust": "reviewed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/llm-application-dev",
-      "whyHere": "Covers prompt engineering, token management, and LLM integration patterns from a backend perspective. Relevant whenever the codebase talks to a language model."
+      "whyHere": "Covers prompt engineering, token management, and LLM integration patterns from a backend perspective. Relevant whenever the codebase talks to a language model.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/llm-application-dev"
     },
     {
       "name": "code-documentation",
@@ -490,25 +557,30 @@
       "author": "wshobson",
       "source": "wshobson/agents",
       "license": "MIT",
-      "path": "skills/code-documentation",
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/wshobson/agents/tree/main/plugins/documentation-generation",
-      "whyHere": "Kept because this wshobson pattern still earns a place for docs, file-heavy tasks, and long-form output, even though upstream has since reorganized around plugins."
+      "whyHere": "Kept because this wshobson pattern still earns a place for docs, file-heavy tasks, and long-form output, even though upstream has since reorganized around plugins.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/code-documentation"
     },
     {
       "name": "job-application",
-      "description": "Write tailored cover letters and job applications using your CV and preferred style. Paste a job description and get a personalized cover letter instantly.",
+      "description": "Use when tailoring resumes, writing applications, or preparing role-specific job materials.",
       "category": "productivity",
       "workArea": "business",
       "branch": "Career",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
-      "path": "skills/job-application",
       "featured": false,
       "verified": true,
       "origin": "authored",
@@ -516,7 +588,14 @@
       "syncMode": "authored",
       "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/job-application",
       "whyHere": "Original library skill for structured application writing, tailoring, and career positioning work.",
-      "lastVerified": "2026-03-13"
+      "lastVerified": "2026-03-13",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/job-application"
     },
     {
       "name": "ask-questions-if-underspecified",
@@ -527,7 +606,6 @@
       "author": "thsottiaux",
       "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
-      "path": "skills/ask-questions-if-underspecified",
       "tags": [
         "clarification",
         "requirements",
@@ -541,7 +619,14 @@
       "syncMode": "adapted",
       "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/ask-questions-if-underspecified",
       "whyHere": "Kept because this requirement-clarification pattern is one of the cleanest ways to stop agents from running ahead on underspecified work.",
-      "lastVerified": "2026-03-13"
+      "lastVerified": "2026-03-13",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/ask-questions-if-underspecified"
     },
     {
       "name": "best-practices",
@@ -552,7 +637,6 @@
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/Ai-Agent-Skills",
       "license": "MIT",
-      "path": "skills/best-practices",
       "tags": [
         "prompts",
         "workflow",
@@ -566,79 +650,110 @@
       "syncMode": "authored",
       "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/tree/main/skills/best-practices",
       "whyHere": "Original library skill that sets the quality bar for prompts, constraints, and implementation workflow across the library.",
-      "lastVerified": "2026-03-13"
+      "lastVerified": "2026-03-13",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/best-practices"
     },
     {
       "name": "changelog-generator",
-      "description": "Create user-facing changelogs from git commits. Transforms technical commits into customer-friendly release notes.",
+      "description": "Use when turning commits, shipped work, or release notes into a readable changelog.",
       "category": "development",
       "workArea": "workflow",
       "branch": "Release Notes",
       "author": "composio",
       "source": "ComposioHQ/awesome-claude-skills",
       "license": "Apache-2.0",
-      "path": "skills/changelog-generator",
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "mirror",
       "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/changelog-generator",
-      "whyHere": "Kept because it adds practical Release Notes coverage without diluting the library's focus on execution, planning, and day-to-day operating flow."
+      "whyHere": "Kept because release notes are a real recurring workflow task, and this one is more practical than a generic writing skill when a ship checklist needs finishing.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/changelog-generator"
     },
     {
       "name": "content-research-writer",
-      "description": "Research and write high-quality content with citations. Improves hooks and provides section feedback.",
+      "description": "Use when researching a topic and turning the findings into a usable written brief or draft.",
       "category": "productivity",
       "workArea": "research",
       "branch": "Writing",
       "author": "composio",
       "source": "ComposioHQ/awesome-claude-skills",
       "license": "Apache-2.0",
-      "path": "skills/content-research-writer",
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "mirror",
       "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/content-research-writer",
-      "whyHere": "Kept because it adds practical Writing coverage without diluting the library's focus on research and synthesis that actually helps execution."
+      "whyHere": "Kept because the research shelf needs one skill that turns raw findings into a usable written brief instead of stopping at collection.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/content-research-writer"
     },
     {
       "name": "lead-research-assistant",
-      "description": "Identify and qualify high-quality leads. Analyze products, search for targets, and provide outreach strategies.",
+      "description": "Use when researching leads, accounts, or prospects before outreach or prioritization.",
       "category": "business",
       "workArea": "research",
       "branch": "Lead Research",
       "author": "composio",
       "source": "ComposioHQ/awesome-claude-skills",
       "license": "Apache-2.0",
-      "path": "skills/lead-research-assistant",
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "mirror",
       "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/lead-research-assistant",
-      "whyHere": "Kept because it adds practical Lead Research coverage without diluting the library's focus on research and synthesis that actually helps execution."
+      "whyHere": "Kept because it adds targeted lead and account research to the shelf, which is a distinct job from general content research.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/lead-research-assistant"
     },
     {
       "name": "video-downloader",
-      "description": "Download videos from YouTube and other platforms. Various formats and quality options.",
+      "description": "Use when a task needs source video for editing, reference, clipping, or offline review.",
       "category": "creative",
       "workArea": "design",
       "branch": "Video",
       "author": "composio",
       "source": "ComposioHQ/awesome-claude-skills",
       "license": "Apache-2.0",
-      "path": "skills/video-downloader",
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "snapshot",
       "sourceUrl": "https://github.com/ComposioHQ/awesome-claude-skills/tree/master/video-downloader",
-      "whyHere": "Kept because it still earns a place for visual direction and design craft, but the library ships a stable snapshot instead of tracking every upstream change."
+      "whyHere": "Kept because it still earns a place for visual direction and design craft, but the library ships a stable snapshot instead of tracking every upstream change.",
+      "tier": "house",
+      "vendored": true,
+      "distribution": "bundled",
+      "installSource": "",
+      "notes": "",
+      "labels": [],
+      "path": "skills/video-downloader"
     },
     {
       "name": "openai-docs",
@@ -649,7 +764,6 @@
       "author": "openai",
       "source": "openai/skills",
       "license": "Apache-2.0",
-      "path": "skills/openai-docs",
       "tags": [
         "openai",
         "docs",
@@ -663,18 +777,22 @@
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.system/openai-docs",
       "whyHere": "Kept because it gives the library a current, official path into OpenAI docs, model guidance, and implementation help.",
       "vendored": false,
-      "installSource": "openai/skills"
+      "installSource": "openai/skills/skills/.system/openai-docs",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "gh-fix-ci",
-      "description": "Debug failing GitHub Actions checks with gh, pull the useful failure context, and turn it into a concrete fix plan.",
+      "description": "Use when GitHub Actions CI is failing and the task is to diagnose or fix the pipeline.",
       "category": "productivity",
       "workArea": "devops",
       "branch": "CI",
       "author": "openai",
       "source": "openai/skills",
       "license": "Apache-2.0",
-      "path": "skills/gh-fix-ci",
       "tags": [
         "github",
         "actions",
@@ -688,7 +806,12 @@
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/gh-fix-ci",
       "whyHere": "Kept because OpenAI's CI skill is current, high-signal, and fits the library well for review, QA, and product-quality work.",
       "vendored": false,
-      "installSource": "openai/skills"
+      "installSource": "openai/skills/skills/.curated/gh-fix-ci",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "figma",
@@ -699,7 +822,6 @@
       "author": "openai",
       "source": "openai/skills",
       "license": "Apache-2.0",
-      "path": "skills/figma",
       "tags": [
         "figma",
         "design",
@@ -713,18 +835,22 @@
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/figma",
       "whyHere": "Kept because OpenAI's Figma skill is current, high-signal, and fits the library well for visual direction and design craft.",
       "vendored": false,
-      "installSource": "openai/skills"
+      "installSource": "openai/skills/skills/.curated/figma",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "sentry",
-      "description": "Inspect Sentry issues and events, summarize recent production errors, and pull basic health data through the Sentry API.",
+      "description": "Use when investigating production errors, tracing issues, or working from Sentry events.",
       "category": "productivity",
       "workArea": "devops",
       "branch": "Observability",
       "author": "openai",
       "source": "openai/skills",
       "license": "Apache-2.0",
-      "path": "skills/sentry",
       "tags": [
         "sentry",
         "observability",
@@ -738,18 +864,22 @@
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/sentry",
       "whyHere": "Kept because OpenAI's Observability skill is current, high-signal, and fits the library well for review, QA, and product-quality work.",
       "vendored": false,
-      "installSource": "openai/skills"
+      "installSource": "openai/skills/skills/.curated/sentry",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "playwright",
-      "description": "Automate a real browser from the terminal with playwright-cli for navigation, form fills, snapshots, screenshots, and UI-flow debugging.",
+      "description": "Use when browser automation, end-to-end testing, or reproducing UI behavior in a real browser is required.",
       "category": "development",
       "workArea": "testing",
       "branch": "Browser Automation",
       "author": "openai",
       "source": "openai/skills",
       "license": "Apache-2.0",
-      "path": "skills/playwright",
       "tags": [
         "playwright",
         "browser",
@@ -763,7 +893,12 @@
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/playwright",
       "whyHere": "Kept because OpenAI's Browser Automation skill is current, high-signal, and fits the library well for review, QA, and product-quality work.",
       "vendored": false,
-      "installSource": "openai/skills"
+      "installSource": "openai/skills/skills/.curated/playwright",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "linear",
@@ -775,7 +910,7 @@
       "source": "openai/skills",
       "license": "MIT",
       "vendored": false,
-      "installSource": "openai/skills",
+      "installSource": "openai/skills/skills/.curated/linear",
       "tags": [],
       "featured": false,
       "verified": false,
@@ -783,8 +918,13 @@
       "trust": "listed",
       "syncMode": "live",
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/linear",
-      "whyHere": "",
-      "addedDate": "2026-03-21"
+      "whyHere": "Kept because it gives the workflow shelf a real project-management endpoint instead of only prompting advice, and Linear is a tool I actually reach for.",
+      "addedDate": "2026-03-21",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "frontend-skill",
@@ -804,8 +944,13 @@
       "trust": "listed",
       "syncMode": "live",
       "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/frontend-skill",
-      "whyHere": "",
-      "addedDate": "2026-03-21"
+      "whyHere": "Kept because OpenAI's frontend taste is distinct from Anthropic's React guidance; together they make the frontend shelf feel like a real set instead of one repo repeated.",
+      "addedDate": "2026-03-21",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "shadcn",
@@ -825,12 +970,17 @@
       "trust": "listed",
       "syncMode": "live",
       "sourceUrl": "https://github.com/shadcn-ui/ui/tree/main/skills/shadcn",
-      "whyHere": "",
-      "addedDate": "2026-03-21"
+      "whyHere": "Kept because shadcn/ui is a real part of modern frontend work, and this skill gives the shelf practical component-system leverage instead of only visual theory.",
+      "addedDate": "2026-03-21",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
     },
     {
       "name": "emil-design-eng",
-      "description": "This skill encodes Emil Kowalski's philosophy on UI polish, component design, animation decisions, and the invisible details that make software feel great.",
+      "description": "Use when the task needs sharper UI polish, motion judgment, spacing, or design-engineering craft.",
       "category": "development",
       "workArea": "frontend",
       "branch": "Design Engineering",
@@ -846,8 +996,91 @@
       "trust": "listed",
       "syncMode": "live",
       "sourceUrl": "https://github.com/emilkowalski/skill/tree/main/skills/emil-design-eng",
-      "whyHere": "",
-      "addedDate": "2026-03-21"
+      "whyHere": "Kept because Emil's sensibility sharpens polish, spacing, motion, and restraint in a way the rest of the shelf does not.",
+      "addedDate": "2026-03-21",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
+    },
+    {
+      "name": "figma-implement-design",
+      "description": "Translate Figma nodes into production-ready code with 1:1 visual fidelity using the Figma MCP workflow (design context, screenshots, assets, and project-convention translation). Trigger when the user provides Figma URLs or node IDs, or asks to implement designs or components that must match Figma specs. Requires a working Figma MCP server connection.",
+      "category": "development",
+      "workArea": "frontend",
+      "branch": "Implementation",
+      "author": "openai",
+      "source": "openai/skills",
+      "license": "MIT",
+      "tier": "upstream",
+      "distribution": "live",
+      "vendored": false,
+      "installSource": "openai/skills/skills/.curated/figma-implement-design",
+      "tags": [],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/figma-implement-design",
+      "whyHere": "Kept because it closes the gap between design files and implementation, which makes the frontend shelf more complete in day-to-day product work.",
+      "notes": "",
+      "labels": [],
+      "addedDate": "2026-03-21",
+      "path": ""
+    },
+    {
+      "name": "security-best-practices",
+      "description": "Perform language and framework specific security best-practice reviews and suggest improvements. Trigger only when the user explicitly requests security best practices guidance, a security review/report, or secure-by-default coding help. Trigger only for supported languages (python, javascript/typescript, go). Do not trigger for general code review, debugging, or non-security tasks.",
+      "category": "development",
+      "workArea": "backend",
+      "branch": "Security",
+      "author": "openai",
+      "source": "openai/skills",
+      "license": "MIT",
+      "tier": "upstream",
+      "distribution": "live",
+      "vendored": false,
+      "installSource": "openai/skills/skills/.curated/security-best-practices",
+      "tags": [],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/security-best-practices",
+      "whyHere": "Kept because the backend shelf needed an explicit security lens, not just architecture and data-modeling guidance.",
+      "notes": "",
+      "labels": [],
+      "addedDate": "2026-03-21",
+      "path": ""
+    },
+    {
+      "name": "notion-spec-to-implementation",
+      "description": "Turn Notion specs into implementation plans, tasks, and progress tracking; use when implementing PRDs/feature specs and creating Notion plans + tasks from them.",
+      "category": "development",
+      "workArea": "workflow",
+      "branch": "Planning",
+      "author": "openai",
+      "source": "openai/skills",
+      "license": "MIT",
+      "tier": "upstream",
+      "distribution": "live",
+      "vendored": false,
+      "installSource": "openai/skills/skills/.curated/notion-spec-to-implementation",
+      "tags": [],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/notion-spec-to-implementation",
+      "whyHere": "Kept because the workflow shelf should include a real spec-to-plan bridge, not just ticketing and prompting.",
+      "notes": "",
+      "labels": [],
+      "addedDate": "2026-03-21",
+      "path": ""
     }
   ]
 }

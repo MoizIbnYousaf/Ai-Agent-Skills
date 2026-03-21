@@ -1,290 +1,230 @@
-<h1 align="center">
-  <br>
-  🔧 AI Agent Skills
-  <br>
-</h1>
+# AI Agent Skills
 
-<p align="center">
-  <strong>There are a lot of agent skills now. These are the ones I keep around.</strong><br>
-  Some are mine. Some come from other great repos.<br>
-  <em>My curated agent skills library</em>
-</p>
+My curated agent skills library.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/skills-48-blue?style=flat-square" alt="Skills" />
-  <img src="https://img.shields.io/npm/v/ai-agent-skills?style=flat-square&color=red" alt="npm" />
-  <img src="https://img.shields.io/npm/dt/ai-agent-skills?style=flat-square&color=orange" alt="Downloads" />
-</p>
+There are a lot of skills now. These are the ones I actually keep around.
 
-<p align="center">
-  <a href="#quick-start"><strong>Quick Start</strong></a> ·
-  <a href="#install-from-any-source"><strong>Install from Any Source</strong></a> ·
-  <a href="#read-the-library"><strong>Read the Library</strong></a> ·
-  <a href="#work-areas"><strong>Work Areas</strong></a> ·
-  <a href="#cli-collections"><strong>CLI Collections</strong></a> ·
-  <a href="#source-repos"><strong>Source Repos</strong></a> ·
-  <a href="./CURATION.md"><strong>Curation Guide</strong></a> ·
-  <a href="./CONTRIBUTING.md"><strong>Contribute</strong></a> ·
-  <a href="https://agentskills.io"><strong>Specification</strong></a>
-</p>
+- 36 skills total
+- 10 shelves
+- 11 house copies
+- 25 cataloged upstream
 
----
+The point is not to be a registry. The point is to be a bookshelf.
 
 ## What This Is
 
-I launched this on December 17, 2025, the day after Agent Skills became an open standard, and before `skills.sh` launched on January 14, 2026.
+`ai-agent-skills` is a CLI library of agent skills for tools like Claude Code, Codex, Cursor, and other SKILL.md-compatible agents.
 
-This repo is my library of agent skills: the ones I use, adapt, or recommend.
+The library is organized the way I actually work:
 
-I built it first as a universal installer. That still works, but the center now is curation: work-area organization, source lineage, trust metadata, and stable vendored installs. v3 simplifies the install model to two scopes: global (`~/.claude/skills/`) for your personal library, and project (`.agents/skills/`) for skills committed with your repo.
+- Start with a shelf like `frontend` or `workflow`
+- See a small set of vetted skills, not every possible match
+- Keep provenance visible so upstream repos stay credited
+- Keep editorial notes visible so the curation is the product
 
-If you only want the default universal installer flow, use `skills.sh`. If you want a curated library with explicit provenance, use this repo.
+If you want the broad open ecosystem, use `skills.sh`.
+If you want my shelves, use this repo.
 
-## What I Built
+## The Two-Tier Model
 
-- An early cross-agent installer and npm CLI that still works across the major coding agents.
-- A curated cross-repo catalog that keeps sourced skills organized by work area, branch, and trust.
-- Stable vendored installs, with source attribution kept explicit instead of hidden.
-- A browsable directory and terminal atlas that turn the library into something easier to inspect than a flat repo.
+Every skill in the library is one of two things:
+
+- `House copies`
+  Local folders under `skills/<name>/`.
+  These install fast, work offline, and ship with the npm package.
+
+- `Cataloged upstream`
+  Metadata in `skills.json` with no local folder.
+  These stay upstream and install live from the source repo when you ask for them.
+
+The library stays lean because it does not pretend to own upstream content.
 
 ## Quick Start
 
 ```bash
-# Browse the library
+# Open the terminal browser
 npx ai-agent-skills
 
-# Install a skill
+# List the shelves
+npx ai-agent-skills list
+
+# Install a skill from the library
 npx ai-agent-skills install frontend-design
 
-# Install from any GitHub repo
-npx ai-agent-skills install anthropics/skills
-
-# Install to your project (shared with team)
+# Install to the project shelf
 npx ai-agent-skills install pdf -p
+
+# Browse a repo before adding or installing from it
+npx ai-agent-skills install openai/skills --list
 ```
 
-Skills install to `~/.claude/skills/` by default.
-Use `-p` for project-scoped installs to `.agents/skills/`, where most major agents can read them.
+Default install targets:
 
-## How the Catalog Works
+- Global: `~/.claude/skills/`
+- Project: `.agents/skills/`
 
-Every skill in this library carries metadata beyond a name and description. Here is what a real entry looks like:
+Legacy agent-specific targets still work through `--agent <name>`.
 
-```json
-{
-  "name": "ask-questions-if-underspecified",
-  "author": "thsottiaux",
-  "origin": "adapted",
-  "trust": "verified",
-  "syncMode": "adapted",
-  "sourceUrl": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills/...",
-  "whyHere": "Kept because this requirement-clarification pattern is one of the cleanest ways to stop agents from running ahead on underspecified work.",
-  "lastVerified": "2026-03-13"
-}
-```
+## How To Read The Library
 
-`trust` tells you how much review a skill has received: verified, reviewed, or listed. `syncMode` tells you whether the skill tracks upstream changes or is pinned as a stable snapshot. `whyHere` is a written rationale for why this specific skill belongs in the library. You can see this for any skill by running `npx ai-agent-skills info <name>`.
+There are four useful views:
 
-## Install from Any Source
+| View | Why it exists | Start here |
+| --- | --- | --- |
+| Shelves | The main way to understand the library | `npx ai-agent-skills list` |
+| My Picks | The shortest starter stack | `npx ai-agent-skills list --collection my-picks` |
+| Source Repos | Provenance and publisher lineage | `npx ai-agent-skills info frontend-design` |
+| Terminal Browser | Browse the library as a shelf system, not a flat repo | `npx ai-agent-skills browse` |
 
-Point the CLI at any GitHub repo that follows the SKILL.md standard:
+## Shelves
+
+These are the shelves. They are the product.
+
+| Shelf | Skills | What it covers |
+| --- | ---: | --- |
+| Frontend | 5 | Interface systems, React work, and web product execution |
+| AI | 6 | LLM apps, MCP, prompting, agent-building, and skills work |
+| Docs | 6 | Documents, specs, file handling, and long-form output |
+| Backend | 3 | Architecture, databases, security, and deeper code work |
+| Design | 4 | Visual systems, creative direction, and design craft |
+| DevOps | 2 | CI, observability, deployment, and release infrastructure |
+| Testing | 2 | QA, browser automation, and regression work |
+| Workflow | 3 | Planning, ticketing, prompting, and operating rhythm |
+| Research | 2 | Discovery, lead research, and synthesis |
+| Business | 3 | Brand, communication, and career-adjacent work |
+
+The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
+
+## Collections
+
+Collections still exist, but they are secondary. They are small cross-shelf reading lists, not the main taxonomy.
+
+| Collection | Why it exists | Start here |
+| --- | --- | --- |
+| `my-picks` | The smallest cross-shelf starter stack | `frontend-design`, `mcp-builder`, `pdf` |
+| `build-apps` | Frontend and design implementation work | `frontend-design`, `frontend-skill`, `shadcn` |
+| `build-systems` | Architecture, MCP, backend, and security | `mcp-builder`, `backend-development`, `database-design` |
+| `test-and-debug` | QA, observability, and debugging discipline | `playwright`, `webapp-testing`, `gh-fix-ci` |
+| `docs-and-research` | File-heavy work, docs, and research | `pdf`, `doc-coauthoring`, `openai-docs` |
+
+## Catalog Curation
+
+The `catalog` command is how I pull from upstream repos without vendoring everything.
 
 ```bash
-npx ai-agent-skills install anthropics/skills
-npx ai-agent-skills install anthropics/skills@frontend-design
-npx ai-agent-skills install anthropics/skills --list
-npx ai-agent-skills install ./local-skills
+npx ai-agent-skills catalog openai/skills --list
+npx ai-agent-skills catalog openai/skills --skill linear --area workflow --branch Linear
+npx ai-agent-skills catalog openai/skills --skill security-best-practices --area backend --branch Security
+npx ai-agent-skills catalog shadcn-ui/ui --skill shadcn --area frontend --branch Components
 ```
 
-Use `--skill` to pick specific skills. Use `--list` to see what's available before installing.
+That command does not copy the upstream skill into this repo.
+It adds metadata and editorial placement:
 
-## Read the Library
-
-This repo reads best in four ways:
-
-| View | Best for | Start here |
-|------|----------|------------|
-| Work Areas | The main way to understand the library | `npx ai-agent-skills list --work-area frontend` |
-| CLI Collections | The fastest shortcuts when you want a short shelf | `npx ai-agent-skills list --collection my-picks` |
-| Source Repos | Seeing the upstream lineage on purpose | `npx ai-agent-skills info frontend-design` |
-| Terminal Browser | Walking the atlas instead of reading a flat repo | `npx ai-agent-skills browse` |
-
-## How I Organize It
-
-- `Work areas` are the main way to understand the library.
-- `Collections` still exist as the fastest CLI shortcuts.
-- A few skills are authored here. Most are curated from upstream repos and kept clearly attributed.
-- `Source` stays attached to every skill. The library matters, but so does provenance.
-- Imported skills are either kept as direct mirrors or stable snapshots. The installer still ships vendored copies either way.
-- `Featured` means I would actively point someone to that skill first.
-- `Verified` means I have personally checked the skill and its metadata.
-- `Categories`, `tags`, and search cover everything that does not need a top-level shelf.
-
-The folder layout stays flat under `skills/<name>/` because installs stay simpler that way. The catalog handles the grouping.
-The full repo map lives in [WORK_AREAS.md](./WORK_AREAS.md).
-
-## Work Areas
-
-This is the cleanest way to read the library.
-The full repo index is in [WORK_AREAS.md](./WORK_AREAS.md).
-If you want the same map in the terminal, use `npx ai-agent-skills browse`.
-
-| Work area | What it covers | Typical branches | Main sources |
-|-----------|----------------|------------------|--------------|
-| Frontend | Product UI, interface systems, and design implementation work | React, Figma, UI | Anthropic, OpenAI, Composio |
-| Backend | APIs, architecture, databases, MCP, and deeper codebase work | MCP, Database, Python | wshobson, Anthropic |
-| Docs | Documents, specs, code docs, and product documentation | PDF, Writing, OpenAI | Anthropic, OpenAI |
-| Testing | Review, QA, browser automation, CI, and observability | Regression, CI, Browser Automation, Observability | Moiz, Anthropic, OpenAI |
-| Workflow | Clarification, plans, files, and execution support | Clarification, Planning, Jira, Files | Moiz, OpenAI, Composio |
-| Research | Research, lead work, and synthesis that helps execution | Writing, Lead Research | Composio |
-| Design | Interface direction, themes, media, and visual craft | Interface, Figma, Themes | Anthropic, OpenAI, Composio |
-| Business | Brand, communication, naming, and adjacent operating work | Brand, Communication, Career | Anthropic, Moiz, Composio |
-
-## CLI Collections
-
-These are still useful when you want a short shelf in the CLI instead of the full work-area view.
-
-| Collection | What it's for | Start with | Main sources |
-|-------|-------------|-------------|--------------|
-| `my-picks` | The first skills I would install on a fresh setup | `frontend-design`, `mcp-builder`, `qa-regression` | Anthropic, Moiz |
-| `build-apps` | Web product work with a high interface bar | `frontend-design`, `figma-implement-design`, `theme-factory` | Anthropic, OpenAI, Composio |
-| `build-systems` | Backend, architecture, MCP, and deeper engineering work | `mcp-builder`, `backend-development`, `database-design` | wshobson, Anthropic |
-| `test-and-debug` | Review, QA, debugging, and cleanup work | `gh-fix-ci`, `playwright`, `qa-regression` | Moiz, Anthropic, OpenAI |
-| `docs-and-research` | Docs, files, research, and execution support | `openai-docs`, `pdf`, `notion-spec-to-implementation` | Anthropic, OpenAI, Composio |
-
-CLI shortcuts:
-
-```bash
-npx ai-agent-skills collections
-npx ai-agent-skills list --collection my-picks
-npx ai-agent-skills list --collection build-apps
-npx ai-agent-skills search expo
-```
+- which shelf it belongs on
+- what branch it lives under
+- why it earned a place
+- how it should install later
 
 ## Source Repos
 
-This is still my library, but the upstream lineage stays visible on purpose.
-Some skills track clean upstream mirrors. Others are stable snapshots I keep vendored so installs stay deterministic.
+Current source mix:
 
-| Source repo | Why it's here | In this library |
-|------------|----------------|-----------------|
-| [Anthropic Skills](https://github.com/anthropics/skills) | The strongest general-purpose skill set in the ecosystem, especially for frontend, docs, and workflow. | 13 skills |
-| [Anthropic Claude Code](https://github.com/anthropics/claude-code) | Extra Claude Code workflow coverage that belongs here when it clears the bar. | 1 skill |
-| [OpenAI Skills](https://github.com/openai/skills) | Strong skills for docs, Figma workflows, browser automation, CI work, and implementation planning. | 7 skills |
-| [wshobson/agents](https://github.com/wshobson/agents) | Strong backend, systems, and architecture coverage. | 7 skills |
-| [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) | Broad practical coverage for workflow, files, research, and creative tasks. | 15 skills |
-| [MoizIbnYousaf/Ai-Agent-Skills](https://github.com/MoizIbnYousaf/Ai-Agent-Skills) | The skills I write and maintain directly. | 5 skills |
+| Source repo | Skills |
+| --- | ---: |
+| `anthropics/skills` | 13 |
+| `openai/skills` | 10 |
+| `wshobson/agents` | 4 |
+| `ComposioHQ/awesome-claude-skills` | 4 |
+| `MoizIbnYousaf/Ai-Agent-Skills` | 3 |
+| `shadcn-ui/ui` | 1 |
+| `emilkowalski/skill` | 1 |
+
+The two major upstream publishers in this library are Anthropic and OpenAI.
+I do not import everything they ship. I browse, pick, and shelve.
 
 ## Commands
 
 ```bash
-# Discovery
+# Browse
+npx ai-agent-skills
 npx ai-agent-skills browse
-npx ai-agent-skills collections
 npx ai-agent-skills list
 npx ai-agent-skills list --work-area frontend
-npx ai-agent-skills list --collection my-picks
-npx ai-agent-skills search testing
+npx ai-agent-skills collections
+npx ai-agent-skills search frontend
 npx ai-agent-skills info frontend-design
+npx ai-agent-skills preview pdf
 
-# Installation
-npx ai-agent-skills install <name>
-npx ai-agent-skills install <name> -p
+# Install
+npx ai-agent-skills install <skill-name>
+npx ai-agent-skills install <skill-name> -p
 npx ai-agent-skills install <owner/repo>
-npx ai-agent-skills install <owner/repo>@<skill>
-npx ai-agent-skills install <owner/repo> --list
+npx ai-agent-skills install <owner/repo>@<skill-name>
 npx ai-agent-skills install <owner/repo> --skill <name>
-npx ai-agent-skills install ./path
-npx ai-agent-skills install <name> --dry-run
+npx ai-agent-skills install <owner/repo> --list
+npx ai-agent-skills install ./local-path
+npx ai-agent-skills install <skill-name> --dry-run
 
-# Management
-npx ai-agent-skills uninstall <name>
+# Maintain
 npx ai-agent-skills update [name]
+npx ai-agent-skills uninstall <name>
 npx ai-agent-skills check
+npx ai-agent-skills doctor
+npx ai-agent-skills validate [path]
 
-# Authoring
-npx ai-agent-skills init [name]
-
-# Configuration
-npx ai-agent-skills config
+# Curate
+npx ai-agent-skills catalog <owner/repo> --list
+npx ai-agent-skills catalog <owner/repo> --skill <name> --area <shelf> --branch <branch>
 ```
 
-<details>
-<summary>Legacy agent support</summary>
+## Testing
 
-These agents are still supported via `--agent <name>`:
+There are two layers on purpose:
 
-| Agent | Flag | Install Location |
-|-------|------|------------------|
-| Claude Code | `--agent claude` | `~/.claude/skills/` |
-| Cursor | `--agent cursor` | `.cursor/skills/` |
-| Codex | `--agent codex` | `~/.codex/skills/` |
-| Amp | `--agent amp` | `~/.amp/skills/` |
-| VS Code / Copilot | `--agent vscode` | `.github/skills/` |
-| Gemini CLI | `--agent gemini` | `~/.gemini/skills/` |
-| Goose | `--agent goose` | `~/.config/goose/skills/` |
-| OpenCode | `--agent opencode` | `~/.config/opencode/skill/` |
-| Letta | `--agent letta` | `~/.letta/skills/` |
-| Kilo Code | `--agent kilocode` | `~/.kilocode/skills/` |
-| Portable | `--agent project` | `.skills/` |
+- `npm test`
+  Fast regression coverage for CLI behavior, schema rules, routing, and local install flows.
+- `npm run test:live`
+  No-mock live verification. Clones the real upstream repos, captures raw `SKILL.md` frontmatter and file manifests, runs real install/update/uninstall flows in isolated temp homes and projects, drives the TUI through a real PTY, and writes a report to `tmp/live-test-report.json`.
+- `npm run test:live:quick`
+  Smaller live matrix for faster iteration while keeping the same no-mock pipeline.
 
-</details>
+## Legacy Agent Support
 
-## What Are Agent Skills?
+These still work through `--agent <name>`:
 
-Agent skills follow the open format documented at [agentskills.io](https://agentskills.io). A skill is just a folder:
+- `claude`
+- `cursor`
+- `codex`
+- `amp`
+- `vscode`
+- `copilot`
+- `gemini`
+- `goose`
+- `opencode`
+- `letta`
+- `kilocode`
+- `project`
 
-```text
-my-skill/
-├── SKILL.md
-├── scripts/
-└── references/
-```
+## Why It Feels Different
 
-All major coding agents support some variation of this pattern.
+This repo is opinionated on purpose.
 
-## Manual Install
-
-```bash
-git clone https://github.com/MoizIbnYousaf/Ai-Agent-Skills.git
-cp -r Ai-Agent-Skills/skills/pdf ~/.claude/skills/
-```
+- Small shelves beat giant taxonomies
+- Editorial notes beat anonymous tags
+- Provenance should stay visible
+- Upstream repos should stay upstream
+- A curated library should feel maintained, not harvested
 
 ## Contributing
 
-This repo is curated. I do not accept everything, and I do not want the catalog to sprawl.
-I would rather keep it small and strong than let it get messy.
+This is a curated library, not an open registry.
 
-Before opening a PR:
+Read [CURATION.md](./CURATION.md) before opening a PR.
 
-1. Read [CURATION.md](./CURATION.md).
-2. Follow [CONTRIBUTING.md](./CONTRIBUTING.md).
-3. Add or update the `skills.json` entry.
-4. Put the skill on a top-level shelf only if it clearly belongs there.
-5. Explain why it belongs here.
+## Related
 
-## Links
-
-- [Agent Skills Spec](https://agentskills.io)
-- [Anthropic Skills](https://github.com/anthropics/skills)
-- [Curation Guide](./CURATION.md)
-- [Contributing Guide](./CONTRIBUTING.md)
-- [Issues](https://github.com/MoizIbnYousaf/Ai-Agent-Skills/issues)
-
-## Credits & Attribution
-
-This library builds on work from the open-source community, especially:
-
-- [Anthropic Skills](https://github.com/anthropics/skills)
-- [Anthropic Claude Code](https://github.com/anthropics/claude-code)
-- [OpenAI Skills](https://github.com/openai/skills)
-- [ComposioHQ Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills)
-- [wshobson/agents](https://github.com/wshobson/agents)
-
-If something here traces back to your work and you want clearer attribution, open an issue.
-
----
-
-<p align="center">
-  <sub>Built and curated by <a href="https://github.com/MoizIbnYousaf">Moiz Ibn Yousaf</a></sub>
-</p>
+- [WORK_AREAS.md](./WORK_AREAS.md)
+- [CURATION.md](./CURATION.md)
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [Agent Skills specification](https://agentskills.io)

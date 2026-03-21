@@ -11,6 +11,7 @@ scripts/
 
 # Local install artifacts
 .skills/
+tmp/
 
 # Documentation (README is auto-included)
 CONTRIBUTING.md

@@ -5,6 +5,38 @@ const path = require('path');
 const os = require('os');
 const { pathToFileURL } = require('url');
 const { compareSkillsByCurationData, getGitHubInstallSpec, getSiblingRecommendations, sortSkillsByCuration } = require('./tui/catalog.cjs');
+const {
+  AGENT_PATHS,
+  CONFIG_FILE,
+  LEGACY_AGENTS,
+  MAX_SKILL_SIZE,
+  ROOT_DIR,
+  SCOPES,
+  SKILLS_DIR,
+} = require('./lib/paths.cjs');
+const {
+  findSkillByName,
+  getCatalogCounts,
+  loadCatalogData,
+  writeCatalogData,
+} = require('./lib/catalog-data.cjs');
+const { parseSkillMarkdown: parseSkillMarkdownFile } = require('./lib/frontmatter.cjs');
+const { readInstalledMeta, writeInstalledMeta } = require('./lib/install-metadata.cjs');
+const {
+  classifyGitError: classifyGitErrorLib,
+  discoverSkills: discoverSkillsLib,
+  expandPath: expandPathLib,
+  getRepoNameFromUrl: getRepoNameFromUrlLib,
+  isGitUrl: isGitUrlLib,
+  isLocalPath: isLocalPathLib,
+  isWindowsPath: isWindowsPathLib,
+  parseGitUrl: parseGitUrlLib,
+  parseSource: parseSourceLib,
+  prepareSource: prepareSourceLib,
+  sanitizeGitUrl: sanitizeGitUrlLib,
+  sanitizeSubpath: sanitizeSubpathLib,
+  validateGitUrl: validateGitUrlLib,
+} = require('./lib/source.cjs');
 
 // Version check
 const [NODE_MAJOR, NODE_MINOR] = process.versions.node.split('.').map(Number);
@@ -12,37 +44,6 @@ if (NODE_MAJOR < 14 || (NODE_MAJOR === 14 && NODE_MINOR < 16)) {
   console.error(`Error: Node.js 14.16+ required (you have ${process.versions.node})`);
   process.exit(1);
 }
-
-const SKILLS_DIR = path.join(__dirname, 'skills');
-const CONFIG_FILE = path.join(os.homedir(), '.agent-skills.json');
-const MAX_SKILL_SIZE = 50 * 1024 * 1024; // 50MB limit
-
-// v3 scope model: two primary scopes replace the agent picker
-const SCOPES = {
-  global: path.join(os.homedir(), '.claude', 'skills'),
-  project: path.join(process.cwd(), '.agents', 'skills'),
-};
-
-// Legacy agent paths (still functional via --agent)
-const LEGACY_AGENTS = {
-  cursor:   path.join(process.cwd(), '.cursor', 'skills'),
-  amp:      path.join(os.homedir(), '.amp', 'skills'),
-  vscode:   path.join(process.cwd(), '.github', 'skills'),
-  copilot:  path.join(process.cwd(), '.github', 'skills'),
-  project:  path.join(process.cwd(), '.skills'),
-  goose:    path.join(os.homedir(), '.config', 'goose', 'skills'),
-  opencode: path.join(os.homedir(), '.config', 'opencode', 'skill'),
-  codex:    path.join(os.homedir(), '.codex', 'skills'),
-  letta:    path.join(os.homedir(), '.letta', 'skills'),
-  kilocode: path.join(os.homedir(), '.kilocode', 'skills'),
-  gemini:   path.join(os.homedir(), '.gemini', 'skills'),
-};
-
-// Unified lookup: resolve scope or legacy agent name to a path
-const AGENT_PATHS = {
-  claude: SCOPES.global,
-  ...LEGACY_AGENTS,
-};
 
 const colors = {
   reset: '\x1b[0m',
@@ -118,37 +119,12 @@ function saveConfig(config) {
 
 // ============ SKILL METADATA SUPPORT ============
 
-const SKILL_META_FILE = '.skill-meta.json';
-
 function writeSkillMeta(skillPath, meta) {
-  try {
-    const metaPath = path.join(skillPath, SKILL_META_FILE);
-    const now = new Date().toISOString();
-    const metadata = {
-      ...meta,
-      // Preserve original installedAt if it exists, otherwise set it
-      installedAt: meta.installedAt || now,
-      // Always update the updatedAt timestamp
-      updatedAt: now
-    };
-    fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2));
-    return true;
-  } catch (e) {
-    // Non-fatal - skill still works without metadata
-    return false;
-  }
+  return writeInstalledMeta(skillPath, meta);
 }
 
 function readSkillMeta(skillPath) {
-  try {
-    const metaPath = path.join(skillPath, SKILL_META_FILE);
-    if (fs.existsSync(metaPath)) {
-      return JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-    }
-  } catch (e) {
-    // Ignore - treat as legacy skill
-  }
-  return null;
+  return readInstalledMeta(skillPath);
 }
 
 // ============ SECURITY VALIDATION ============
@@ -216,37 +192,8 @@ function validateGitHubSkillPath(skillPath) {
   return segments;
 }
 
-function parseFrontmatterValue(value) {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return '';
-
-  if (trimmed.startsWith('[')) {
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      return trimmed;
-    }
-  }
-
-  return trimmed.replace(/^["']|["']$/g, '');
-}
-
 function parseSkillMarkdown(raw) {
-  const match = String(raw || '').match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-  if (!match) return null;
-
-  const frontmatter = {};
-  for (const line of match[1].split('\n')) {
-    const kvMatch = line.match(/^([A-Za-z0-9._-]+):\s*(.*)$/);
-    if (!kvMatch) continue;
-    const [, key, value] = kvMatch;
-    frontmatter[key] = parseFrontmatterValue(value);
-  }
-
-  return {
-    frontmatter,
-    content: match[2].trim(),
-  };
+  return parseSkillMarkdownFile(raw);
 }
 
 function readSkillDirectory(skillDir) {
@@ -270,28 +217,10 @@ function readSkillDirectory(skillDir) {
 // ============ ERROR-SAFE JSON LOADING ============
 
 function loadSkillsJson() {
-  const skillsJsonPath = path.join(__dirname, 'skills.json');
-
-  if (!fs.existsSync(skillsJsonPath)) {
-    warn('skills.json not found, using empty list');
-    return { skills: [] };
-  }
-
   try {
-    const content = fs.readFileSync(skillsJsonPath, 'utf8');
-    const data = JSON.parse(content);
-
-    if (!data.skills || !Array.isArray(data.skills)) {
-      throw new Error('Invalid skills.json: missing skills array');
-    }
-
-    return data;
+    return loadCatalogData();
   } catch (e) {
-    if (e instanceof SyntaxError) {
-      error(`Failed to parse skills.json: ${e.message}`);
-    } else {
-      error(`Failed to load skills.json: ${e.message}`);
-    }
+    error(`Failed to load skills.json: ${e.message}`);
     process.exit(1);
   }
 }
@@ -417,6 +346,10 @@ function formatWorkAreaTitle(workArea) {
     .join(' ');
 }
 
+function formatCount(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function getWorkAreaMeta(data, workAreaId) {
   return getWorkAreas(data).find(area => area.id === workAreaId) || null;
 }
@@ -458,6 +391,34 @@ function getSyncMode(skill) {
   const origin = getOrigin(skill);
   if (origin === 'authored' || origin === 'adapted') return origin;
   return 'snapshot';
+}
+
+function getTier(skill) {
+  if (skill && (skill.tier === 'house' || skill.tier === 'upstream')) {
+    return skill.tier;
+  }
+  return skill && skill.vendored === false ? 'upstream' : 'house';
+}
+
+function getDistribution(skill) {
+  if (skill && (skill.distribution === 'bundled' || skill.distribution === 'live')) {
+    return skill.distribution;
+  }
+  return getTier(skill) === 'house' ? 'bundled' : 'live';
+}
+
+function getTierBadge(skill) {
+  if (getTier(skill) === 'house') {
+    return `${colors.green}[house copy]${colors.reset}`;
+  }
+  return `${colors.magenta}[cataloged upstream]${colors.reset}`;
+}
+
+function getTierLine(skill) {
+  if (getTier(skill) === 'house') {
+    return 'House copy · bundled in this library';
+  }
+  return `Cataloged upstream · install pulls live from ${skill.installSource || skill.source}`;
 }
 
 function getSkillMeta(skill, includeCategory = true) {
@@ -698,6 +659,28 @@ function resolveInstallPath(parsed) {
   return [SCOPES.global];
 }
 
+function resolveManagedTargets(parsed) {
+  if (parsed.explicitAgent && parsed.agents.length > 0) {
+    return parsed.agents.map((agent) => ({
+      label: agent,
+      path: AGENT_PATHS[agent] || SCOPES.global,
+    }));
+  }
+
+  if (parsed.scope === 'project') {
+    return [{ label: 'project', path: SCOPES.project }];
+  }
+
+  if (parsed.scope === 'global') {
+    return [{ label: 'global', path: SCOPES.global }];
+  }
+
+  return parsed.agents.map((agent) => ({
+    label: agent,
+    path: AGENT_PATHS[agent] || SCOPES.global,
+  }));
+}
+
 // v3: resolve scope label for metadata
 function resolveScopeLabel(targetPath) {
   if (targetPath === SCOPES.global) return 'global';
@@ -797,7 +780,7 @@ function installSkill(skillName, agent = 'claude', dryRun = false, targetPath = 
     // Check if this is a non-vendored cataloged skill
     try {
       const data = loadSkillsJson();
-      const cataloged = data.skills.find(s => s.name === skillName && s.vendored === false);
+      const cataloged = data.skills.find(s => s.name === skillName && s.tier === 'upstream');
       if (cataloged) {
         const installSource = cataloged.installSource || cataloged.source;
         if (installSource) {
@@ -852,8 +835,9 @@ function installSkill(skillName, agent = 'claude', dryRun = false, targetPath = 
 
     // Write metadata for update tracking
     writeSkillMeta(destPath, {
-      source: 'catalog',
-      name: skillName,
+      sourceType: 'registry',
+      source: 'registry',
+      skillName,
       scope: resolveScopeLabel(destDir),
     });
 
@@ -881,6 +865,15 @@ function installSkillToScope(skillName, scopePath, scopeLabel, dryRun = false) {
 
   const sourcePath = path.join(SKILLS_DIR, skillName);
   if (!fs.existsSync(sourcePath)) {
+    try {
+      const data = loadSkillsJson();
+      const cataloged = data.skills.find((skill) => skill.name === skillName && skill.tier === 'upstream');
+      if (cataloged && cataloged.installSource) {
+        const parsed = parseSource(cataloged.installSource);
+        return installFromSource(cataloged.installSource, parsed, [scopePath], [skillName], false, true, dryRun);
+      }
+    } catch {}
+
     error(`Skill "${skillName}" not found.`);
     const available = getAvailableSkills();
     const similar = available.filter(s => s.includes(skillName) || skillName.includes(s) || levenshteinDistance(s, skillName) <= 3).slice(0, 3);
@@ -903,7 +896,14 @@ function installSkillToScope(skillName, scopePath, scopeLabel, dryRun = false) {
   try {
     if (!fs.existsSync(scopePath)) fs.mkdirSync(scopePath, { recursive: true });
     copyDir(sourcePath, destPath);
-    writeSkillMeta(destPath, { source: 'catalog', url: 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills', name: skillName, scope: scopeLabel });
+    writeSkillMeta(destPath, {
+      sourceType: 'registry',
+      source: 'registry',
+      repo: 'MoizIbnYousaf/Ai-Agent-Skills',
+      url: 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills',
+      skillName,
+      scope: scopeLabel,
+    });
     success(`\nInstalled: ${skillName}`);
     info(`Scope: ${scopeLabel}`);
     info(`Location: ${destPath}`);
@@ -940,6 +940,11 @@ function showAgentInstructions(agent, skillName, destPath) {
 }
 
 function uninstallSkill(skillName, agent = 'claude', dryRun = false) {
+  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  return uninstallSkillFromPath(skillName, destDir, agent, dryRun);
+}
+
+function uninstallSkillFromPath(skillName, destDir, targetLabel = 'global', dryRun = false) {
   try {
     validateSkillName(skillName);
   } catch (e) {
@@ -947,20 +952,19 @@ function uninstallSkill(skillName, agent = 'claude', dryRun = false) {
     return false;
   }
 
-  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
   const skillPath = path.join(destDir, skillName);
 
   if (!fs.existsSync(skillPath)) {
-    error(`Skill "${skillName}" is not installed for ${agent}.`);
-    log(`\nInstalled skills for ${agent}:`);
-    listInstalledSkills(agent);
+    error(`Skill "${skillName}" is not installed in ${targetLabel}.`);
+    log(`\nInstalled skills in ${targetLabel}:`);
+    listInstalledSkillsInPath(destDir, targetLabel);
     return false;
   }
 
   if (dryRun) {
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
     info(`Would uninstall: ${skillName}`);
-    info(`Agent: ${agent}`);
+    info(`Target: ${targetLabel}`);
     info(`Path: ${skillPath}`);
     return true;
   }
@@ -968,7 +972,7 @@ function uninstallSkill(skillName, agent = 'claude', dryRun = false) {
   try {
     fs.rmSync(skillPath, { recursive: true });
     success(`\nUninstalled: ${skillName}`);
-    info(`Agent: ${agent}`);
+    info(`Target: ${targetLabel}`);
     info(`Removed from: ${skillPath}`);
     return true;
   } catch (e) {
@@ -979,7 +983,10 @@ function uninstallSkill(skillName, agent = 'claude', dryRun = false) {
 
 function getInstalledSkills(agent = 'claude') {
   const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  return getInstalledSkillsInPath(destDir);
+}
 
+function getInstalledSkillsInPath(destDir) {
   if (!fs.existsSync(destDir)) return [];
 
   try {
@@ -996,22 +1003,39 @@ function getInstalledSkills(agent = 'claude') {
 function listInstalledSkills(agent = 'claude') {
   const installed = getInstalledSkills(agent);
   const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  return listInstalledSkillsInPath(destDir, agent, installed);
+}
 
-  if (installed.length === 0) {
-    warn(`No skills installed for ${agent}`);
+function listInstalledSkillsInPath(destDir, label = 'global', installed = null) {
+  const resolvedInstalled = Array.isArray(installed) ? installed : getInstalledSkillsInPath(destDir);
+
+  if (resolvedInstalled.length === 0) {
+    warn(`No skills installed in ${label}`);
     info(`Location: ${destDir}`);
     return;
   }
 
-  log(`\n${colors.bold}Installed Skills${colors.reset} (${installed.length} for ${agent})\n`);
+  log(`\n${colors.bold}Installed Skills${colors.reset} (${resolvedInstalled.length} in ${label})\n`);
   log(`${colors.dim}Location: ${destDir}${colors.reset}\n`);
 
-  installed.forEach(name => {
+  resolvedInstalled.forEach(name => {
     log(`  ${colors.green}${name}${colors.reset}`);
   });
 
-  log(`\n${colors.dim}Update:    npx ai-agent-skills update <name> --agent ${agent}${colors.reset}`);
-  log(`${colors.dim}Uninstall: npx ai-agent-skills uninstall <name> --agent ${agent}${colors.reset}`);
+  if (label === 'project') {
+    log(`\n${colors.dim}Update:    npx ai-agent-skills update <name> --project${colors.reset}`);
+    log(`${colors.dim}Uninstall: npx ai-agent-skills uninstall <name> --project${colors.reset}`);
+    return;
+  }
+
+  if (label === 'global') {
+    log(`\n${colors.dim}Update:    npx ai-agent-skills update <name> --global${colors.reset}`);
+    log(`${colors.dim}Uninstall: npx ai-agent-skills uninstall <name> --global${colors.reset}`);
+    return;
+  }
+
+  log(`\n${colors.dim}Update:    npx ai-agent-skills update <name> --agent ${label}${colors.reset}`);
+  log(`${colors.dim}Uninstall: npx ai-agent-skills uninstall <name> --agent ${label}${colors.reset}`);
 }
 
 function runDoctor(agentsToCheck = Object.keys(AGENT_PATHS)) {
@@ -1019,8 +1043,8 @@ function runDoctor(agentsToCheck = Object.keys(AGENT_PATHS)) {
 
   try {
     const data = loadSkillsJson();
-    const vendoredSkills = (data.skills || []).filter(s => s.vendored !== false);
-    const catalogedSkills = (data.skills || []).filter(s => s.vendored === false);
+    const vendoredSkills = (data.skills || []).filter(s => s.tier === 'house');
+    const catalogedSkills = (data.skills || []).filter(s => s.tier === 'upstream');
     const missingSkills = vendoredSkills.filter((skill) => {
       const skillPath = path.join(SKILLS_DIR, skill.name, 'SKILL.md');
       return !fs.existsSync(skillPath);
@@ -1140,7 +1164,7 @@ function runValidate(targetPath) {
 }
 
 // Update from bundled registry
-function updateFromRegistry(skillName, agent, destPath, dryRun) {
+function updateFromRegistry(skillName, targetLabel, destPath, dryRun) {
   const sourcePath = path.join(SKILLS_DIR, skillName);
 
   if (!fs.existsSync(sourcePath)) {
@@ -1151,7 +1175,7 @@ function updateFromRegistry(skillName, agent, destPath, dryRun) {
   if (dryRun) {
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
     info(`Would update: ${skillName} (from registry)`);
-    info(`Agent: ${agent}`);
+    info(`Target: ${targetLabel}`);
     info(`Path: ${destPath}`);
     return true;
   }
@@ -1162,12 +1186,16 @@ function updateFromRegistry(skillName, agent, destPath, dryRun) {
 
     // Write metadata
     writeSkillMeta(destPath, {
+      sourceType: 'registry',
       source: 'registry',
-      name: skillName
+      repo: 'MoizIbnYousaf/Ai-Agent-Skills',
+      url: 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills',
+      skillName,
+      scope: resolveScopeLabel(path.dirname(destPath)),
     });
 
     success(`\nUpdated: ${skillName}`);
-    info(`Agent: ${agent}`);
+    info(`Target: ${targetLabel}`);
     info(`Location: ${destPath}`);
     return true;
   } catch (e) {
@@ -1176,161 +1204,134 @@ function updateFromRegistry(skillName, agent, destPath, dryRun) {
   }
 }
 
-// Update from GitHub repository
-function updateFromGitHub(meta, skillName, agent, destPath, dryRun) {
-  const { execFileSync } = require('child_process');
-  const repo = meta.repo;
+function updateFromRemoteSource(meta, skillName, targetLabel, destPath, dryRun) {
+  const sourceType = meta.sourceType || meta.source;
+  const scopeLabel = meta.scope || resolveScopeLabel(path.dirname(destPath));
 
-  // Validate repo format
-  if (!repo || typeof repo !== 'string' || !repo.includes('/')) {
-    error(`Invalid repository in metadata: ${repo}`);
-    error(`Try reinstalling the skill from GitHub.`);
+  let parsed;
+  let sourceLabel;
+
+  if (sourceType === 'github') {
+    if (!meta.repo || typeof meta.repo !== 'string' || !meta.repo.includes('/')) {
+      error(`Invalid repository in metadata: ${meta.repo}`);
+      error('Try reinstalling the skill from GitHub.');
+      return false;
+    }
+
+    const [owner, repo] = meta.repo.split('/');
+    parsed = {
+      type: 'github',
+      url: `https://github.com/${meta.repo}`,
+      owner,
+      repo,
+      ref: meta.ref || null,
+      subpath: meta.subpath || null,
+    };
+    sourceLabel = `github:${meta.repo}`;
+  } else if (sourceType === 'git') {
+    if (!meta.url || typeof meta.url !== 'string') {
+      error('Invalid git URL in metadata. Try reinstalling the skill.');
+      return false;
+    }
+
+    try {
+      validateGitUrl(meta.url);
+    } catch (e) {
+      error(`Invalid git URL in metadata: ${e.message}. Try reinstalling the skill.`);
+      return false;
+    }
+
+    parsed = {
+      type: 'git',
+      url: meta.url,
+      ref: meta.ref || null,
+      subpath: meta.subpath || null,
+    };
+    sourceLabel = `git:${sanitizeGitUrl(meta.url)}${meta.ref ? `#${meta.ref}` : ''}`;
+  } else {
+    error(`Unsupported remote source type: ${sourceType}`);
     return false;
   }
 
   if (dryRun) {
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
-    info(`Would update: ${skillName} (from github:${repo})`);
-    info(`Agent: ${agent}`);
+    info(`Would update: ${skillName} (from ${sourceLabel})`);
+    info(`Target: ${targetLabel}`);
     info(`Path: ${destPath}`);
     return true;
   }
 
-  const tempDir = path.join(os.tmpdir(), `ai-skills-update-${Date.now()}`);
+  let prepared = null;
 
   try {
-    info(`Updating ${skillName} from ${repo}...`);
-    const repoUrl = `https://github.com/${repo}.git`;
-    execFileSync('git', ['clone', '--depth', '1', repoUrl, tempDir], { stdio: 'pipe' });
+    info(`Updating ${skillName} from ${sourceLabel}...`);
+    prepared = prepareSourceLib(buildInstallSourceRef(parsed, parsed.subpath || null) || parsed.url, {
+      parsed,
+      sparseSubpath: parsed.subpath || null,
+    });
 
-    // Determine source path in cloned repo
-    let sourcePath;
-    if (meta.isRootSkill) {
-      sourcePath = tempDir;
-    } else if (meta.skillPath) {
-      // Check if skills/ subdirectory exists
-      const skillsSubdir = path.join(tempDir, 'skills', meta.skillPath);
-      const directPath = path.join(tempDir, meta.skillPath);
-      sourcePath = fs.existsSync(skillsSubdir) ? skillsSubdir : directPath;
-    } else {
-      sourcePath = tempDir;
+    const discovered = maybeRenameRootSkill(
+      discoverSkills(prepared.rootDir, prepared.repoRoot),
+      parsed,
+      prepared.rootDir,
+      prepared.repoRoot,
+    );
+
+    let match = findDiscoveredSkill(discovered, skillName);
+    if (!match && meta.subpath) {
+      match = discovered.find((skill) => skill.relativeDir === meta.subpath) || null;
+    }
+    if (!match && discovered.length === 1) {
+      match = discovered[0];
     }
 
-    if (!fs.existsSync(sourcePath) || !fs.existsSync(path.join(sourcePath, 'SKILL.md'))) {
-      error(`Skill not found in repository ${repo}`);
-      fs.rmSync(tempDir, { recursive: true });
+    if (!match) {
+      error(`Skill "${skillName}" not found in source ${sourceLabel}`);
       return false;
     }
 
-    fs.rmSync(destPath, { recursive: true });
-    copyDir(sourcePath, destPath);
-
-    // Preserve metadata
-    writeSkillMeta(destPath, meta);
-
-    fs.rmSync(tempDir, { recursive: true });
-
-    success(`\nUpdated: ${skillName}`);
-    info(`Source: github:${repo}`);
-    info(`Agent: ${agent}`);
-    info(`Location: ${destPath}`);
-    return true;
-  } catch (e) {
-    error(`Failed to update from GitHub: ${e.message}`);
-    try { fs.rmSync(tempDir, { recursive: true }); } catch {}
-    return false;
-  }
-}
-
-function updateFromGitUrl(meta, skillName, agent, destPath, dryRun) {
-  const { execFileSync } = require('child_process');
-  const parsed = parseGitUrl(meta.url);
-  const url = parsed.url;
-  const ref = meta.ref || parsed.ref;
-
-  // Validate URL from metadata
-  try {
-    validateGitUrl(url);
-  } catch (e) {
-    error(`Invalid git URL in metadata: ${e.message}. Try reinstalling the skill.`);
-    return false;
-  }
-
-  if (dryRun) {
-    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
-    info(`Would update: ${skillName} (from git:${url}${ref ? `#${ref}` : ''})`);
-    info(`Agent: ${agent}`);
-    info(`Path: ${destPath}`);
-    return true;
-  }
-
-  // Use secure temp directory creation
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-update-'));
-
-  try {
-    info(`Updating ${skillName} from ${url}${ref ? `#${ref}` : ''}...`);
-    const cloneArgs = ['clone', '--depth', '1'];
-    if (ref) {
-      cloneArgs.push('--branch', ref);
-    }
-    cloneArgs.push(url, tempDir);
-    execFileSync('git', cloneArgs, { stdio: 'pipe' });
-
-    let sourcePath;
-    if (meta.isRootSkill) {
-      sourcePath = tempDir;
-    } else if (meta.skillPath) {
-      const skillsSubdir = path.join(tempDir, 'skills', meta.skillPath);
-      const directPath = path.join(tempDir, meta.skillPath);
-      sourcePath = fs.existsSync(skillsSubdir) ? skillsSubdir : directPath;
-    } else {
-      sourcePath = tempDir;
-    }
-
-    if (!fs.existsSync(sourcePath) || !fs.existsSync(path.join(sourcePath, 'SKILL.md'))) {
-      error(`Skill not found in repository ${url}`);
-      fs.rmSync(tempDir, { recursive: true });
-      return false;
-    }
-
-    fs.rmSync(destPath, { recursive: true });
-    copyDir(sourcePath, destPath);
-
-    // Sanitize URL before storing
-    const sanitizedUrl = sanitizeGitUrl(url);
+    fs.rmSync(destPath, { recursive: true, force: true });
+    copyDir(match.dir, destPath);
 
     writeSkillMeta(destPath, {
       ...meta,
-      source: 'git',
-      url: sanitizedUrl,
-      ref: ref || null
+      sourceType,
+      source: sourceType,
+      url: parsed.type === 'git' ? sanitizeGitUrl(parsed.url) : parsed.url,
+      repo: buildRepoId(parsed) || meta.repo || null,
+      ref: parsed.ref || null,
+      subpath: match.relativeDir && match.relativeDir !== '.' ? match.relativeDir : null,
+      installSource: buildInstallSourceRef(parsed, match.relativeDir === '.' ? null : match.relativeDir),
+      skillName: match.name,
+      scope: scopeLabel,
     });
 
-    fs.rmSync(tempDir, { recursive: true });
-
-    success(`\nUpdated: ${skillName}`);
-    info(`Source: git:${url}${ref ? `#${ref}` : ''}`);
-    info(`Agent: ${agent}`);
+    success(`\nUpdated: ${match.name}`);
+    info(`Source: ${sourceLabel}`);
+    info(`Target: ${targetLabel}`);
     info(`Location: ${destPath}`);
     return true;
   } catch (e) {
-    // Provide more helpful error messages for common git failures
-    let errorMsg = e.message;
-    if (e.message.includes('not found') || e.message.includes('Repository not found')) {
-      errorMsg = `Repository not found. The URL may have changed or been removed.`;
-    } else if (e.message.includes('Authentication failed') || e.message.includes('Permission denied')) {
-      errorMsg = `Authentication failed. Check your credentials or SSH key.`;
-    } else if (e.message.includes('Could not resolve host')) {
-      errorMsg = `Could not resolve host. Check your network connection.`;
-    }
-    error(`Failed to update from git: ${errorMsg}`);
-    try { fs.rmSync(tempDir, { recursive: true }); } catch {}
+    error(`Failed to update from ${sourceType}: ${e.message}`);
     return false;
+  } finally {
+    if (prepared) {
+      prepared.cleanup();
+    }
   }
 }
 
+// Update from GitHub repository
+function updateFromGitHub(meta, skillName, targetLabel, destPath, dryRun) {
+  return updateFromRemoteSource(meta, skillName, targetLabel, destPath, dryRun);
+}
+
+function updateFromGitUrl(meta, skillName, targetLabel, destPath, dryRun) {
+  return updateFromRemoteSource(meta, skillName, targetLabel, destPath, dryRun);
+}
+
 // Update from local path
-function updateFromLocalPath(meta, skillName, agent, destPath, dryRun) {
+function updateFromLocalPath(meta, skillName, targetLabel, destPath, dryRun) {
   const sourcePath = meta.path;
 
   if (!sourcePath || typeof sourcePath !== 'string') {
@@ -1353,7 +1354,7 @@ function updateFromLocalPath(meta, skillName, agent, destPath, dryRun) {
   if (dryRun) {
     log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
     info(`Would update: ${skillName} (from local:${sourcePath})`);
-    info(`Agent: ${agent}`);
+    info(`Target: ${targetLabel}`);
     info(`Path: ${destPath}`);
     return true;
   }
@@ -1367,7 +1368,7 @@ function updateFromLocalPath(meta, skillName, agent, destPath, dryRun) {
 
     success(`\nUpdated: ${skillName}`);
     info(`Source: local:${sourcePath}`);
-    info(`Agent: ${agent}`);
+    info(`Target: ${targetLabel}`);
     info(`Location: ${destPath}`);
     return true;
   } catch (e) {
@@ -1377,6 +1378,11 @@ function updateFromLocalPath(meta, skillName, agent, destPath, dryRun) {
 }
 
 function updateSkill(skillName, agent = 'claude', dryRun = false) {
+  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  return updateSkillInPath(skillName, destDir, agent, dryRun);
+}
+
+function updateSkillInPath(skillName, destDir, targetLabel = 'global', dryRun = false) {
   try {
     validateSkillName(skillName);
   } catch (e) {
@@ -1384,11 +1390,10 @@ function updateSkill(skillName, agent = 'claude', dryRun = false) {
     return false;
   }
 
-  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
   const destPath = path.join(destDir, skillName);
 
   if (!fs.existsSync(destPath)) {
-    error(`Skill "${skillName}" is not installed for ${agent}.`);
+    error(`Skill "${skillName}" is not installed in ${targetLabel}.`);
     log(`\nUse 'install' to add it first.`);
     return false;
   }
@@ -1398,38 +1403,44 @@ function updateSkill(skillName, agent = 'claude', dryRun = false) {
 
   if (!meta) {
     // Legacy skill without metadata - try registry
-    return updateFromRegistry(skillName, agent, destPath, dryRun);
+    return updateFromRegistry(skillName, targetLabel, destPath, dryRun);
   }
 
   // Route to correct update method based on source
-  switch (meta.source) {
+  switch (meta.sourceType || meta.source) {
     case 'github':
-      return updateFromGitHub(meta, skillName, agent, destPath, dryRun);
+      return updateFromGitHub(meta, skillName, targetLabel, destPath, dryRun);
     case 'git':
-      return updateFromGitUrl(meta, skillName, agent, destPath, dryRun);
+      return updateFromGitUrl(meta, skillName, targetLabel, destPath, dryRun);
     case 'local':
-      return updateFromLocalPath(meta, skillName, agent, destPath, dryRun);
+      return updateFromLocalPath(meta, skillName, targetLabel, destPath, dryRun);
+    case 'catalog':
     case 'registry':
     default:
-      return updateFromRegistry(skillName, agent, destPath, dryRun);
+      return updateFromRegistry(skillName, targetLabel, destPath, dryRun);
   }
 }
 
 function updateAllSkills(agent = 'claude', dryRun = false) {
-  const installed = getInstalledSkills(agent);
+  const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
+  return updateAllSkillsInPath(destDir, agent, dryRun);
+}
+
+function updateAllSkillsInPath(destDir, targetLabel = 'global', dryRun = false) {
+  const installed = getInstalledSkillsInPath(destDir);
 
   if (installed.length === 0) {
-    warn(`No skills installed for ${agent}`);
+    warn(`No skills installed in ${targetLabel}`);
     return;
   }
 
-  log(`\n${colors.bold}Updating ${installed.length} skill(s)...${colors.reset}\n`);
+  log(`\n${colors.bold}Updating ${installed.length} skill(s) in ${targetLabel}...${colors.reset}\n`);
 
   let updated = 0;
   let failed = 0;
 
   for (const skillName of installed) {
-    if (updateSkill(skillName, agent, dryRun)) {
+    if (updateSkillInPath(skillName, destDir, targetLabel, dryRun)) {
       updated++;
     } else {
       failed++;
@@ -1489,17 +1500,19 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
     return;
   }
 
-  log(`\n${colors.bold}Available Skills${colors.reset} (${skills.length} total)\n`);
-
   if (collectionResult.collection) {
     const startHere = getCollectionStartHere(collectionResult.collection);
+    const collectionShelves = new Set(skills.map((skill) => getSkillWorkArea(skill)).filter(Boolean));
+    const collectionSources = new Set(skills.map((skill) => skill.source).filter(Boolean));
     log(`${colors.blue}${colors.bold}${collectionResult.collection.title}${colors.reset} ${colors.dim}[${collectionResult.collection.id}]${colors.reset}`);
     log(`${colors.dim}${collectionResult.collection.description}${colors.reset}\n`);
-    log(`${colors.dim}Start here:${colors.reset} ${startHere.join(', ')}\n`);
+    log(`${colors.dim}Start here:${colors.reset} ${startHere.join(', ')}`);
+    log(`${colors.dim}${formatCount(skills.length, 'pick')} · ${formatCount(collectionShelves.size, 'shelf', 'shelves')} · ${formatCount(collectionSources.size, 'source repo', 'source repos')}${colors.reset}\n`);
 
     skills.forEach(skill => {
       const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
       const verified = skill.verified ? ` ${colors.green}✓${colors.reset}` : '';
+      const tierBadge = ` ${getTierBadge(skill)}`;
       const tagStr = skill.tags && skill.tags.length > 0
         ? ` ${colors.dim}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
         : '';
@@ -1507,13 +1520,14 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
         ? ` ${colors.dim}{${getCollectionBadgeText(data, skill)}}${colors.reset}`
         : '';
 
-      log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tagStr}${collectionBadge}`);
-      log(`    ${colors.dim}${getSkillMeta(skill)}${colors.reset}`);
+      log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tierBadge}${tagStr}${collectionBadge}`);
+      log(`    ${colors.dim}${getSkillMeta(skill, false)}${colors.reset}`);
 
-      const desc = skill.description.length > 80
-        ? skill.description.slice(0, 80) + '...'
-        : skill.description;
-      log(`    ${colors.dim}${desc}${colors.reset}`);
+      const shelfNote = skill.whyHere || skill.description;
+      const desc = shelfNote.length > 88
+        ? shelfNote.slice(0, 88) + '...'
+        : shelfNote;
+      log(`    ${colors.dim}Why:${colors.reset} ${desc}`);
     });
   } else {
     const byWorkArea = {};
@@ -1528,17 +1542,25 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
       ...Object.keys(byWorkArea).filter(area => !getWorkAreaMeta(data, area)).sort()
     ].filter((area, index, array) => array.indexOf(area) === index && byWorkArea[area]);
 
+    const counts = getCatalogCounts(data);
+    log(`\n${colors.bold}Curated Library${colors.reset}`);
+    log(`${colors.dim}${formatCount(counts.total, 'pick')} on ${formatCount(orderedAreas.length, 'shelf', 'shelves')} · ${formatCount(counts.house, 'house copy', 'house copies')} · ${formatCount(counts.upstream, 'cataloged upstream pick', 'cataloged upstream picks')}${colors.reset}`);
+    log(`${colors.dim}Small enough to scan. Opinionated enough to trust.${colors.reset}\n`);
+
     orderedAreas.forEach(areaId => {
       const meta = getWorkAreaMeta(data, areaId);
       const title = meta ? meta.title : formatWorkAreaTitle(areaId);
-      log(`${colors.blue}${colors.bold}${title.toUpperCase()}${colors.reset}`);
+      const shelfSkills = sortSkillsByCuration(data, byWorkArea[areaId]);
+      const houseCount = shelfSkills.filter((skill) => getTier(skill) === 'house').length;
+      const upstreamCount = shelfSkills.length - houseCount;
+      log(`${colors.blue}${colors.bold}${title.toUpperCase()}${colors.reset} ${colors.dim}${formatCount(shelfSkills.length, 'pick')} · ${formatCount(houseCount, 'house copy', 'house copies')} · ${formatCount(upstreamCount, 'upstream pick', 'upstream picks')}${colors.reset}`);
       if (meta && meta.description) {
         log(`${colors.dim}${meta.description}${colors.reset}`);
       }
-      sortSkillsByCuration(data, byWorkArea[areaId]).forEach(skill => {
+      shelfSkills.forEach(skill => {
         const featured = skill.featured ? ` ${colors.yellow}*${colors.reset}` : '';
         const verified = skill.verified ? ` ${colors.green}✓${colors.reset}` : '';
-        const upstream = skill.vendored === false ? ` ${colors.magenta}[upstream]${colors.reset}` : '';
+        const tierBadge = ` ${getTierBadge(skill)}`;
         const tagStr = skill.tags && skill.tags.length > 0
           ? ` ${colors.dim}[${skill.tags.slice(0, 3).join(', ')}]${colors.reset}`
           : '';
@@ -1546,13 +1568,14 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
           ? ` ${colors.dim}{${getCollectionBadgeText(data, skill)}}${colors.reset}`
           : '';
 
-        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${upstream}${tagStr}${collectionBadge}`);
+        log(`  ${colors.green}${skill.name}${colors.reset}${featured}${verified}${tierBadge}${tagStr}${collectionBadge}`);
         log(`    ${colors.dim}${getSkillMeta(skill, false)}${colors.reset}`);
 
-        const desc = skill.description.length > 65
-          ? skill.description.slice(0, 65) + '...'
-          : skill.description;
-        log(`    ${colors.dim}${desc}${colors.reset}`);
+        const shelfNote = skill.whyHere || skill.description;
+        const desc = shelfNote.length > 88
+          ? shelfNote.slice(0, 88) + '...'
+          : shelfNote;
+        log(`    ${colors.dim}Why:${colors.reset} ${desc}`);
       });
       log('');
     });
@@ -1659,7 +1682,7 @@ function showCollections() {
   }
 
   log(`\n${colors.bold}Curated Collections${colors.reset} (${collections.length} total)\n`);
-  log(`${colors.dim}These are the main shelves. Search and tags cover the rest.${colors.reset}\n`);
+  log(`${colors.dim}These are cross-shelf reading lists layered on top of the main work-area shelves.${colors.reset}\n`);
 
   collections.forEach(collection => {
     const startHere = getCollectionStartHere(collection);
@@ -1674,17 +1697,15 @@ function showCollections() {
   });
 }
 
-function getSkillFilePath(skillName) {
+function getBundledSkillFilePath(skillName) {
   try {
     validateSkillName(skillName);
   } catch (e) {
-    error(e.message);
     return null;
   }
 
   const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md');
   if (!fs.existsSync(skillPath)) {
-    error(`Skill "${skillName}" not found.`);
     return null;
   }
 
@@ -1692,13 +1713,13 @@ function getSkillFilePath(skillName) {
 }
 
 function showPreview(skillName) {
-  const skillPath = getSkillFilePath(skillName);
+  const skillPath = getBundledSkillFilePath(skillName);
 
   if (!skillPath) {
     // Check if it's a non-vendored cataloged skill
     try {
       const data = loadSkillsJson();
-      const cataloged = data.skills.find(s => s.name === skillName && s.vendored === false);
+      const cataloged = data.skills.find(s => s.name === skillName && s.tier === 'upstream');
       if (cataloged) {
         log(`\n${colors.bold}Preview:${colors.reset} ${skillName}\n`);
         log(cataloged.description);
@@ -1710,6 +1731,7 @@ function showPreview(skillName) {
         return;
       }
     } catch {}
+    error(`Skill "${skillName}" not found.`);
     return;
   }
 
@@ -1781,100 +1803,8 @@ function levenshteinDistance(a, b) {
 
 // ============ EXTERNAL INSTALL (GitHub/Local) ============
 
-// v3: sanitize subpath segments (reject path traversal)
-function sanitizeSubpath(subpath) {
-  if (!subpath) return null;
-  const segments = String(subpath).replace(/\\/g, '/').split('/').filter(Boolean);
-  for (const seg of segments) {
-    if (seg === '..') {
-      throw new Error(`Path traversal rejected: "${subpath}" contains ".." segment`);
-    }
-  }
-  return segments.join('/') || null;
-}
-
-// v3: unified source parser handling all 7 input formats
-function parseSource(source) {
-  if (!source || typeof source !== 'string') {
-    return { type: 'catalog', name: source };
-  }
-
-  const trimmed = source.trim();
-
-  // Priority 1: local path (starts with ./, ../, /, or is ".")
-  if (trimmed === '.' || trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('/') || trimmed.startsWith('~/') || isWindowsPath(trimmed)) {
-    return { type: 'local', url: trimmed };
-  }
-
-  // Priority 2: full github.com URL with /tree/ (branch + subpath)
-  const treeMatch = trimmed.match(/^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(?:\/(.+))?$/);
-  if (treeMatch) {
-    const subpath = treeMatch[4] ? sanitizeSubpath(treeMatch[4]) : null;
-    return {
-      type: 'github',
-      url: `https://github.com/${treeMatch[1]}/${treeMatch[2]}`,
-      owner: treeMatch[1],
-      repo: treeMatch[2],
-      ref: treeMatch[3],
-      subpath,
-    };
-  }
-
-  // Priority 3: full github.com URL (no tree)
-  const ghUrlMatch = trimmed.match(/^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/)?$/);
-  if (ghUrlMatch) {
-    return {
-      type: 'github',
-      url: `https://github.com/${ghUrlMatch[1]}/${ghUrlMatch[2]}`,
-      owner: ghUrlMatch[1],
-      repo: ghUrlMatch[2],
-    };
-  }
-
-  // Priority 4: owner/repo@skill-name
-  const atMatch = trimmed.match(/^([^/:@.]+)\/([^/:@.]+)@(.+)$/);
-  if (atMatch) {
-    return {
-      type: 'github',
-      url: `https://github.com/${atMatch[1]}/${atMatch[2]}`,
-      owner: atMatch[1],
-      repo: atMatch[2],
-      skillFilter: atMatch[3],
-    };
-  }
-
-  // Priority 5: owner/repo (exactly two segments, no special chars that suggest a URL)
-  const shortMatch = trimmed.match(/^([^/:@.]+)\/([^/:@.]+)$/);
-  if (shortMatch && !trimmed.includes(':') && !trimmed.includes('.')) {
-    return {
-      type: 'github',
-      url: `https://github.com/${shortMatch[1]}/${shortMatch[2]}`,
-      owner: shortMatch[1],
-      repo: shortMatch[2],
-    };
-  }
-
-  // Priority 6: owner/repo/subpath (3+ segments, no protocol)
-  const subpathMatch = trimmed.match(/^([^/:@.]+)\/([^/:@.]+)\/(.+)$/);
-  if (subpathMatch && !trimmed.includes(':') && !trimmed.includes('://')) {
-    const subpath = sanitizeSubpath(subpathMatch[3]);
-    return {
-      type: 'github',
-      url: `https://github.com/${subpathMatch[1]}/${subpathMatch[2]}`,
-      owner: subpathMatch[1],
-      repo: subpathMatch[2],
-      subpath,
-    };
-  }
-
-  // Priority 7: any other URL (git, ssh, etc.)
-  if (isGitUrl(trimmed)) {
-    return { type: 'git', url: trimmed };
-  }
-
-  // Fallback: treat as catalog skill name
-  return { type: 'catalog', name: trimmed };
-}
+function sanitizeSubpath(subpath) { return sanitizeSubpathLib(subpath); }
+function parseSource(source) { return parseSourceLib(source); }
 
 function isGitHubUrl(source) {
   // Must have owner/repo format, not start with path indicators
@@ -1886,117 +1816,14 @@ function isGitHubUrl(source) {
          !isWindowsPath(source);
 }
 
-function isGitUrl(source) {
-  if (!source || typeof source !== 'string') return false;
-
-  // Avoid treating local filesystem paths as git URLs
-  if (isLocalPath(source)) return false;
-
-  // SSH-style: git@host:path (with optional .git suffix and #ref)
-  const sshLike = /^git@[a-zA-Z0-9._-]+:[a-zA-Z0-9._\/-]+(?:\.git)?(?:#[a-zA-Z0-9._\/-]+)?$/;
-  // Protocol URLs: https://, git://, ssh://, file:// (allows @ for user in ssh://git@host)
-  const protocolLike = /^(https?|git|ssh|file):\/\/[a-zA-Z0-9._@:\/-]+(?:#[a-zA-Z0-9._\/-]+)?$/;
-
-  return sshLike.test(source) || protocolLike.test(source);
-}
-
-function parseGitUrl(source) {
-  if (!source || typeof source !== 'string') return { url: null, ref: null };
-  // Split on first # only (ref might contain special chars)
-  const hashIndex = source.indexOf('#');
-  if (hashIndex === -1) {
-    return { url: source, ref: null };
-  }
-  return {
-    url: source.slice(0, hashIndex),
-    ref: source.slice(hashIndex + 1) || null
-  };
-}
-
-function getRepoNameFromUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-
-  // Remove trailing slashes and .git suffix
-  let cleaned = url.replace(/\/+$/, '').replace(/\.git$/, '');
-
-  // Handle SSH URLs: git@host:org/repo -> extract 'repo'
-  if (cleaned.includes('@') && cleaned.includes(':')) {
-    const colonIndex = cleaned.lastIndexOf(':');
-    const pathPart = cleaned.slice(colonIndex + 1);
-    const segments = pathPart.split('/').filter(Boolean);
-    return segments.length > 0 ? segments[segments.length - 1] : null;
-  }
-
-  // Handle protocol URLs: extract last path segment
-  const segments = cleaned.split('/').filter(Boolean);
-  return segments.length > 0 ? segments[segments.length - 1] : null;
-}
-
-// Validate git URL to prevent malformed/malicious input
-function validateGitUrl(url) {
-  if (!url || typeof url !== 'string') {
-    throw new Error('Invalid git URL: empty or not a string');
-  }
-
-  // Max reasonable URL length
-  if (url.length > 2048) {
-    throw new Error('Git URL too long (max 2048 characters)');
-  }
-
-  // Check for dangerous characters that could cause issues
-  const dangerousChars = /[\x00-\x1f\x7f`$\\]/;
-  if (dangerousChars.test(url)) {
-    throw new Error('Git URL contains invalid characters');
-  }
-
-  // Must match expected patterns
-  if (!isGitUrl(url)) {
-    throw new Error('Invalid git URL format');
-  }
-
-  return true;
-}
-
-// Sanitize URL for storage (remove credentials if present)
-function sanitizeGitUrl(url) {
-  if (!url) return url;
-  try {
-    // Handle protocol URLs
-    if (url.includes('://')) {
-      const parsed = new URL(url);
-      // Remove any embedded credentials
-      parsed.username = '';
-      parsed.password = '';
-      return parsed.toString();
-    }
-    // SSH URLs don't typically have credentials embedded
-    return url;
-  } catch {
-    return url;
-  }
-}
-
-function isWindowsPath(source) {
-  // Match Windows absolute paths like C:\, D:\, etc.
-  return /^[a-zA-Z]:[\\\/]/.test(source);
-}
-
-function isLocalPath(source) {
-  // Explicit local paths: ./ or / or ~/ or Windows paths like C:\
-  // Also accept ../ as local path (will be resolved)
-  return source.startsWith('./') ||
-         source.startsWith('../') ||
-         source.startsWith('/') ||
-         source.startsWith('~/') ||
-         isWindowsPath(source);
-}
-
-function expandPath(p) {
-  if (p.startsWith('~')) {
-    return path.join(os.homedir(), p.slice(1));
-  }
-  return path.resolve(p);
-}
+function isGitUrl(source) { return isGitUrlLib(source); }
+function parseGitUrl(source) { return parseGitUrlLib(source); }
+function getRepoNameFromUrl(url) { return getRepoNameFromUrlLib(url); }
+function validateGitUrl(url) { return validateGitUrlLib(url); }
+function sanitizeGitUrl(url) { return sanitizeGitUrlLib(url); }
+function isWindowsPath(source) { return isWindowsPathLib(source); }
+function isLocalPath(source) { return isLocalPathLib(source); }
+function expandPath(p) { return expandPathLib(p); }
 
 function getArgValue(argv, flag) {
   const i = argv.indexOf(flag);
@@ -2170,106 +1997,103 @@ function validateSkillDirectory(skillTarget) {
 }
 
 // v3: discover skills in a directory (cloned repo or local path)
-function discoverSkills(rootDir) {
+function discoverSkills(rootDir, repoRoot = rootDir) {
+  return discoverSkillsLib(rootDir, { repoRoot });
+}
+
+function buildRepoId(parsed) {
+  if (parsed.type === 'github' && parsed.owner && parsed.repo) {
+    return `${parsed.owner}/${parsed.repo}`;
+  }
+  return null;
+}
+
+function buildInstallSourceRef(parsed, relativeDir = null) {
+  const cleanRelativeDir = relativeDir && relativeDir !== '.' ? relativeDir.replace(/\\/g, '/') : null;
+
+  if (parsed.type === 'github') {
+    const repoId = buildRepoId(parsed);
+    return cleanRelativeDir ? `${repoId}/${cleanRelativeDir}` : repoId;
+  }
+
+  if (parsed.type === 'git') {
+    const baseUrl = sanitizeGitUrl(parsed.url);
+    const withPath = cleanRelativeDir ? `${baseUrl}/${cleanRelativeDir}` : baseUrl;
+    return parsed.ref ? `${withPath}#${parsed.ref}` : withPath;
+  }
+
+  if (parsed.type === 'local') {
+    const basePath = expandPath(parsed.url);
+    return cleanRelativeDir ? path.join(basePath, cleanRelativeDir) : basePath;
+  }
+
+  return null;
+}
+
+function buildSourceUrl(parsed, relativeDir = null) {
+  if (!parsed.url) return '';
+  const cleanRelativeDir = relativeDir && relativeDir !== '.' ? relativeDir.replace(/\\/g, '/') : '';
+
+  if (parsed.type === 'github') {
+    const ref = parsed.ref || 'main';
+    return cleanRelativeDir
+      ? `${parsed.url}/tree/${ref}/${cleanRelativeDir}`
+      : `${parsed.url}/tree/${ref}`;
+  }
+
+  return sanitizeGitUrl(parsed.url);
+}
+
+function maybeRenameRootSkill(discovered, parsed, rootDir, repoRoot) {
+  if (!Array.isArray(discovered) || discovered.length !== 1) return discovered;
+  if (!discovered[0].isRoot) return discovered;
+  if (parsed.type === 'local') return discovered;
+  if (parsed.subpath) return discovered;
+  if (path.resolve(rootDir) !== path.resolve(repoRoot)) return discovered;
+
+  const repoName = parsed.repo || getRepoNameFromUrl(parsed.url);
+  if (!repoName) return discovered;
+
+  const cleanName = repoName
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  if (cleanName) {
+    discovered[0].name = cleanName;
+  }
+
+  return discovered;
+}
+
+function findDiscoveredSkill(discovered, filter) {
+  const needle = String(filter || '').trim().toLowerCase();
+  if (!needle) return null;
+
+  return discovered.find((skill) => skill.name.toLowerCase() === needle)
+    || discovered.find((skill) => skill.dirName.toLowerCase() === needle)
+    || discovered.find((skill) => skill.relativeDir.toLowerCase() === needle)
+    || null;
+}
+
+function uniqueSkillFilters(filters = []) {
   const seen = new Set();
-  const skills = [];
-
-  function scanDir(dir) {
-    if (!fs.existsSync(dir)) return;
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        if (['.git', 'node_modules', 'dist', 'build', '__pycache__'].includes(entry.name)) continue;
-        const skillDir = path.join(dir, entry.name);
-        const skillMd = path.join(skillDir, 'SKILL.md');
-        if (fs.existsSync(skillMd)) {
-          const parsed = parseSkillMarkdown(fs.readFileSync(skillMd, 'utf8'));
-          const name = parsed && parsed.frontmatter && typeof parsed.frontmatter.name === 'string'
-            ? parsed.frontmatter.name.trim()
-            : entry.name;
-          const description = parsed && parsed.frontmatter && typeof parsed.frontmatter.description === 'string'
-            ? parsed.frontmatter.description.trim()
-            : '';
-          if (name && !seen.has(name.toLowerCase())) {
-            seen.add(name.toLowerCase());
-            skills.push({ name, description, dirName: entry.name, dir: skillDir });
-          }
-        }
-      }
-    } catch (e) {
-      // skip unreadable directories
-    }
+  const output = [];
+  for (const filter of filters) {
+    const value = String(filter || '').trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(value);
   }
-
-  // Check if root itself is a single skill
-  if (fs.existsSync(path.join(rootDir, 'SKILL.md'))) {
-    const parsed = parseSkillMarkdown(fs.readFileSync(path.join(rootDir, 'SKILL.md'), 'utf8'));
-    const name = parsed && parsed.frontmatter && typeof parsed.frontmatter.name === 'string'
-      ? parsed.frontmatter.name.trim()
-      : path.basename(rootDir);
-    const description = parsed && parsed.frontmatter && typeof parsed.frontmatter.description === 'string'
-      ? parsed.frontmatter.description.trim()
-      : '';
-    if (name) {
-      return [{ name, description, dirName: path.basename(rootDir), dir: rootDir, isRoot: true }];
-    }
-  }
-
-  // Scan standard directories in priority order
-  const standardDirs = [
-    path.join(rootDir, 'skills'),
-    path.join(rootDir, 'skills', '.curated'),
-    path.join(rootDir, '.agents', 'skills'),
-    path.join(rootDir, '.claude', 'skills'),
-  ];
-
-  for (const dir of standardDirs) {
-    scanDir(dir);
-  }
-
-  // Recursive fallback if nothing found
-  if (skills.length === 0) {
-    function walkTree(dir, depth) {
-      if (depth > 5) return;
-      if (!fs.existsSync(dir)) return;
-      try {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (!entry.isDirectory()) continue;
-          if (['.git', 'node_modules', 'dist', 'build', '__pycache__'].includes(entry.name)) continue;
-          const childDir = path.join(dir, entry.name);
-          const skillMd = path.join(childDir, 'SKILL.md');
-          if (fs.existsSync(skillMd)) {
-            const parsed = parseSkillMarkdown(fs.readFileSync(skillMd, 'utf8'));
-            const name = parsed && parsed.frontmatter && typeof parsed.frontmatter.name === 'string'
-              ? parsed.frontmatter.name.trim()
-              : entry.name;
-            const description = parsed && parsed.frontmatter && typeof parsed.frontmatter.description === 'string'
-              ? parsed.frontmatter.description.trim()
-              : '';
-            if (name && !seen.has(name.toLowerCase())) {
-              seen.add(name.toLowerCase());
-              skills.push({ name, description, dirName: entry.name, dir: childDir });
-            }
-          } else {
-            walkTree(childDir, depth + 1);
-          }
-        }
-      } catch (e) {
-        // skip
-      }
-    }
-    walkTree(rootDir, 0);
-  }
-
-  return skills;
+  return output;
 }
 
 // ============ CATALOG COMMAND ============
 
 function catalogSkills(source, options = {}) {
-  const { execFileSync } = require('child_process');
   const parsed = parseSource(source);
 
   if (!parsed || parsed.type === 'catalog') {
@@ -2277,39 +2101,25 @@ function catalogSkills(source, options = {}) {
     return;
   }
 
-  let rootDir = null;
-  let tempDir = null;
+  let prepared = null;
 
   try {
-    // Resolve source
-    if (parsed.type === 'local') {
-      rootDir = expandPath(parsed.url);
-      if (!fs.existsSync(rootDir)) {
-        error(`Path not found: ${rootDir}`);
-        return;
-      }
-    } else {
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'catalog-'));
-      rootDir = tempDir;
-      const cloneUrl = parsed.type === 'github' ? `${parsed.url}.git` : parsed.url;
+    if (parsed.type !== 'local') {
       info(`Discovering skills in ${source}...`);
-      try {
-        execFileSync('git', ['clone', '--depth', '1', cloneUrl, tempDir], {
-          stdio: 'pipe',
-          timeout: 60000,
-          env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-        });
-      } catch (cloneErr) {
-        error(classifyGitError(cloneErr.message || cloneErr.stderr));
-        return;
-      }
-      if (parsed.subpath) {
-        const subDir = path.join(tempDir, parsed.subpath);
-        if (fs.existsSync(subDir)) rootDir = subDir;
-      }
     }
 
-    const discovered = discoverSkills(rootDir);
+    prepared = prepareSourceLib(source, {
+      parsed,
+      sparseSubpath: parsed.subpath || null,
+    });
+
+    const discovered = maybeRenameRootSkill(
+      discoverSkills(prepared.rootDir, prepared.repoRoot),
+      parsed,
+      prepared.rootDir,
+      prepared.repoRoot,
+    );
+
     if (discovered.length === 0) {
       warn('No skills found in source.');
       return;
@@ -2342,7 +2152,7 @@ function catalogSkills(source, options = {}) {
       }
       targets = [match];
     }
-    const sourceLabel = parsed.owner && parsed.repo ? `${parsed.owner}/${parsed.repo}` : source;
+    const sourceLabel = buildRepoId(parsed) || source;
 
     let added = 0;
     let skipped = 0;
@@ -2363,11 +2173,7 @@ function catalogSkills(source, options = {}) {
         continue;
       }
 
-      // Build the relative path for installSource
-      const relPath = path.relative(tempDir || rootDir, skill.dir).replace(/\\/g, '/');
-      const installSource = relPath && relPath !== '.' && relPath !== skill.dirName
-        ? `${sourceLabel}/${relPath}`
-        : sourceLabel;
+      const relPath = skill.relativeDir && skill.relativeDir !== '.' ? skill.relativeDir : null;
 
       const entry = {
         name: skill.name,
@@ -2375,19 +2181,23 @@ function catalogSkills(source, options = {}) {
         category: options.category || 'development',
         workArea: options.area || '',
         branch: options.branch || '',
-        author: parsed.owner || 'unknown',
+        author: skill.frontmatter.author || parsed.owner || 'unknown',
         source: sourceLabel,
-        license: 'MIT',
+        license: skill.frontmatter.license || 'MIT',
+        tier: 'upstream',
+        distribution: 'live',
         vendored: false,
-        installSource,
+        installSource: buildInstallSourceRef(parsed, relPath),
         tags: options.tags ? options.tags.split(',').map(t => t.trim()) : [],
         featured: false,
         verified: false,
         origin: 'curated',
         trust: 'listed',
         syncMode: 'live',
-        sourceUrl: parsed.url ? `${parsed.url}/tree/main/${relPath}` : '',
+        sourceUrl: buildSourceUrl(parsed, relPath),
         whyHere: '',
+        notes: '',
+        labels: [],
         addedDate: new Date().toISOString().split('T')[0],
       };
 
@@ -2400,11 +2210,10 @@ function catalogSkills(source, options = {}) {
     }
 
     if (added > 0) {
-      data.total = data.skills.length;
       data.updated = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
-      fs.writeFileSync(path.join(__dirname, 'skills.json'), JSON.stringify(data, null, 2) + '\n');
+      writeCatalogData(data);
       log(`\n${colors.green}Cataloged ${added} skill${added !== 1 ? 's' : ''}${colors.reset} from ${sourceLabel} (${skipped} already existed)`);
-      log(`${colors.dim}Total: ${data.total} skills in catalog${colors.reset}`);
+      log(`${colors.dim}Total: ${data.skills.length} skills in catalog${colors.reset}`);
 
       if (!options.area) {
         log(`\n${colors.dim}Tip: set work area with --area <name> --branch <name>${colors.reset}`);
@@ -2414,25 +2223,15 @@ function catalogSkills(source, options = {}) {
     }
 
   } finally {
-    if (tempDir) {
-      safeTempCleanup(tempDir);
+    if (prepared) {
+      prepared.cleanup();
     }
   }
 }
 
 // v3: classify git clone errors for actionable messages
 function classifyGitError(message) {
-  const msg = String(message || '');
-  if (msg.includes('timed out') || msg.includes('block timeout')) {
-    return 'Clone timed out. If this is a private repo, check your credentials.';
-  }
-  if (msg.includes('Authentication failed') || msg.includes('Permission denied')) {
-    return 'Authentication failed. Check your git credentials or SSH keys.';
-  }
-  if (msg.includes('Repository not found') || msg.includes('not found')) {
-    return 'Repository not found. It may be private or the URL may be wrong.';
-  }
-  return msg;
+  return classifyGitErrorLib(message);
 }
 
 // v3: copy skill files with appropriate skip list
@@ -2465,82 +2264,24 @@ function copySkillFiles(srcDir, destDir) {
 
 // v3: main source-repo install flow
 async function installFromSource(source, parsed, installPaths, skillFilters, listMode, yes, dryRun) {
-  const { execFileSync } = require('child_process');
-
-  let rootDir = null;
-  let tempDir = null;
-  let sourceType = parsed.type;
-  let sourceUrl = parsed.url;
+  let prepared = null;
 
   try {
-    // Clone or resolve local path
-    if (parsed.type === 'local') {
-      rootDir = expandPath(parsed.url);
-      if (!fs.existsSync(rootDir)) {
-        error(`Path not found: ${rootDir}`);
-        return false;
-      }
-    } else {
-      // Git clone
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-'));
-      rootDir = tempDir;
-
-      const cloneUrl = parsed.type === 'github'
-        ? `${parsed.url}.git`
-        : parsed.url;
-
-      const cloneArgs = ['clone'];
-      if (!cloneUrl.startsWith('file://')) {
-        cloneArgs.push('--depth', '1');
-      }
-      if (parsed.ref) {
-        cloneArgs.push('--branch', parsed.ref);
-      }
-      cloneArgs.push(cloneUrl, tempDir);
-
-      if (dryRun) {
-        log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
-        info(`Would clone: ${cloneUrl}`);
-        info(`Would install to: ${installPaths.join(', ')}`);
-        return true;
-      }
-
+    if (parsed.type !== 'local') {
       info(`Cloning ${source}...`);
-      try {
-        execFileSync('git', cloneArgs, {
-          stdio: 'pipe',
-          timeout: 60000,
-          env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-        });
-      } catch (cloneErr) {
-        error(classifyGitError(cloneErr.message || cloneErr.stderr));
-        return false;
-      }
-
-      // Navigate to subpath if specified
-      if (parsed.subpath) {
-        const subDir = path.join(tempDir, parsed.subpath);
-        if (!fs.existsSync(subDir)) {
-          error(`Subpath "${parsed.subpath}" not found in repository`);
-          return false;
-        }
-        rootDir = subDir;
-      }
     }
 
-    // Discover skills
-    const discovered = discoverSkills(rootDir);
+    prepared = prepareSourceLib(source, {
+      parsed,
+      sparseSubpath: parsed.subpath || null,
+    });
 
-    // For root skills cloned from a repo, derive a proper name from the source URL
-    if (discovered.length === 1 && discovered[0].isRoot && tempDir) {
-      const repoName = parsed.repo || getRepoNameFromUrl(parsed.url);
-      if (repoName) {
-        const cleanName = repoName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        if (cleanName) {
-          discovered[0].name = cleanName;
-        }
-      }
-    }
+    const discovered = maybeRenameRootSkill(
+      discoverSkills(prepared.rootDir, prepared.repoRoot),
+      parsed,
+      prepared.rootDir,
+      prepared.repoRoot,
+    );
 
     if (discovered.length === 0) {
       warn('No skills found in source');
@@ -2565,6 +2306,7 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
     if (parsed.skillFilter) {
       filters.push(parsed.skillFilter);
     }
+    filters = uniqueSkillFilters(filters);
 
     // Select skills
     let selected;
@@ -2573,7 +2315,7 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
     } else if (filters.length > 0) {
       selected = [];
       for (const filter of filters) {
-        const match = discovered.find(s => s.name.toLowerCase() === filter.toLowerCase());
+        const match = findDiscoveredSkill(discovered, filter);
         if (match) {
           selected.push(match);
         } else {
@@ -2605,8 +2347,14 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
     if (dryRun) {
       log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
       info(`Would install ${selected.length} skill(s) to ${installPaths.length} target(s)`);
+      info(`Source: ${parsed.type === 'local' ? 'local path' : parsed.type === 'github' ? `live upstream from ${buildInstallSourceRef(parsed, parsed.subpath || null)}` : `git source ${sanitizeGitUrl(parsed.url)}`}`);
+      info(`Targets: ${installPaths.join(', ')}`);
+      if (prepared.usedSparse) {
+        info('Clone mode: sparse checkout');
+      }
       for (const skill of selected) {
-        log(`  ${colors.green}${skill.name}${colors.reset}`);
+        const sourceRef = buildInstallSourceRef(parsed, skill.relativeDir === '.' ? null : skill.relativeDir);
+        log(`  ${colors.green}${skill.name}${colors.reset}${sourceRef ? ` ${colors.dim}(${sourceRef})${colors.reset}` : ''}`);
       }
       return true;
     }
@@ -2631,17 +2379,19 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
             fs.mkdirSync(targetBase, { recursive: true });
           }
 
-          if (skill.isRoot) {
-            copyDir(skill.dir, destPath);
-          } else {
-            copySkillFiles(skill.dir, destPath);
-          }
+          copyDir(skill.dir, destPath);
 
           // Write .skill-meta.json
           writeSkillMeta(destPath, {
-            source: sourceType,
-            url: sourceUrl || null,
-            skill: skill.name,
+            sourceType: parsed.type,
+            source: parsed.type,
+            url: parsed.type === 'local' ? null : sanitizeGitUrl(parsed.url),
+            repo: buildRepoId(parsed),
+            ref: parsed.ref || null,
+            subpath: skill.relativeDir && skill.relativeDir !== '.' ? skill.relativeDir : null,
+            installSource: buildInstallSourceRef(parsed, skill.relativeDir === '.' ? null : skill.relativeDir),
+            skillName: skill.name,
+            path: parsed.type === 'local' ? skill.dir : undefined,
             scope: resolveScopeLabel(targetBase),
           });
 
@@ -2663,401 +2413,28 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
 
     return successes > 0;
   } finally {
-    if (tempDir) {
-      safeTempCleanup(tempDir);
+    if (prepared) {
+      prepared.cleanup();
     }
   }
 }
 
 async function installFromGitHub(source, agent = 'claude', dryRun = false) {
-  const { execFileSync } = require('child_process');
-
-  // Parse owner/repo format
-  const parts = source.split('/');
-  if (parts.length < 2) {
-    error('Invalid GitHub source. Use format: owner/repo or owner/repo/path/to/skill');
-    return false;
-  }
-
-  const owner = parts[0];
-  const repo = parts[1];
-  const skillPath = parts.slice(2).join('/'); // Optional specific skill path
-  let skillSegments = [];
-
-  // Validate owner and repo to prevent injection attacks
-  try {
-    validateGitHubName(owner, 'owner');
-    validateGitHubName(repo, 'repository');
-    skillSegments = skillPath ? validateGitHubSkillPath(skillPath) : [];
-    const validatedInstallName = skillSegments.length > 0 ? skillSegments[skillSegments.length - 1] : null;
-    if (validatedInstallName) {
-      validateSkillName(validatedInstallName);
-    }
-  } catch (e) {
-    error(e.message);
-    return false;
-  }
-
-  const installName = skillSegments.length > 0 ? skillSegments[skillSegments.length - 1] : null;
-
-  const repoUrl = `https://github.com/${owner}/${repo}.git`;
-  const tempDir = path.join(os.tmpdir(), `ai-skills-${Date.now()}`);
-
-  if (dryRun) {
-    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
-    info(`Would clone: ${repoUrl}`);
-    info(`Would install ${skillPath ? `skill path: ${skillPath}` : 'all skills from repo'}`);
-    info(`Agent: ${agent}`);
-    return true;
-  }
-
-  try {
-    info(`Cloning ${owner}/${repo}...`);
-    // Use execFileSync with args array to prevent shell injection
-    execFileSync('git', ['clone', '--depth', '1', repoUrl, tempDir], { stdio: 'pipe' });
-
-    // Find skills in the cloned repo
-    const skillsDir = fs.existsSync(path.join(tempDir, 'skills'))
-      ? path.join(tempDir, 'skills')
-      : tempDir;
-
-    // Check if repo root IS a skill (has SKILL.md at root)
-    const isRootSkill = fs.existsSync(path.join(tempDir, 'SKILL.md'));
-
-    if (skillPath) {
-      // Install specific skill
-      const resolvedSkillPath = path.join(skillsDir, ...skillSegments);
-      if (!fs.existsSync(resolvedSkillPath) || !fs.existsSync(path.join(resolvedSkillPath, 'SKILL.md'))) {
-        error(`Skill path "${skillPath}" not found in ${owner}/${repo}`);
-        fs.rmSync(tempDir, { recursive: true });
-        return false;
-      }
-
-      const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-      const destPath = path.join(destDir, installName);
-
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-
-      copyDir(resolvedSkillPath, destPath);
-
-      // Write metadata for update tracking
-      writeSkillMeta(destPath, {
-        source: 'github',
-        repo: `${owner}/${repo}`,
-        skillPath
-      });
-
-      success(`\nInstalled: ${installName} from ${owner}/${repo}`);
-      info(`Source path: ${skillPath}`);
-      info(`Location: ${destPath}`);
-    } else if (isRootSkill) {
-      // Repo itself is a single skill
-      // Sanitize repo name to valid skill name (lowercase, alphanumeric + hyphens)
-      const skillName = repo.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-      try {
-        validateSkillName(skillName);
-      } catch (e) {
-        error(`Cannot install: repo name "${repo}" cannot be converted to valid skill name`);
-        fs.rmSync(tempDir, { recursive: true });
-        return false;
-      }
-
-      const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-      const destPath = path.join(destDir, skillName);
-
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-
-      copyDir(tempDir, destPath);
-
-      // Write metadata for update tracking
-      writeSkillMeta(destPath, {
-        source: 'github',
-        repo: `${owner}/${repo}`,
-        isRootSkill: true
-      });
-
-      success(`\nInstalled: ${skillName} from ${owner}/${repo}`);
-      info(`Location: ${destPath}`);
-    } else {
-      // Install all skills from repo
-      const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
-      let installed = 0;
-
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const skillPath = path.join(skillsDir, entry.name);
-          if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-            const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-            const destPath = path.join(destDir, entry.name);
-
-            if (!fs.existsSync(destDir)) {
-              fs.mkdirSync(destDir, { recursive: true });
-            }
-
-            copyDir(skillPath, destPath);
-
-            // Write metadata for update tracking
-            writeSkillMeta(destPath, {
-              source: 'github',
-              repo: `${owner}/${repo}`,
-              skillPath: entry.name
-            });
-
-            log(`  ${colors.green}✓${colors.reset} ${entry.name}`);
-            installed++;
-          }
-        }
-      }
-
-      if (installed > 0) {
-        success(`\nInstalled ${installed} skill(s) from ${owner}/${repo}`);
-      } else {
-        warn('No skills found in repository');
-      }
-    }
-
-    // Cleanup
-    fs.rmSync(tempDir, { recursive: true });
-    return true;
-  } catch (e) {
-    error(`Failed to install from GitHub: ${e.message}`);
-    try { fs.rmSync(tempDir, { recursive: true }); } catch {}
-    return false;
-  }
+  const parsed = parseSource(source);
+  const installPaths = [AGENT_PATHS[agent] || SCOPES.global];
+  return installFromSource(source, parsed, installPaths, [], false, true, dryRun);
 }
 
 async function installFromGitUrl(source, agent = 'claude', dryRun = false) {
-  const { execFileSync } = require('child_process');
-  const { url, ref } = parseGitUrl(source);
-
-  // Validate URL format and safety
-  try {
-    validateGitUrl(url);
-    if (ref && !/^[a-zA-Z0-9._\/-]+$/.test(ref)) {
-      throw new Error('Invalid ref format');
-    }
-  } catch (e) {
-    error(`Invalid git URL: ${e.message}`);
-    return false;
-  }
-
-  const repoName = getRepoNameFromUrl(url);
-  if (!repoName) {
-    error('Could not determine repository name from git URL');
-    return false;
-  }
-
-  // Use secure temp directory creation
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-'));
-
-  if (dryRun) {
-    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
-    info(`Would clone: ${url}${ref ? `#${ref}` : ''}`);
-    info('Would install skills discovered in repository');
-    info(`Agent: ${agent}`);
-    return true;
-  }
-
-  try {
-    info(`Cloning ${url}${ref ? `#${ref}` : ''}...`);
-    const cloneArgs = ['clone'];
-    if (!url.startsWith('file://')) {
-      cloneArgs.push('--depth', '1');
-    }
-    if (ref) {
-      cloneArgs.push('--branch', ref);
-    }
-    cloneArgs.push(url, tempDir);
-    execFileSync('git', cloneArgs, { stdio: 'pipe' });
-
-    const skillsDir = fs.existsSync(path.join(tempDir, 'skills'))
-      ? path.join(tempDir, 'skills')
-      : tempDir;
-
-    const isRootSkill = fs.existsSync(path.join(tempDir, 'SKILL.md'));
-
-    if (isRootSkill) {
-      const skillName = repoName.toLowerCase()
-        .replace(/[^a-z0-9-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-
-      try {
-        validateSkillName(skillName);
-      } catch (e) {
-        error(`Cannot install: repo name "${repoName}" cannot be converted to valid skill name`);
-        fs.rmSync(tempDir, { recursive: true });
-        return false;
-      }
-
-      const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-      const destPath = path.join(destDir, skillName);
-
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-
-      copyDir(tempDir, destPath);
-
-      // Sanitize URL before storing in metadata
-      const sanitizedUrl = sanitizeGitUrl(url);
-
-      writeSkillMeta(destPath, {
-        source: 'git',
-        url: sanitizedUrl,
-        ref: ref || null,
-        isRootSkill: true
-      });
-
-      success(`\nInstalled: ${skillName} from ${url}`);
-      info(`Location: ${destPath}`);
-    } else {
-      const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
-      let installed = 0;
-
-      // Sanitize URL before storing in metadata
-      const sanitizedUrl = sanitizeGitUrl(url);
-
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const skillPath = path.join(skillsDir, entry.name);
-          if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-            const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-            const destPath = path.join(destDir, entry.name);
-
-            if (!fs.existsSync(destDir)) {
-              fs.mkdirSync(destDir, { recursive: true });
-            }
-
-            copyDir(skillPath, destPath);
-
-            writeSkillMeta(destPath, {
-              source: 'git',
-              url: sanitizedUrl,
-              ref: ref || null,
-              skillPath: entry.name
-            });
-
-            log(`  ${colors.green}✓${colors.reset} ${entry.name}`);
-            installed++;
-          }
-        }
-      }
-
-      if (installed > 0) {
-        success(`\nInstalled ${installed} skill(s) from ${url}`);
-      } else {
-        warn('No skills found in repository');
-      }
-    }
-
-    fs.rmSync(tempDir, { recursive: true });
-    return true;
-  } catch (e) {
-    // Provide more helpful error messages for common git failures
-    let errorMsg = e.message;
-    if (e.message.includes('not found') || e.message.includes('Repository not found')) {
-      errorMsg = `Repository not found. Check the URL is correct and you have access.`;
-    } else if (e.message.includes('Authentication failed') || e.message.includes('Permission denied')) {
-      errorMsg = `Authentication failed. For SSH URLs, ensure your SSH key is configured. For HTTPS, check credentials.`;
-    } else if (e.message.includes('Could not resolve host')) {
-      errorMsg = `Could not resolve host. Check your network connection and the URL.`;
-    } else if (e.message.includes('Connection refused') || e.message.includes('Connection timed out')) {
-      errorMsg = `Connection failed. Check your network connection.`;
-    }
-    error(`Failed to install from git: ${errorMsg}`);
-    try { fs.rmSync(tempDir, { recursive: true }); } catch {}
-    return false;
-  }
+  const parsed = parseSource(source);
+  const installPaths = [AGENT_PATHS[agent] || SCOPES.global];
+  return installFromSource(source, parsed, installPaths, [], false, true, dryRun);
 }
 
 function installFromLocalPath(source, agent = 'claude', dryRun = false) {
-  const sourcePath = expandPath(source);
-
-  if (!fs.existsSync(sourcePath)) {
-    error(`Path not found: ${sourcePath}`);
-    return false;
-  }
-
-  const stat = fs.statSync(sourcePath);
-  if (!stat.isDirectory()) {
-    error('Source must be a directory');
-    return false;
-  }
-
-  // Check if it's a single skill or a directory of skills
-  const hasSkillMd = fs.existsSync(path.join(sourcePath, 'SKILL.md'));
-
-  if (dryRun) {
-    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
-    info(`Would install from: ${sourcePath}`);
-    info(`Agent: ${agent}`);
-    return true;
-  }
-
-  if (hasSkillMd) {
-    // Single skill
-    const skillName = path.basename(sourcePath);
-    const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-    const destPath = path.join(destDir, skillName);
-
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true });
-    }
-
-    copyDir(sourcePath, destPath);
-
-    // Write metadata for update tracking
-    writeSkillMeta(destPath, {
-      source: 'local',
-      path: sourcePath
-    });
-
-    success(`\nInstalled: ${skillName} from local path`);
-    info(`Location: ${destPath}`);
-  } else {
-    // Directory of skills
-    const entries = fs.readdirSync(sourcePath, { withFileTypes: true });
-    let installed = 0;
-
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        const skillPath = path.join(sourcePath, entry.name);
-        if (fs.existsSync(path.join(skillPath, 'SKILL.md'))) {
-          const destDir = AGENT_PATHS[agent] || AGENT_PATHS.claude;
-          const destPath = path.join(destDir, entry.name);
-
-          if (!fs.existsSync(destDir)) {
-            fs.mkdirSync(destDir, { recursive: true });
-          }
-
-          copyDir(skillPath, destPath);
-
-          // Write metadata for update tracking
-          writeSkillMeta(destPath, {
-            source: 'local',
-            path: skillPath
-          });
-
-          log(`  ${colors.green}✓${colors.reset} ${entry.name}`);
-          installed++;
-        }
-      }
-    }
-
-    if (installed > 0) {
-      success(`\nInstalled ${installed} skill(s) from local path`);
-    } else {
-      warn('No skills found in directory');
-    }
-  }
-
-  return true;
+  const parsed = parseSource(source);
+  const installPaths = [AGENT_PATHS[agent] || SCOPES.global];
+  return installFromSource(source, parsed, installPaths, [], false, true, dryRun);
 }
 
 // ============ INFO AND HELP ============
@@ -3112,7 +2489,7 @@ ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
 
 ${colors.bold}Work areas:${colors.reset}
-  frontend, backend, docs, testing, workflow, research, design, business, mobile, ai, devops
+  frontend, backend, docs, testing, workflow, research, design, business, ai, devops
 
 ${colors.bold}Collections:${colors.reset}
   my-picks, build-apps, build-systems, test-and-debug, docs-and-research
@@ -3164,27 +2541,38 @@ function showInfo(skillName) {
   const lastVerifiedLine = skill.lastVerified
     ? `${colors.bold}Last Verified:${colors.reset} ${skill.lastVerified}\n`
     : '';
+  const labelsLine = Array.isArray(skill.labels) && skill.labels.length > 0
+    ? `${colors.bold}Labels:${colors.reset}      ${skill.labels.join(', ')}\n`
+    : '';
+  const notesLine = skill.notes
+    ? `${colors.bold}Notes:${colors.reset}       ${skill.notes}\n`
+    : '';
 
   log(`
 ${colors.bold}${skill.name}${colors.reset}${skill.featured ? ` ${colors.yellow}(featured)${colors.reset}` : ''}${skill.verified ? ` ${colors.green}(verified)${colors.reset}` : ''}
 
 ${colors.dim}${skill.description}${colors.reset}
 
-${colors.bold}Tier:${colors.reset}        ${skill.vendored === false ? 'Cataloged upstream (install pulls live from ' + (skill.installSource || skill.source) + ')' : 'Vendored house copy'}
-${colors.bold}Work Area:${colors.reset}   ${skill.workArea ? formatWorkAreaTitle(skill.workArea) : 'n/a'}
-${colors.bold}Branch:${colors.reset}      ${skill.branch || 'n/a'}
-${colors.bold}Category:${colors.reset}    ${skill.category}
-${colors.bold}Trust:${colors.reset}       ${getTrust(skill)}
-${colors.bold}Origin:${colors.reset}      ${getOrigin(skill)}
-${colors.bold}Sync Mode:${colors.reset}   ${syncMode}
-${colors.bold}Tags:${colors.reset}        ${tagStr}
-${colors.bold}Collections:${colors.reset} ${collectionStr}
-${colors.bold}Author:${colors.reset}      ${skill.author}
-${colors.bold}License:${colors.reset}     ${skill.license}
-${colors.bold}Source Repo:${colors.reset} ${skill.source}
-${colors.bold}Source URL:${colors.reset}  ${sourceUrl}
-${lastVerifiedLine}${skill.lastUpdated ? `${colors.bold}Updated:${colors.reset}     ${skill.lastUpdated}\n` : ''}${colors.bold}Why Here:${colors.reset}    ${whyHere}
-${colors.bold}Also Look At:${colors.reset} ${alsoLookAt}
+${colors.bold}Why Here:${colors.reset}
+  ${whyHere}
+
+${colors.bold}Provenance:${colors.reset}
+  Shelf: ${skill.workArea ? formatWorkAreaTitle(skill.workArea) : 'n/a'} / ${skill.branch || 'n/a'}
+  Tier: ${getTier(skill) === 'house' ? 'House copy' : 'Cataloged upstream'}
+  Distribution: ${getDistribution(skill) === 'bundled' ? 'Bundled with this library' : `Live install from ${skill.installSource || skill.source}`}
+  Trust: ${getTrust(skill)} · Origin: ${getOrigin(skill)}
+  Sync Mode: ${syncMode}
+  Collections: ${collectionStr}
+  Source Repo: ${skill.source}
+  Source URL: ${sourceUrl}
+
+${colors.bold}Catalog Notes:${colors.reset}
+  Category: ${skill.category}
+  Tags: ${tagStr}
+  Author: ${skill.author}
+  License: ${skill.license}
+${lastVerifiedLine}${skill.lastUpdated ? `${colors.bold}Updated:${colors.reset}     ${skill.lastUpdated}\n` : ''}${labelsLine}${notesLine}${colors.bold}Neighboring Shelf Picks:${colors.reset}
+  ${alsoLookAt}
 
 ${colors.bold}Install:${colors.reset}
   npx ai-agent-skills install ${skill.name}
@@ -3323,9 +2711,11 @@ function checkSkills(scope) {
         }
 
         // For GitHub sources, try to check if updates exist
-        if (meta.source === 'github' && meta.url) {
+        const sourceType = meta.sourceType || meta.source;
+
+        if (sourceType === 'github' && (meta.repo || meta.url)) {
           try {
-            const repoPath = meta.url.replace('https://github.com/', '').replace(/\.git$/, '');
+            const repoPath = meta.repo || meta.url.replace('https://github.com/', '').replace(/\.git$/, '');
             execFileSync('git', ['ls-remote', '--exit-code', `https://github.com/${repoPath}.git`, 'HEAD'], {
               stdio: 'pipe',
               timeout: 10000,
@@ -3335,10 +2725,10 @@ function checkSkills(scope) {
             // so just report as potentially up to date
             log(`  ${colors.green}\u2713${colors.reset} ${entry.name}${colors.dim}      up to date${colors.reset}`);
           } catch {
-            log(`  ${colors.yellow}\u2191${colors.reset} ${entry.name}${colors.dim}      update may be available (${meta.url})${colors.reset}`);
+            log(`  ${colors.yellow}\u2191${colors.reset} ${entry.name}${colors.dim}      update may be available (${meta.repo || meta.url})${colors.reset}`);
             updatesAvailable++;
           }
-        } else if (meta.source === 'catalog' || meta.source === 'registry') {
+        } else if (sourceType === 'catalog' || sourceType === 'registry') {
           // Check against bundled catalog
           const bundledPath = path.join(SKILLS_DIR, entry.name);
           if (fs.existsSync(bundledPath)) {
@@ -3347,7 +2737,7 @@ function checkSkills(scope) {
             log(`  ${colors.dim}?${colors.reset} ${entry.name}${colors.dim}      not in current catalog${colors.reset}`);
           }
         } else {
-          log(`  ${colors.green}\u2713${colors.reset} ${entry.name}${colors.dim}      ${meta.source}${colors.reset}`);
+          log(`  ${colors.green}\u2713${colors.reset} ${entry.name}${colors.dim}      ${sourceType}${colors.reset}`);
         }
       }
     } catch (e) {
@@ -3375,6 +2765,7 @@ async function main() {
   const parsed = parseArgs(args);
   const { command, param, agents, explicitAgent, installed, dryRun, category, workArea, collection, tags, all, scope, skillFilters, listMode, yes } = parsed;
   const ALL_AGENTS = Object.keys(AGENT_PATHS);
+  const managedTargets = resolveManagedTargets(parsed);
 
   if (!command) {
     if (!isInteractiveTerminal()) {
@@ -3451,9 +2842,9 @@ async function main() {
     case 'list':
     case 'ls':
       if (installed) {
-        for (let i = 0; i < agents.length; i++) {
+        for (let i = 0; i < managedTargets.length; i++) {
           if (i > 0) log('');
-          listInstalledSkills(agents[i]);
+          listInstalledSkillsInPath(managedTargets[i].path, managedTargets[i].label);
         }
       } else {
         listSkills(category, tags, collection, workArea);
@@ -3495,16 +2886,16 @@ async function main() {
         log('Usage: npx ai-agent-skills uninstall <name> [--agents claude,cursor]');
         process.exit(1);
       }
-      for (const agent of agents) {
-        uninstallSkill(param, agent, dryRun);
+      for (const target of managedTargets) {
+        uninstallSkillFromPath(param, target.path, target.label, dryRun);
       }
       return;
 
     case 'update':
     case 'upgrade':
       if (all) {
-        for (const agent of agents) {
-          updateAllSkills(agent, dryRun);
+        for (const target of managedTargets) {
+          updateAllSkillsInPath(target.path, target.label, dryRun);
         }
       } else if (!param) {
         error('Please specify a skill name or use --all.');
@@ -3512,8 +2903,8 @@ async function main() {
         log('       npx ai-agent-skills update --all [--agents claude,cursor]');
         process.exit(1);
       } else {
-        for (const agent of agents) {
-          updateSkill(param, agent, dryRun);
+        for (const target of managedTargets) {
+          updateSkillInPath(param, target.path, target.label, dryRun);
         }
       }
       return;
