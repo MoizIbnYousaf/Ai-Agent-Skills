@@ -1539,7 +1539,7 @@ function getSourceItems(catalog) {
     description: sourceNoteFor(source.slug, source.slug),
     chips: source.branches.slice(0, 2).map((branch) => `${branch.areaTitle} / ${branch.title}`),
     sampleLines: source.skills.slice(0, 2).map((skill) => `${skill.title} · ${skill.workAreaTitle}`),
-    footerLeft: `${formatCount(source.areaCount, 'shelf')} · ${formatCount(source.branchCount, 'lane')}`,
+    footerLeft: `${formatCount(source.areaCount, 'shelf', 'shelves')} · ${formatCount(source.branchCount, 'lane')}`,
     footerRight: 'Open',
   }));
 }
