@@ -12,8 +12,8 @@ The repo folders stay flat under `skills/<name>/` for house copies. The catalog 
 | --- | --- | --- |
 | Components | `shadcn` | shadcn-ui |
 | Design Engineering | `emil-design-eng` | emilkowalski |
-| UI | `frontend-skill` | openai |
-| UI Craft | `frontend-design` | anthropics |
+| Frontend (Anthropic) | `frontend-design` | anthropics |
+| Frontend (OpenAI) | `frontend-skill` | openai |
 
 ## Backend
 

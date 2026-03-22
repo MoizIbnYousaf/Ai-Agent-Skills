@@ -275,6 +275,10 @@ function fitText(text, maxLength) {
   return `${value.slice(0, maxLength - 1)}…`;
 }
 
+function formatCount(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function shellQuote(value) {
   const stringValue = String(value);
   if (/^[a-zA-Z0-9._:/=@-]+$/.test(stringValue)) {
@@ -419,7 +423,6 @@ function ModeTabs({rootMode, compact = false}) {
   return html`
     <${Box} marginBottom=${compact ? 0 : 1} flexWrap="wrap">
       ${[
-        {id: 'collections', label: 'Home (h)'},
         {id: 'areas', label: 'Shelves (w)'},
         {id: 'sources', label: 'Sources (r)'},
       ].map((tab) => {
@@ -860,12 +863,12 @@ function HelpOverlay({viewport = null}) {
       subtitle="Keyboard and navigation for the library view."
       footerLines=${['? or Esc closes help']}
     >
-      <${Text} color=${COLORS.text}>Arrow keys move between shelves, picks, and source rails.<//>
-      <${Text} color=${COLORS.text}>Enter opens the focused shelf or the focused pick.<//>
+      <${Text} color=${COLORS.text}>Arrow keys move between shelves, sources, lanes, and picks.<//>
+      <${Text} color=${COLORS.text}>Enter opens the focused shelf, source, lane, or pick.<//>
       <${Text} color=${COLORS.text}>/ opens library search, : opens the command palette, ? closes this help.<//>
       <${Text} color=${COLORS.text}>b or Esc goes back, c opens curator actions, i opens install choices, o opens upstream, q quits.<//>
       <${Text} color=${COLORS.text}>t cycles the house themes.<//>
-      <${Text} color=${COLORS.muted}>Home is the curator-first shelf poster. Shelves and Sources stay available when you want the taxonomy underneath.<//>
+      <${Text} color=${COLORS.muted}>Shelves are the default library view. Sources stay available when provenance matters more than task-first browsing.<//>
     <//>
   `;
 }
@@ -880,7 +883,7 @@ function PaletteOverlay({query, setQuery, items, selectedIndex, viewport = null}
     <${ModalShell}
       width=${viewport?.micro ? 66 : 86}
       title="Command palette"
-      subtitle="Jump around the library and change the surface."
+      subtitle="Jump across shelves, sources, and curator actions."
       footerLines=${['Enter runs the command · Esc closes the palette']}
     >
       <${Box} marginTop=${1}>
@@ -1400,11 +1403,9 @@ function InstallChooser({skill, scope, agent, selectedIndex, columns, viewport =
 }
 
 function buildBreadcrumbs(rootMode, stack, catalog) {
-  const rootLabel = rootMode === 'collections'
-    ? 'Home'
-    : rootMode === 'areas'
-      ? 'Shelves'
-      : 'Source Repos';
+  const rootLabel = rootMode === 'areas'
+    ? 'Shelves'
+    : 'Sources';
   const trail = ['Atlas', rootLabel];
 
   for (const entry of stack.slice(1)) {
@@ -1468,13 +1469,13 @@ function getCollectionItems(catalog) {
   }));
 }
 
-function getHomeItems(catalog) {
+function getShelfItems(catalog) {
   return catalog.areas
     .filter((area) => area.skillCount > 0)
     .map((area) => ({
       id: area.id,
       title: area.title,
-      count: `${area.skillCount} skills`,
+      count: formatCount(area.skillCount, 'skill'),
       description: area.description,
       chips: area.branches.slice(0, 2).map((branch) => branch.title),
       sampleLines: [
@@ -1484,8 +1485,8 @@ function getHomeItems(catalog) {
           .map((skill) => skill.title)
           .join(', ')}`,
       ],
-      footerLeft: `${area.repoCount} repos · ${area.branches.length} branches`,
-      footerRight: 'Enter to open',
+      footerLeft: `${formatCount(area.repoCount, 'repo')} · ${formatCount(area.branches.length, 'lane')}`,
+      footerRight: 'Open',
     }));
 }
 
@@ -1534,12 +1535,12 @@ function getSourceItems(catalog) {
   return catalog.sources.map((source) => ({
     id: source.slug,
     title: source.title,
-    count: `${source.skillCount} skills`,
+    count: formatCount(source.skillCount, 'skill'),
     description: sourceNoteFor(source.slug, source.slug),
     chips: source.branches.slice(0, 2).map((branch) => `${branch.areaTitle} / ${branch.title}`),
-    sampleLines: source.skills.slice(0, 2).map((skill) => skill.title),
-    footerLeft: `${source.areaCount} areas · ${source.branchCount} branches`,
-    footerRight: 'Enter to open',
+    sampleLines: source.skills.slice(0, 2).map((skill) => `${skill.title} · ${skill.workAreaTitle}`),
+    footerLeft: `${formatCount(source.areaCount, 'shelf')} · ${formatCount(source.branchCount, 'lane')}`,
+    footerRight: 'Open',
   }));
 }
 
@@ -1547,12 +1548,14 @@ function getAreaItems(area) {
   return area.branches.map((branch) => ({
     id: branch.id,
     title: branch.title,
-    count: `${branch.skillCount} skills`,
-    description: `This lane covers ${branch.repoCount} source repos inside ${area.title.toLowerCase()}.`,
+    count: formatCount(branch.skillCount, 'pick'),
+    description: branch.skillCount === 1
+      ? (branch.skills[0]?.whyHere || branch.skills[0]?.description || `A focused ${area.title.toLowerCase()} lane.`)
+      : `${branch.title} is one thread inside ${area.title.toLowerCase()}, shaped by ${branch.repoTitles.join(', ')}.`,
     chips: branch.repoTitles.slice(0, 2),
     sampleLines: branch.skills.slice(0, 2).map((skill) => `${skill.title} · ${skill.sourceTitle}`),
-    footerLeft: `${branch.repoCount} repos`,
-    footerRight: 'Enter to open',
+    footerLeft: formatCount(branch.repoCount, 'publisher'),
+    footerRight: 'Open',
   }));
 }
 
@@ -1560,11 +1563,13 @@ function getSourceBranchItems(source) {
   return source.branches.map((branch) => ({
     id: branch.id,
     title: `${branch.areaTitle} / ${branch.title}`,
-    count: `${branch.skillCount} skills`,
-    description: `${source.title} contributes this branch into the atlas.`,
+    count: formatCount(branch.skillCount, 'pick'),
+    description: branch.skillCount === 1
+      ? (branch.skills[0]?.whyHere || branch.skills[0]?.description || `${source.title} contributes this lane into the library.`)
+      : `${source.title} feeds this lane into ${branch.areaTitle}.`,
     sampleLines: branch.skills.slice(0, 2).map((skill) => skill.title),
-    footerLeft: `${branch.skillCount} skills`,
-    footerRight: 'Enter to open',
+    footerLeft: `${branch.areaTitle} · ${formatCount(branch.skillCount, 'pick')}`,
+    footerRight: 'Open',
   }));
 }
 
@@ -1576,7 +1581,7 @@ function getSkillItems(skills) {
     description: skill.whyHere || skill.description,
     chips: [skill.sourceTitle, skill.syncMode],
     footerLeft: `${skill.workAreaTitle} / ${skill.branchTitle}`,
-    footerRight: 'Enter to inspect',
+    footerRight: 'Inspect',
   }));
 }
 
@@ -1588,7 +1593,7 @@ function getCollectionSkillItems(collection) {
     description: skill.whyHere || skill.description,
     chips: [skill.workAreaTitle, skill.sourceTitle],
     footerLeft: `${skill.branchTitle} · ${skill.syncMode}`,
-    footerRight: 'Enter to inspect',
+    footerRight: 'Inspect',
   }));
 }
 
@@ -1666,11 +1671,9 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
   const [bootReady, setBootReady] = useState(false);
   const [catalog, setCatalog] = useState(initialCatalog);
 
-  const [rootMode, setRootMode] = useState('collections');
+  const [rootMode, setRootMode] = useState('areas');
   const [stack, setStack] = useState([{type: 'home'}]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [homeSectionIndex, setHomeSectionIndex] = useState(0);
-  const [homeSelections, setHomeSelections] = useState({});
   const [searchMode, setSearchMode] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -1868,52 +1871,6 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
 
   const breadcrumbs = buildBreadcrumbs(rootMode, stack, catalog);
   const currentSkillsSpec = currentSkill && agent ? getSkillsInstallSpec(currentSkill, agent) : null;
-  const curatedHomeSections = useMemo(() => {
-    const myPicks = catalog.collections.find((collection) => collection.id === 'my-picks');
-
-    return [
-      {
-        id: 'shelves',
-        title: 'Shelves',
-        subtitle: 'Start from the work itself. Each shelf stays small enough to scan in one pass.',
-        kind: 'area',
-        mode: 'default',
-        items: getHomeItems(catalog),
-      },
-      {
-        id: 'my-picks',
-        title: 'My Picks',
-        subtitle: 'The first stack I would install on a fresh machine.',
-        kind: 'skill',
-        mode: 'skills',
-        items: getSkillItems((myPicks?.skills || []).slice(0, 6)),
-      },
-      {
-        id: 'house',
-        title: 'House Copies',
-        subtitle: 'Bundled, local, and owned here when speed and permanence matter.',
-        kind: 'skill',
-        mode: 'skills',
-        items: getTierSkillItems(catalog, 'house'),
-      },
-      {
-        id: 'upstream',
-        title: 'Cataloged Upstream',
-        subtitle: 'Picked from trusted publishers, but kept live at the source.',
-        kind: 'skill',
-        mode: 'skills',
-        items: getTierSkillItems(catalog, 'upstream'),
-      },
-      {
-        id: 'sources',
-        title: 'Source Repos',
-        subtitle: 'Browse the publishers behind the shelves when provenance matters more than task-first browsing.',
-        kind: 'source',
-        mode: 'default',
-        items: getSourceItems(catalog).slice(0, 6),
-      },
-    ].filter((section) => section.items.length > 0);
-  }, [catalog]);
 
   const installOptions = currentSkill
     ? agent
@@ -1966,19 +1923,13 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
   const paletteItems = useMemo(() => {
     const items = [];
 
-    items.push({id: 'go-home', label: 'Home', detail: 'Jump to the curated library home', run: () => {
-      setRootMode('collections');
-      setStack([{type: 'home'}]);
-      setSelectedIndex(0);
-      setPreviewMode(false);
-    }});
     items.push({id: 'go-areas', label: 'Shelves', detail: 'Jump to the work-area shelf view', run: () => {
       setRootMode('areas');
       setStack([{type: 'home'}]);
       setSelectedIndex(0);
       setPreviewMode(false);
     }});
-    items.push({id: 'go-sources', label: 'Source Repos', detail: 'Jump to source provenance view', run: () => {
+    items.push({id: 'go-sources', label: 'Sources', detail: 'Jump to source provenance view', run: () => {
       setRootMode('sources');
       setStack([{type: 'home'}]);
       setSelectedIndex(0);
@@ -1998,15 +1949,6 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
     items.push({id: 'theme-cycle', label: 'Cycle house theme', detail: `Current theme: ${activeTheme.label}`, run: () => {
       setThemeIndex((value) => (value + 1) % THEMES.length);
     }});
-
-    if (rootMode === 'collections' && current.type === 'home') {
-      items.push({id: 'go-shelves', label: 'Browse by Shelf', detail: 'Jump to the shelf section on the home screen', run: () => {
-        setHomeSectionIndex(0);
-      }});
-      items.push({id: 'go-my-picks', label: 'My Picks', detail: 'Jump to the personal starter stack', run: () => {
-        setHomeSectionIndex(1);
-      }});
-    }
 
     if (stack.length > 1) {
       items.push({id: 'back', label: 'Back', detail: 'Move one level up in the atlas', run: () => {
@@ -2048,38 +1990,6 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
     setPaletteOpen(false);
     setPaletteQuery('');
     setPaletteIndex(0);
-  };
-
-  const setHomeSelection = (sectionIndex, nextIndex) => {
-    setHomeSelections((currentSelections) => ({
-      ...currentSelections,
-      [sectionIndex]: nextIndex,
-    }));
-  };
-
-  const openHomeItem = (section, itemIndex) => {
-    const item = section?.items?.[itemIndex];
-    if (!item) return;
-
-    if (section.kind === 'skill') {
-      setStack((currentStack) => [...currentStack, {type: 'skill', skillName: item.id}]);
-      setPreviewMode(false);
-      return;
-    }
-
-    if (section.kind === 'collection') {
-      setStack((currentStack) => [...currentStack, {type: 'collection', collectionId: item.id}]);
-      return;
-    }
-
-    if (section.kind === 'area') {
-      setStack((currentStack) => [...currentStack, {type: 'area', areaId: item.id}]);
-      return;
-    }
-
-    if (section.kind === 'source') {
-      setStack((currentStack) => [...currentStack, {type: 'source', sourceSlug: item.id}]);
-    }
   };
 
   useInput((input, key) => {
@@ -2489,12 +2399,6 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
     }
 
     if (current.type === 'home') {
-      if (input === 'h' || input === 'c') {
-        setRootMode('collections');
-        setSelectedIndex(0);
-        setHomeSectionIndex(0);
-        return;
-      }
       if (input === 'w') {
         setRootMode('areas');
         setSelectedIndex(0);
@@ -2503,39 +2407,6 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
       if (input === 'r') {
         setRootMode('sources');
         setSelectedIndex(0);
-        return;
-      }
-
-      if (rootMode === 'collections') {
-        const sectionCount = curatedHomeSections.length;
-        const currentSection = curatedHomeSections[homeSectionIndex];
-        const currentItemCount = currentSection?.items?.length || 0;
-        const currentHomeIndex = homeSelections[homeSectionIndex] || 0;
-
-        if (key.upArrow || input === 'k') {
-          setHomeSectionIndex((value) => clamp(value - 1, 0, Math.max(0, sectionCount - 1)));
-          return;
-        }
-
-        if (key.downArrow || input === 'j') {
-          setHomeSectionIndex((value) => clamp(value + 1, 0, Math.max(0, sectionCount - 1)));
-          return;
-        }
-
-        if (key.leftArrow || input === 'h') {
-          setHomeSelection(homeSectionIndex, clamp(currentHomeIndex - 1, 0, Math.max(0, currentItemCount - 1)));
-          return;
-        }
-
-        if (key.rightArrow || input === 'l') {
-          setHomeSelection(homeSectionIndex, clamp(currentHomeIndex + 1, 0, Math.max(0, currentItemCount - 1)));
-          return;
-        }
-
-        if (key.return) {
-          openHomeItem(currentSection, currentHomeIndex);
-          setSelectedIndex(0);
-        }
         return;
       }
 
@@ -2664,7 +2535,7 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
           breadcrumbs=${breadcrumbs}
           title="Search the library"
           subtitle="Find skills by work area, branch, source repo, or title."
-          metaItems=${[`${catalog.total} skills`, `${catalog.collections.length} collections`, `${catalog.sources.length} source repos`, activeTheme.label]}
+          metaItems=${[`${catalog.total} skills`, `${catalog.areas.length} shelves`, `${catalog.sources.length} sources`, activeTheme.label]}
           hint="Enter opens a skill · Esc closes search"
           viewport=${viewport}
         />
@@ -2679,110 +2550,45 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
       <//>
     `;
   } else if (current.type === 'home') {
-    if (rootMode === 'collections') {
-      const currentSection = curatedHomeSections[homeSectionIndex] || curatedHomeSections[0];
-      const currentHomeIndex = homeSelections[homeSectionIndex] || 0;
-      const selectedHomeItem = currentSection?.items?.[currentHomeIndex] || currentSection?.items?.[0];
-      const visibleSectionIndices = getVisibleHomeSectionIndices(
-        curatedHomeSections.length,
-        homeSectionIndex,
-        viewport
-      );
-      const renderedSectionIndices = viewport.compact
-        ? visibleSectionIndices
-        : curatedHomeSections.map((_, index) => index);
-      const supportingSectionIndices = renderedSectionIndices.filter((index) => index !== homeSectionIndex);
-
-      body = html`
-        <${Box} flexDirection="column">
-          <${Header}
-            breadcrumbs=${breadcrumbs}
-            title=${LIBRARY_THESIS}
-            subtitle=${LIBRARY_SUPPORT}
-            metaItems=${[`${catalog.total} skills`, `${catalog.areas.length} shelves`, `${catalog.houseCount} house copies`, `${catalog.upstreamCount} live upstream`, `scope ${agent ? agent : (scope || 'global')}`, activeTheme.label]}
-            hint="Up/down changes sections · Left/right moves within a section · Enter opens · : command palette"
-            viewport=${viewport}
-          />
-          <${ModeTabs} rootMode=${rootMode} compact=${viewport.compact} />
-          ${currentSection && selectedHomeItem
-            ? html`
-                <${ShelfHero}
-                  section=${currentSection}
-                  selectedItem=${selectedHomeItem}
-                  columns=${columns}
-                  selectedIndex=${currentHomeIndex}
-                  viewport=${viewport}
-                />
-              `
-            : null}
-          <${Text} color=${COLORS.border}>
-            ${viewport.micro
-              ? 'House copies install fast. Cataloged upstream stays live with the publisher.'
-              : 'House copies install fast. Cataloged upstream stays live with the publisher. Start with shelves when you want taste, not search results.'}
-          <//>
-          <${Box} marginTop=${1} flexDirection="column">
-          ${supportingSectionIndices.map((index) => {
-            const section = curatedHomeSections[index];
-            const sectionItemIndex = homeSelections[index] || 0;
-            const sectionItem = section.items[sectionItemIndex] || section.items[0];
-            return html`
-              <${Box} key=${section.id} flexDirection="column" marginBottom=${1}>
-                <${CompactShelfPreview}
-                  title=${section.title}
-                  subtitle=${section.subtitle}
-                  active=${false}
-                  summary=${sectionItem
-                    ? `${section.items.length} items · focus: ${sectionItem.title}${sectionItem.description ? ` · ${compactText(sectionItem.description, viewport.micro ? 36 : 64)}` : ''}`
-                    : `${section.items.length} items`}
-                  compact=${viewport.compact}
-                />
-              <//>
-            `;
-          })}
-          <//>
-        <//>
-      `;
-    } else {
-      const homeItems = rootMode === 'areas' ? getHomeItems(catalog) : getSourceItems(catalog);
-      const selectedHomeItem = homeItems[selectedIndex] || homeItems[0];
-      const showHomeInspector = !viewport.compact && Boolean(selectedHomeItem);
-      body = html`
-        <${Box} flexDirection="column">
-          <${Header}
-            breadcrumbs=${breadcrumbs}
-            title=${rootMode === 'areas' ? 'Browse the shelves' : 'Browse the publishers'}
-            subtitle=${rootMode === 'areas'
-              ? 'Start with the kind of work, then drill into the small set of skills on that shelf.'
-              : 'Browse trusted source repos and the lanes they feed into the shelves.'}
-            metaItems=${[`${catalog.total} skills`, `${catalog.areas.length} shelves`, `${catalog.sources.length} publishers`, `scope ${agent ? agent : (scope || 'global')}`, activeTheme.label]}
-            hint="Arrow keys move · Enter drills in · / searches · : command palette"
-            viewport=${viewport}
-          />
-          <${ModeTabs} rootMode=${rootMode} compact=${viewport.compact} />
-          <${AtlasGrid}
-            items=${homeItems}
-            selectedIndex=${selectedIndex}
-            columns=${columns}
-            rows=${rows}
-            reservedRows=${getReservedRows('home-grid', viewport, {showInspector: showHomeInspector})}
-            compact=${viewport.compact}
-          />
-          ${showHomeInspector
-            ? html`
-                <${Inspector}
-                  title=${selectedHomeItem.title}
-                  eyebrow=${rootMode === 'areas' ? 'Work area' : 'Source repo'}
-                  lines=${[
-                    selectedHomeItem.description,
-                    ...(selectedHomeItem.sampleLines || []),
-                  ]}
-                  footer="Enter opens the focused tile"
-                />
-              `
-            : null}
-        <//>
-      `;
-    }
+    const homeItems = rootMode === 'areas' ? getShelfItems(catalog) : getSourceItems(catalog);
+    const selectedHomeItem = homeItems[selectedIndex] || homeItems[0];
+    const showHomeInspector = !viewport.compact && Boolean(selectedHomeItem);
+    body = html`
+      <${Box} flexDirection="column">
+        <${Header}
+          breadcrumbs=${breadcrumbs}
+          title=${rootMode === 'areas' ? LIBRARY_THESIS : 'Trusted publishers'}
+          subtitle=${rootMode === 'areas'
+            ? 'Start with the work. Each shelf stays small enough to scan and opinionated enough to trust.'
+            : 'See where the picks come from and which lanes each publisher feeds into the library.'}
+          metaItems=${[`${catalog.total} skills`, `${catalog.areas.length} shelves`, `${catalog.sources.length} sources`, `scope ${agent ? agent : (scope || 'global')}`, activeTheme.label]}
+          hint="Arrow keys move · Enter drills in · / searches · : command palette"
+          viewport=${viewport}
+        />
+        <${ModeTabs} rootMode=${rootMode} compact=${viewport.compact} />
+        <${AtlasGrid}
+          items=${homeItems}
+          selectedIndex=${selectedIndex}
+          columns=${columns}
+          rows=${rows}
+          reservedRows=${getReservedRows('home-grid', viewport, {showInspector: showHomeInspector})}
+          compact=${viewport.compact}
+        />
+        ${showHomeInspector
+          ? html`
+              <${Inspector}
+                title=${selectedHomeItem.title}
+                eyebrow=${rootMode === 'areas' ? 'Shelf' : 'Source'}
+                lines=${[
+                  selectedHomeItem.description,
+                  ...(selectedHomeItem.sampleLines || []),
+                ]}
+                footer="Enter opens the focused tile"
+              />
+            `
+          : null}
+      <//>
+    `;
   } else if (current.type === 'collection' && currentCollection) {
     const selectedSkill = currentCollection.skills[selectedIndex] || currentCollection.skills[0];
     const startHereSkills = currentCollection.skills.slice(0, 3);
@@ -3028,11 +2834,11 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
       : 'Enter open · b back · : commands · q quit'
     : current.type === 'skill'
       ? '/ search · : palette · b back · c curate · i install · p preview · o upstream · t theme · ? help · q quit'
-      : '/ search · : palette · Enter open · b back · h/w/r switch root views · t theme · ? help · q quit';
+      : '/ search · : palette · Enter open · b back · w/r switch views · t theme · ? help · q quit';
   const footerMode = current.type === 'skill'
     ? 'DETAIL'
     : current.type === 'home'
-      ? rootMode.toUpperCase()
+      ? rootMode === 'areas' ? 'SHELVES' : 'SOURCES'
       : current.type.toUpperCase();
   const footerDetail = currentSkill
     ? `${currentSkill.title} · ${activeTheme.label}`

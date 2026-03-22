@@ -206,6 +206,17 @@ test('skills.json provenance metadata is valid', () => {
   });
 });
 
+test('frontend shelf distinguishes overlapping frontend picks by publisher', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const anthropicFrontend = data.skills.find(skill => skill.name === 'frontend-design');
+  const openaiFrontend = data.skills.find(skill => skill.name === 'frontend-skill');
+
+  assert(anthropicFrontend, 'Expected frontend-design to exist');
+  assert(openaiFrontend, 'Expected frontend-skill to exist');
+  assertEqual(anthropicFrontend.branch, 'Frontend (Anthropic)');
+  assertEqual(openaiFrontend.branch, 'Frontend (OpenAI)');
+});
+
 test('skills.json does not carry stale popularity metrics', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
 
@@ -443,6 +454,13 @@ test('preview command works for non-vendored skill', () => {
 test('browse command shows tty guidance outside a TTY', () => {
   const output = runArgs(['browse']);
   assertContains(output, 'requires a TTY terminal');
+});
+
+test('README keeps the launch timeline and universal installer context', () => {
+  const readme = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8');
+  assertContains(readme, 'December 17, 2025');
+  assertContains(readme, 'before `skills.sh` existed');
+  assertContains(readme, 'Originally this repo was that universal installer.');
 });
 
 test('help output shows scope-based targets and legacy agent support', () => {

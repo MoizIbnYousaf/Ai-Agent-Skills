@@ -13,8 +13,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Locked normal intake to upstream-only behavior: `catalog` now accepts GitHub repos, requires full shelf placement, and refuses partial or blank editorial entries.
 - Tightened `vendor` into the explicit house-copy path, with the same editorial metadata requirements as the upstream catalog flow.
-- Reclassified Anthropic's `frontend-design` skill from a React lane to `UI Craft` and rewrote its editorial metadata to match the actual upstream skill.
+- Renamed the two overlapping frontend lanes so they read by publisher: `Frontend (Anthropic)` and `Frontend (OpenAI)`.
+- Simplified the TUI to the two real browse modes, `Shelves` and `Sources`, with the old home summary removed from the top-level navigation.
+- Rewrote shelf and source lane cards with more editorial copy and less generic metadata filler so the first scan reads like a curated library, not a utility dashboard.
 - Synced the README and work-area map from the catalog so shelf counts and tables stop drifting.
+- Restored the README note that this repo launched before `skills.sh` and started life as a universal installer before becoming a personal skills library.
 
 ### Removed
 - Removed `figma-implement-design` from the curated library and the frontend shelf.

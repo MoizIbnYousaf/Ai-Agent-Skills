@@ -731,9 +731,9 @@ async function main() {
         }
 
         const viewportScenarios = [
-          { columns: 80, rows: 24, expectedLines: ['Frontend', 'My Picks', 'House Copies'] },
-          { columns: 100, rows: 30, expectedLines: ['Frontend', 'My Picks', 'Cataloged Upstream'] },
-          { columns: 140, rows: 40, expectedLines: ['Frontend', 'Cataloged Upstream', 'Source Repos'] },
+          { columns: 80, rows: 24, expectedLines: ['Frontend', 'Backend'] },
+          { columns: 100, rows: 30, expectedLines: ['Frontend', 'Backend', 'Docs', 'Testing'] },
+          { columns: 140, rows: 40, expectedLines: ['Frontend', 'Backend', 'Docs', 'Testing'] },
         ];
 
         report.tui.viewports = [];

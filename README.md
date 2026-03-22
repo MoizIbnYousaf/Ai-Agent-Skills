@@ -27,6 +27,14 @@ The library is organized the way I actually work:
 If you want the broad open ecosystem, use `skills.sh`.
 If you want my shelves, use this repo.
 
+## Why This Repo Still Exists
+
+I launched this on December 17, 2025, before `skills.sh` existed and before the ecosystem had a clear default universal installer.
+
+Originally this repo was that universal installer. That part still works.
+
+What makes it worth keeping now is the library itself: the shelves, the provenance, and the editorial judgment. `skills.sh` is the broad open ecosystem. This repo is the smaller personal library I actually reach for.
+
 ## The Two-Tier Model
 
 Every skill in the library is one of two things:
@@ -69,14 +77,18 @@ Legacy agent-specific targets still work through `--agent <name>`.
 
 ## How To Read The Library
 
-There are four useful views:
+There are two main ways to browse it:
 
 | View | Why it exists | Start here |
 | --- | --- | --- |
-| Shelves | The main way to understand the library | `npx ai-agent-skills list` |
-| My Picks | The shortest starter stack | `npx ai-agent-skills list --collection my-picks` |
-| Source Repos | Provenance and publisher lineage | `npx ai-agent-skills info frontend-design` |
-| Terminal Browser | Browse the library as a shelf system, not a flat repo | `npx ai-agent-skills browse` |
+| Shelves | The main way to understand the library: start with the kind of work, then drill into the small set of picks on that shelf. | `npx ai-agent-skills list` |
+| Sources | The provenance view: see which publishers feed which shelves and branches. | `npx ai-agent-skills info frontend-design` |
+
+Secondary surfaces still exist, but they are not the main taxonomy:
+
+- `npx ai-agent-skills browse` for the TUI
+- `npx ai-agent-skills list --collection my-picks` for a cross-shelf starter stack
+- `npx ai-agent-skills curate review` for the curator cleanup queue
 
 ## Shelves
 
@@ -135,7 +147,7 @@ It adds metadata and editorial placement:
 For existing picks, `curate` is the fast loop:
 
 ```bash
-npx ai-agent-skills curate frontend-design --branch "UI Craft"
+npx ai-agent-skills curate frontend-design --branch "Frontend (Anthropic)"
 npx ai-agent-skills curate frontend-design --why "A stronger note that matches how I actually use it."
 npx ai-agent-skills curate review
 ```
