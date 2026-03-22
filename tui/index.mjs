@@ -328,6 +328,14 @@ function getColumnsPerRow(columns, mode = 'default') {
   return 1;
 }
 
+function getAtlasTileHeight(mode = 'default', compact = false) {
+  if (compact) {
+    return mode === 'skills' ? 7 : 8;
+  }
+
+  return mode === 'skills' ? 11 : 12;
+}
+
 function moveGrid(index, key, itemCount, columnsPerRow) {
   if (itemCount === 0) return 0;
   if (key.upArrow) return clamp(index - columnsPerRow, 0, itemCount - 1);
@@ -340,13 +348,11 @@ function moveGrid(index, key, itemCount, columnsPerRow) {
 function getViewportState({items, selectedIndex, columns, rows, mode = 'default', compact = false, reservedRows = 12}) {
   const columnsPerRow = getColumnsPerRow(columns, mode);
   const gutter = columnsPerRow > 1 ? columnsPerRow - 1 : 0;
+  const tileHeight = getAtlasTileHeight(mode, compact);
   const tileWidth = Math.max(
     mode === 'skills' ? 32 : 28,
     Math.floor((columns - gutter * 2) / columnsPerRow)
   );
-  const tileHeight = compact
-    ? mode === 'skills' ? 7 : 8
-    : mode === 'skills' ? 11 : 12;
   const usableRows = Math.max(tileHeight, rows - reservedRows);
   const visibleRows = Math.max(1, Math.floor(usableRows / tileHeight));
   const totalRows = Math.max(1, Math.ceil(items.length / columnsPerRow));
@@ -363,6 +369,7 @@ function getViewportState({items, selectedIndex, columns, rows, mode = 'default'
   return {
     columnsPerRow,
     tileWidth,
+    tileHeight,
     visibleRows,
     totalRows,
     startRow,
@@ -614,7 +621,7 @@ function AtlasGrid({items, selectedIndex, columns, rows, mode = 'default', reser
           <${AtlasTile}
             key=${item.id}
             width=${viewport.tileWidth}
-            minHeight=${item.minHeight || (mode === 'skills' ? 10 : 11)}
+            minHeight=${item.minHeight || viewport.tileHeight}
             selected=${index === viewport.visibleIndex}
             title=${item.title}
             count=${item.count}
@@ -3013,8 +3020,10 @@ export async function launchTui({agent = null, scope = 'global'} = {}) {
 }
 
 export const __test = {
+  getAtlasTileHeight,
   formatPreviewLines,
   getViewportProfile,
   getVisibleHomeSectionIndices,
   getReservedRows,
+  getViewportState,
 };

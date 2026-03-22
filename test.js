@@ -631,6 +631,29 @@ test('home screen visibility collapses on compact terminals', () => {
   assertContains(data.compact.join(','), '2');
 });
 
+test('atlas grid uses one shared tile height for layout math and rendering', () => {
+  const output = runModule(`
+    import {__test} from './tui/index.mjs';
+    const compactHeight = __test.getAtlasTileHeight('default', true);
+    const skillCompactHeight = __test.getAtlasTileHeight('skills', true);
+    const viewport = __test.getViewportState({
+      items: Array.from({length: 12}, (_, index) => ({id: String(index)})),
+      selectedIndex: 0,
+      columns: 100,
+      rows: 30,
+      mode: 'default',
+      compact: true,
+      reservedRows: __test.getReservedRows('home-grid', __test.getViewportProfile({columns: 100, rows: 30}), {showInspector: false}),
+    });
+    console.log(JSON.stringify({compactHeight, skillCompactHeight, viewport}));
+  `);
+  const data = JSON.parse(output);
+  assertEqual(data.compactHeight, 8);
+  assertEqual(data.skillCompactHeight, 7);
+  assertEqual(data.viewport.tileHeight, data.compactHeight);
+  assertEqual(data.viewport.visibleRows, 2);
+});
+
 test('vendored catalog skills carry real markdown into the TUI catalog', () => {
   const catalog = buildCatalog();
   const skill = catalog.skills.find((candidate) => candidate.name === 'best-practices');
