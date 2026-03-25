@@ -1,7 +1,7 @@
 {
-  "version": "3.4.3",
-  "updated": "2026-03-21T00:00:00Z",
-  "total": 35,
+  "version": "3.4.4",
+  "updated": "2026-03-25T00:00:00Z",
+  "total": 36,
   "workAreas": [
     {
       "id": "frontend",
@@ -1053,6 +1053,34 @@
       "notes": "",
       "labels": [],
       "addedDate": "2026-03-21",
+      "path": ""
+    },
+    {
+      "name": "userinterface-wiki",
+      "description": "UI/UX best practices for web interfaces. Use when reviewing animations, CSS, audio, typography, UX patterns, prefetching, or icon implementations. Covers 11 categories from animation principles to typography. Outputs file:line findings.",
+      "category": "development",
+      "workArea": "frontend",
+      "branch": "Frontend (Community)",
+      "author": "raphaelsalaja",
+      "source": "raphaelsalaja/userinterface-wiki",
+      "license": "MIT",
+      "tier": "upstream",
+      "distribution": "live",
+      "vendored": false,
+      "installSource": "raphaelsalaja/userinterface-wiki/skills",
+      "tags": [],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/raphaelsalaja/userinterface-wiki/tree/main/skills",
+      "whyHere": "High-signal UI/UX review skill for interface polish, implementation critique, and stronger frontend craft.",
+      "lastVerified": "",
+      "notes": "",
+      "labels": [],
+      "addedDate": "2026-03-25",
+      "lastCurated": "2026-03-25T00:00:00Z",
       "path": ""
     }
   ]

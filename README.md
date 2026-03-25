@@ -5,10 +5,10 @@ My curated agent skills library.
 There are a lot of skills now. These are the ones I actually keep around.
 
 <!-- GENERATED:library-stats:start -->
-- 35 skills total
+- 36 skills total
 - 10 shelves
 - 11 house copies
-- 24 cataloged upstream
+- 25 cataloged upstream
 <!-- GENERATED:library-stats:end -->
 
 The point is not to be a registry. The point is to be a bookshelf.
@@ -97,7 +97,7 @@ These are the shelves. They are the product.
 <!-- GENERATED:shelf-table:start -->
 | Shelf | Skills | What it covers |
 | --- | --- | --- |
-| Frontend | 4 | Interface systems, web product craft, and frontend execution. |
+| Frontend | 5 | Interface systems, web product craft, and frontend execution. |
 | Backend | 3 | Infra, tooling, application architecture, and codebase depth. |
 | Docs | 6 | Documents, specs, file handling, and long-form output. |
 | Testing | 2 | Review, QA, regression work, and keeping product quality sharp. |
@@ -171,6 +171,7 @@ Current source mix:
 | `wshobson/agents` | 4 |
 | `MoizIbnYousaf/Ai-Agent-Skills` | 3 |
 | `emilkowalski/skill` | 1 |
+| `raphaelsalaja/userinterface-wiki` | 1 |
 | `shadcn-ui/ui` | 1 |
 <!-- GENERATED:source-table:end -->
 

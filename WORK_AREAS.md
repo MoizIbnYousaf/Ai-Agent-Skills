@@ -6,13 +6,14 @@ The repo folders stay flat under `skills/<name>/` for house copies. The catalog 
 
 ## Frontend
 
-4 skills. Interface systems, web product craft, and frontend execution.
+5 skills. Interface systems, web product craft, and frontend execution.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
 | Components | `shadcn` | shadcn-ui |
 | Design Engineering | `emil-design-eng` | emilkowalski |
 | Frontend (Anthropic) | `frontend-design` | anthropics |
+| Frontend (Community) | `userinterface-wiki` | raphaelsalaja |
 | Frontend (OpenAI) | `frontend-skill` | openai |
 
 ## Backend
