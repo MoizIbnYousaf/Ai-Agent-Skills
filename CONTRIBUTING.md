@@ -2,7 +2,6 @@
 
 This repo is curated on purpose.
 
-I am not trying to build the biggest skill library on GitHub. I want a smaller, sharper library of skills that are actually worth installing.
 Most of the library is sourced from other repos, so attribution and provenance matter as much as the skill itself.
 
 Before you open a PR, read [CURATION.md](./CURATION.md).
