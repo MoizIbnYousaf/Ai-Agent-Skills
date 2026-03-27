@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-skills",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "description": "Curated agent skills library and CLI installer.",
   "main": "cli.js",
   "bin": {
