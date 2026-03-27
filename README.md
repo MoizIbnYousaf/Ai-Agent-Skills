@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A smaller library for Claude Code, Codex, Cursor, and other <code>SKILL.md</code>-compatible agents.
+  The skills I actually keep around, organized the way I work.
 </p>
 
 <!-- GENERATED:library-stats:start -->
