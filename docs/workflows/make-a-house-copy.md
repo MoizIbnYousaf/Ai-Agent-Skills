@@ -12,4 +12,4 @@ Good reasons to vendor:
 - you want to edit the skill body locally
 - you want a maintained house copy instead of a live upstream install
 
-`vendor` copies the files into `skills/<name>/`, adds the metadata entry, and regenerates the generated docs for the active library.
+`vendor` copies the files into `skills/<name>/`, adds the metadata entry, and regenerates the docs for the active library.

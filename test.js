@@ -606,11 +606,15 @@ test('workflow docs exist and README links them', () => {
     'refresh-installed-skills.md',
   ];
   const readme = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8');
+  const agentDocPath = path.join(__dirname, 'FOR_YOUR_AGENT.md');
 
   expected.forEach((fileName) => {
     assert(fs.existsSync(path.join(docsDir, fileName)), `Expected workflow doc ${fileName}`);
     assertContains(readme, `./docs/workflows/${fileName}`);
   });
+  assert(fs.existsSync(agentDocPath), 'Expected FOR_YOUR_AGENT.md to exist');
+  assertContains(readme, './FOR_YOUR_AGENT.md');
+  assertContains(readme, '## Use It With Your Agent');
   assertContains(readme, '## Workspace Mode');
 });
 
@@ -1047,6 +1051,7 @@ test('README keeps the launch timeline and universal installer context', () => {
   assertContains(readme, 'before `skills.sh` existed');
   assertContains(readme, 'Originally this repo was that installer.');
   assertContains(readme, 'init-library my-library');
+  assertContains(readme, 'Paste this into your agent');
 });
 
 test('help output shows scope-based targets and legacy agent support', () => {
@@ -1056,7 +1061,9 @@ test('help output shows scope-based targets and legacy agent support', () => {
   assertContains(output, 'Legacy agents');
   assertContains(output, '--agent');
   assertContains(output, '--collection');
-  assertContains(output, 'Direct repo install (defaults to Claude + Codex)');
+  assertContains(output, 'Direct repo install (default global targets)');
+  assertContains(output, 'agent with shell access');
+  assertContains(output, '--area, --branch, and --why');
   assertContains(output, 'npx ai-agent-skills swift');
   assertContains(output, 'swift-agent-skills');
 });
@@ -1318,6 +1325,7 @@ test('npm pack --dry-run excludes tmp reports from the tarball', () => {
   const output = execSync('npm pack --dry-run 2>&1', { encoding: 'utf8', cwd: __dirname });
   assertNotContains(output, 'tmp/live-test-report.json');
   assertNotContains(output, 'tmp/live-quick-report.json');
+  assertContains(output, 'FOR_YOUR_AGENT.md');
   assertContains(output, 'docs/workflows/start-a-library.md');
   assertNotContains(output, 'docs/library-experience-plan.md');
   assertNotContains(output, 'docs/video-transcript-gap-analysis.md');
@@ -1782,6 +1790,14 @@ test('help mentions legacy agent support', () => {
   const output = run('help');
   assertContains(output, 'Legacy');
   assertContains(output, '--agent');
+  assertContains(output, 'agent with shell access');
+});
+
+test('start-a-library workflow doc supports the agent-first flow', () => {
+  const workflow = fs.readFileSync(path.join(__dirname, 'docs', 'workflows', 'start-a-library.md'), 'utf8');
+  assertContains(workflow, 'Paste this into your agent');
+  assertContains(workflow, 'Use `init-library`, `add`, `install`, `sync`, and `build-docs`.');
+  assertContains(workflow, '../../FOR_YOUR_AGENT.md');
 });
 
 test('help examples use -p and -g flags', () => {

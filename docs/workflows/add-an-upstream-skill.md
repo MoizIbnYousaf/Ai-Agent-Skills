@@ -1,6 +1,6 @@
 # Add an Upstream Skill
 
-Use `add` when you want a workspace entry without vendoring the source.
+Use `add` when you want a workspace entry but do not want to vendor the source.
 
 From the bundled reference library:
 
@@ -16,7 +16,7 @@ npx ai-agent-skills add anthropics/skills --skill ask-questions-if-underspecifie
 
 `add` writes to the active workspace only.
 
-It keeps:
+It keeps the upstream metadata:
 
 - `description`
 - `source`
@@ -26,10 +26,10 @@ It keeps:
 - `labels`
 - `requires`
 
-It still asks you to decide:
+You still choose:
 
 - shelf
 - branch
 - why it belongs
 
-That keeps the workspace shaped like your own library instead of a blind copy.
+That keeps the workspace shaped like your own library instead of becoming a blind copy.

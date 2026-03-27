@@ -26,6 +26,7 @@
   },
   "files": [
     "cli.js",
+    "FOR_YOUR_AGENT.md",
     "docs/workflows/",
     "lib/",
     "skills/",

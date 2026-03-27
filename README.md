@@ -23,10 +23,10 @@
 
 ## Library
 
-`ai-agent-skills` does two jobs.
+`ai-agent-skills` does two things.
 
-It ships my curated bundled library, and it gives you the CLI and TUI to build and manage a library of your own.
-It works with Claude Code, Codex, Cursor, and other SKILL.md-compatible agents.
+It ships my curated bundled library, and it gives you the CLI and TUI to build and manage one of your own.
+It works with any Agent Skills-compatible agent.
 
 The bundled library is organized the way I work:
 
@@ -36,7 +36,7 @@ The bundled library is organized the way I work:
 - Keep notes that explain why a skill is here
 
 Use `skills.sh` for the broad ecosystem.
-Use `ai-agent-skills` for a smaller kept library with shelves, provenance, and notes.
+Use `ai-agent-skills` when you want a smaller library with shelves, provenance, and notes.
 
 ## What's New in 4.0.0
 
@@ -52,7 +52,7 @@ I launched this on December 17, 2025, before `skills.sh` existed and before the 
 
 Originally this repo was that installer. It still does that.
 
-I keep it because the library itself is useful: shelves, provenance, and notes that make the curation easy to read.
+I keep it because the library itself is useful: shelves, provenance, and notes that make the choices easy to follow.
 
 ## How It Works
 
@@ -68,6 +68,35 @@ Each skill here is either a house copy or a cataloged upstream pick.
 
 Upstream work stays upstream. That keeps the library lean.
 
+## Use It With Your Agent
+
+Any Agent Skills-compatible agent with shell access can run this CLI for you.
+
+The CLI already works that way. Prompts help, but they are optional. When the agent passes explicit metadata like `--area`, `--branch`, and `--why`, it can set up and curate a library without editing files by hand.
+
+Full handoff: [FOR_YOUR_AGENT.md](./FOR_YOUR_AGENT.md)
+
+### Paste this into your agent
+
+```text
+Build me a small skills library with `ai-agent-skills`.
+
+Use the CLI, not manual file edits.
+
+1. Create a managed workspace with `npx ai-agent-skills init-library`.
+2. Ask me only the minimum questions you need before acting:
+   - if you have a built-in question tool, use it
+   - which shelves or kinds of work matter most
+   - whether to start mostly from bundled picks or mix in upstream skills
+   - whether installs should default to project scope, global scope, or library setup only
+3. Add a small starter set, around 3 to 8 skills.
+4. Start with `add`. Use `catalog` when you need an upstream entry. Use `vendor` only for a real house copy.
+5. Run `npx ai-agent-skills build-docs` at the end.
+6. Tell me what you added, which shelves you used, and what you'd add next.
+
+If you cannot run local commands here, tell me to use another Agent Skills-compatible agent with terminal access.
+```
+
 ## Quick Start
 
 ### Use the bundled library
@@ -82,7 +111,7 @@ npx ai-agent-skills list
 # Install a skill from the library
 npx ai-agent-skills install frontend-design
 
-# Install the Swift hub straight to Claude + Codex
+# Install the Swift hub to the default global targets
 npx ai-agent-skills swift
 
 # Install an entire curated pack
@@ -91,7 +120,7 @@ npx ai-agent-skills install --collection swift-agent-skills -p
 # Install to the project shelf
 npx ai-agent-skills install pdf -p
 
-# Install all skills from an upstream repo straight to Claude + Codex
+# Install all skills from an upstream repo to the default global targets
 npx ai-agent-skills anthropics/skills
 
 # Browse a repo before adding or installing from it
@@ -112,8 +141,9 @@ Legacy agent-specific targets still work through `--agent <name>`.
 npx ai-agent-skills init-library my-library
 cd my-library
 
-# Add a bundled pick, refresh it, and rebuild the docs
+# Add a bundled pick, install it, refresh it, and rebuild the docs
 npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "I want this on my shelf."
+npx ai-agent-skills install frontend-design -p
 npx ai-agent-skills sync frontend-design -p
 npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing --why "I use this when I want browser-level checks in the workspace."
 npx ai-agent-skills build-docs
@@ -121,15 +151,16 @@ npx ai-agent-skills build-docs
 
 ## Workspace Mode
 
-Workspace mode is built in now.
+Workspace mode is part of the normal flow now.
 
-Start with a managed workspace, add a few skills, then keep your own shelves current with `add`, `catalog`, `vendor`, `sync`, and `build-docs`.
+Start with a managed workspace, add a few skills, then keep your own shelves in shape with `add`, `catalog`, `vendor`, `sync`, and `build-docs`.
 
 ```bash
 npx ai-agent-skills init-library my-library
 cd my-library
 
 npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "I want this on my shelf."
+npx ai-agent-skills install frontend-design -p
 npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing --why "I use this when I want browser-level checks in the workspace."
 npx ai-agent-skills sync frontend-design -p
 npx ai-agent-skills build-docs
@@ -194,8 +225,8 @@ Collections are smaller sets. Useful, but secondary to the shelves.
 
 Use `catalog` when you want to add an upstream skill without vendoring it.
 
-In a managed workspace, `add` is the easier place to start.
-`catalog` and `vendor` are still there when you want direct control.
+In a managed workspace, start with `add`.
+Use `catalog` and `vendor` when you want more control.
 
 ```bash
 npx ai-agent-skills catalog openai/skills --list
@@ -213,7 +244,7 @@ It adds metadata and placement in the active library:
 - why it earned a place
 - how it should install later
 
-For existing picks, `curate` is the quickest edit loop:
+For existing picks, use `curate` for quick edits:
 
 ```bash
 npx ai-agent-skills curate frontend-design --branch Implementation

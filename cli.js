@@ -1233,9 +1233,9 @@ function installSkillToScope(skillName, scopePath, scopeLabel, dryRun = false) {
     info(`Location: ${destPath}`);
     info(`Size: ${(skillSize / 1024).toFixed(1)} KB`);
     if (scopeLabel === 'global') {
-      log(`${colors.dim}The skill is now available in Claude Code.\nJust mention "${skillName}" in your prompt and Claude will use it.${colors.reset}`);
+      log(`${colors.dim}The skill is now available in your default global Agent Skills location.\nCompatible agents can pick it up from there.${colors.reset}`);
     } else {
-      log(`${colors.dim}The skill is installed in .agents/skills/ for this project.\nMultiple agents (Claude, Cursor, Codex, Gemini CLI) can read it.${colors.reset}`);
+      log(`${colors.dim}The skill is installed in .agents/skills/ for this project.\nAny Agent Skills-compatible agent in this repo can read it.${colors.reset}`);
     }
     return true;
   } catch (e) {
@@ -3399,11 +3399,11 @@ ${colors.bold}Scopes:${colors.reset}
   ${colors.cyan}-p, --project${colors.reset}         .agents/skills/          Project, committed with your repo
 
 ${colors.bold}Source formats:${colors.reset}
-  swift                                          Install the Swift hub (defaults to Claude + Codex)
+  swift                                          Install the Swift hub (default global targets)
   install pdf                                    From this library
   install --collection swift-agent-skills        Install a curated collection
-  anthropics/skills                              Direct repo install (defaults to Claude + Codex)
-  ./local-path                                   Direct local repo install (defaults to Claude + Codex)
+  anthropics/skills                              Direct repo install (default global targets)
+  ./local-path                                   Direct local repo install (default global targets)
   install anthropics/skills                      All skills from a GitHub repo
   install anthropics/skills@frontend-design      One skill from a repo
   install anthropics/skills --skill pdf          Select specific skills
@@ -3422,20 +3422,25 @@ ${colors.bold}Options:${colors.reset}
   ${colors.cyan}--no-deps${colors.reset}             Skip dependency expansion for catalog installs
   ${colors.cyan}--agent <name>${colors.reset}        Install to a specific agent path (legacy)
 
+${colors.bold}Use it from an agent:${colors.reset}
+  Any Agent Skills-compatible agent with shell access can run this CLI directly
+  Prompts are optional. In non-TTY flows, pass explicit metadata like --area, --branch, and --why
+
 ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
 
 ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills                            Launch the terminal browser
-  npx ai-agent-skills swift                      Install the Swift hub to Claude + Codex
+  npx ai-agent-skills swift                      Install the Swift hub to the default global targets
   npx ai-agent-skills install frontend-design    Install to ~/.claude/skills/
   npx ai-agent-skills install pdf -p             Install to .agents/skills/
   npx ai-agent-skills install --collection swift-agent-skills -p
   npx ai-agent-skills init-library my-library    Create a managed workspace
   npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "I want this in my own library."
+  npx ai-agent-skills install frontend-design -p Install one workspace pick to project scope
   npx ai-agent-skills sync frontend-design -p    Refresh one installed skill in project scope
   npx ai-agent-skills build-docs                 Regenerate workspace docs
-  npx ai-agent-skills anthropics/skills          Install repo skills to Claude + Codex
+  npx ai-agent-skills anthropics/skills          Install repo skills to the default global targets
   npx ai-agent-skills install anthropics/skills  Install all skills from repo
   npx ai-agent-skills search workflow            Search the catalog
   npx ai-agent-skills curate frontend-design --branch Implementation
