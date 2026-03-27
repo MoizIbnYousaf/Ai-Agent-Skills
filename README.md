@@ -46,7 +46,7 @@ Use `ai-agent-skills` when you want a smaller library with shelves, provenance, 
 - Dependency-aware installs with `requires` and `--no-deps`
 - Installed status in both the CLI and TUI
 
-## Why Keep It
+##  Origins
 
 I launched this on December 17, 2025, before `skills.sh` existed and before the ecosystem had a clear default universal installer.
 
@@ -72,7 +72,7 @@ Upstream work stays upstream. That keeps the library lean.
 
 Any Agent Skills-compatible agent with shell access can run this CLI for you.
 
-The CLI already works that way. Prompts help, but they are optional. When the agent passes explicit metadata like `--area`, `--branch`, and `--why`, it can set up and curate a library without editing files by hand.
+The CLI already works that way. Prompts help, but they are optional. When the agent passes explicit metadata like `--area`, `--branch`, and `--`, it can set up and curate a library without editing files by hand.
 
 Full handoff: [FOR_YOUR_AGENT.md](./FOR_YOUR_AGENT.md)
 
@@ -142,10 +142,10 @@ npx ai-agent-skills init-library my-library
 cd my-library
 
 # Add a bundled pick, install it, refresh it, and rebuild the docs
-npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "I want this on my shelf."
+npx ai-agent-skills add frontend-design --area frontend --branch Implementation -- "I want this on my shelf."
 npx ai-agent-skills install frontend-design -p
 npx ai-agent-skills sync frontend-design -p
-npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing --why "I use this when I want browser-level checks in the workspace."
+npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing -- "I use this when I want browser-level checks in the workspace."
 npx ai-agent-skills build-docs
 ```
 
@@ -159,7 +159,7 @@ Start with a managed workspace, add a few skills, then keep your own shelves in 
 npx ai-agent-skills init-library my-library
 cd my-library
 
-npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "I want this on my shelf."
+npx ai-agent-skills add frontend-design --area frontend --branch Implementation -- "I want this on my shelf."
 npx ai-agent-skills install frontend-design -p
 npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing --why "I use this when I want browser-level checks in the workspace."
 npx ai-agent-skills sync frontend-design -p
