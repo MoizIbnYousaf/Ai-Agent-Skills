@@ -1,7 +1,7 @@
 {
   "name": "ai-agent-skills",
   "version": "3.5.0",
-  "description": "My curated agent skills library, with a CLI that installs from any source.",
+  "description": "Curated agent skills library and CLI installer.",
   "main": "cli.js",
   "bin": {
     "ai-agent-skills": "cli.js"

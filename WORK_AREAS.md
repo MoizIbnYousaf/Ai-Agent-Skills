@@ -1,8 +1,8 @@
 # Work Areas
 
-This is the shelf map for the library.
+Shelf map for the library.
 
-The repo folders stay flat under `skills/<name>/` for house copies. The catalog carries the real organization.
+House copies stay flat under `skills/<name>/`. The catalog holds the real structure.
 
 ## Frontend
 

@@ -1,11 +1,11 @@
 <h1 align="center">AI Agent Skills</h1>
 
 <p align="center">
-  <strong>My curated library of agent skills, and the package to curate your own.</strong>
+  <strong>My curated library of agent skills, plus the package to build your own.</strong>
 </p>
 
 <p align="center">
-  A personal bookshelf of skills for Claude Code, Codex, Cursor, and other <code>SKILL.md</code>-compatible agents.
+  A smaller library for Claude Code, Codex, Cursor, and other <code>SKILL.md</code>-compatible agents.
 </p>
 
 <!-- GENERATED:library-stats:start -->
@@ -19,33 +19,33 @@
 <p align="center"><sub>8 house copies · 47 cataloged upstream</sub></p>
 <!-- GENERATED:library-stats:end -->
 
-<p align="center"><em>The point is not to be a registry. The point is to be a bookshelf.</em></p>
+<p align="center"><em>Picked, shelved, and maintained by hand.</em></p>
 
-## What This Is
+## Library
 
 `ai-agent-skills` is a CLI library of agent skills for tools like Claude Code, Codex, Cursor, and other SKILL.md-compatible agents.
 
-The library is organized the way I actually work:
+I organize it the way I work:
 
 - Start with a shelf like `frontend` or `workflow`
-- See a small set of vetted skills, not every possible match
-- Keep provenance visible so upstream repos stay credited
-- Keep editorial notes visible so the curation is the product
+- Keep the set small enough to browse quickly
+- Keep provenance visible
+- Keep notes that explain why a skill is here
 
-If you want the broad open ecosystem, use `skills.sh`.
-If you want my shelves, use this repo.
+Use `skills.sh` for the broad ecosystem.
+Use this repo for my kept set.
 
-## Why This Repo Still Exists
+## Why Keep It
 
 I launched this on December 17, 2025, before `skills.sh` existed and before the ecosystem had a clear default universal installer.
 
-Originally this repo was that universal installer. That part still works.
+Originally this repo was that installer. That part still matters.
 
-What makes it worth keeping now is the library itself: the shelves, the provenance, and the editorial judgment. `skills.sh` is the broad open ecosystem. This repo is the smaller personal library I actually reach for.
+I keep it because the library itself has become useful: shelves, provenance, and notes that make the curation legible.
 
-## The Two-Tier Model
+## How It Works
 
-Every skill in the library is one of two things:
+Each skill here is either a house copy or a cataloged upstream pick.
 
 - `House copies`
   Local folders under `skills/<name>/`.
@@ -55,7 +55,7 @@ Every skill in the library is one of two things:
   Metadata in `skills.json` with no local folder.
   These stay upstream and install live from the source repo when you ask for them.
 
-The library stays lean because it does not pretend to own upstream content.
+Upstream work stays upstream. That keeps the library lean.
 
 ## Quick Start
 
@@ -92,16 +92,16 @@ Default install targets:
 
 Legacy agent-specific targets still work through `--agent <name>`.
 
-## How To Read The Library
+## Browse
 
-There are two main ways to browse it:
+Most browsing starts in one of two places:
 
 | View | Why it exists | Start here |
 | --- | --- | --- |
 | Shelves | The main way to understand the library: start with the kind of work, then drill into the small set of picks on that shelf. | `npx ai-agent-skills list` |
 | Sources | The provenance view: see which publishers feed which shelves and branches. | `npx ai-agent-skills info frontend-design` |
 
-Secondary surfaces still exist, but they are not the main taxonomy:
+The other views are still there. They are just secondary:
 
 - `npx ai-agent-skills browse` for the TUI
 - `npx ai-agent-skills list --collection my-picks` for a cross-shelf starter stack
@@ -110,7 +110,7 @@ Secondary surfaces still exist, but they are not the main taxonomy:
 
 ## Shelves
 
-These are the shelves. They are the product.
+The shelves are the main structure.
 
 <!-- GENERATED:shelf-table:start -->
 | Shelf | Skills | What it covers |
@@ -126,22 +126,22 @@ The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
 
 ## Collections
 
-Collections still exist, but they are secondary. They can be starter stacks or installable packs, but shelves are still the main taxonomy.
+Collections are smaller sets. Useful, but secondary to the shelves.
 
 <!-- GENERATED:collection-table:start -->
 | Collection | Why it exists | Start here |
 | --- | --- | --- |
-| `my-picks` | The smallest cross-shelf starter stack: the skills I would reach for first on a fresh setup. | `frontend-design`, `mcp-builder`, `pdf` |
-| `build-apps` | Frontend and design implementation skills for shipping polished product work. | `frontend-design`, `frontend-skill`, `shadcn` |
-| `swift-agent-skills` | A curated Swift and Apple-platform hub inside ai-agent-skills, collecting the main upstream Swift skills as one installable set. | `swiftui-pro`, `swiftui-ui-patterns`, `swiftui-design-principles` |
-| `build-systems` | Architecture, MCP, backend, and security picks for deeper engineering work. | `mcp-builder`, `backend-development`, `database-design` |
-| `test-and-debug` | The shelf for QA, regression, CI cleanup, observability, and debugging discipline. | `playwright`, `webapp-testing`, `gh-fix-ci` |
-| `docs-and-research` | File-heavy work, writing, docs, and research flows that end in something usable. | `pdf`, `doc-coauthoring`, `docx` |
+| `my-picks` | A short starter stack. These are the skills I reach for first. | `frontend-design`, `mcp-builder`, `pdf` |
+| `build-apps` | Frontend, UI, and design work for shipping polished apps. | `frontend-design`, `frontend-skill`, `shadcn` |
+| `swift-agent-skills` | The main Swift and Apple-platform set in this library. Install it all at once or pick from it. | `swiftui-pro`, `swiftui-ui-patterns`, `swiftui-design-principles` |
+| `build-systems` | Backend, architecture, MCP, and security work. | `mcp-builder`, `backend-development`, `database-design` |
+| `test-and-debug` | QA, debugging, CI cleanup, and observability. | `playwright`, `webapp-testing`, `gh-fix-ci` |
+| `docs-and-research` | Docs, files, research, and writing work. | `pdf`, `doc-coauthoring`, `docx` |
 <!-- GENERATED:collection-table:end -->
 
-## Catalog Curation
+## Curating The Catalog
 
-The `catalog` command is how I pull from upstream repos without vendoring everything.
+Use `catalog` when you want to add an upstream skill without vendoring it.
 
 ```bash
 npx ai-agent-skills catalog openai/skills --list
@@ -151,15 +151,15 @@ npx ai-agent-skills catalog conorluddy/ios-simulator-skill --skill ios-simulator
 npx ai-agent-skills catalog shadcn-ui/ui --skill shadcn --area frontend --branch Components
 ```
 
-That command does not copy the upstream skill into this repo.
-It adds metadata and editorial placement:
+It does not copy the skill into this repo.
+It adds metadata and placement:
 
 - which shelf it belongs on
 - what branch it lives under
 - why it earned a place
 - how it should install later
 
-For existing picks, `curate` is the fast loop:
+For existing picks, `curate` is the quick loop:
 
 ```bash
 npx ai-agent-skills curate frontend-design --branch Implementation
@@ -169,7 +169,7 @@ npx ai-agent-skills curate frontend-design --why "A stronger note that matches h
 npx ai-agent-skills curate review
 ```
 
-When I explicitly want a new house copy, `vendor` is the only path that does it:
+When I want a local copy, I use `vendor`:
 
 ```bash
 npx ai-agent-skills vendor <repo-or-path> --skill <name> --area <shelf> --branch <branch> --why "Why this deserves a local copy."
@@ -178,7 +178,7 @@ npx ai-agent-skills vendor <repo-or-path> --skill <name> --area mobile --branch 
 
 ## Source Repos
 
-Current source mix:
+Current upstream mix:
 
 <!-- GENERATED:source-table:start -->
 | Source repo | Skills |
@@ -212,8 +212,8 @@ Current source mix:
 | `vanab/swiftdata-agent-skill` | 1 |
 <!-- GENERATED:source-table:end -->
 
-The two major upstream publishers in this library are Anthropic and OpenAI.
-I do not import everything they ship. I browse, pick, and shelve.
+The two biggest upstream publishers in this library are Anthropic and OpenAI.
+I browse, pick, and shelve. I do not mirror everything they publish.
 
 ## Commands
 
@@ -258,8 +258,6 @@ npx ai-agent-skills vendor <repo-or-path> --skill <name> --area <shelf> --branch
 
 ## Testing
 
-There are two layers on purpose:
-
 - `npm test`
   Fast regression coverage for CLI behavior, schema rules, routing, and local install flows.
 - `npm run test:live`
@@ -269,7 +267,7 @@ There are two layers on purpose:
 
 ## Legacy Agent Support
 
-These still work through `--agent <name>`:
+Still supported through `--agent <name>`:
 
 - `claude`
 - `cursor`
@@ -284,19 +282,17 @@ These still work through `--agent <name>`:
 - `kilocode`
 - `project`
 
-## Why It Feels Different
+## What I Care About
 
-This repo is opinionated on purpose.
-
-- Small shelves beat giant taxonomies
-- Editorial notes beat anonymous tags
-- Provenance should stay visible
-- Upstream repos should stay upstream
-- A curated library should feel maintained, not harvested
+- Small shelves
+- Clear provenance
+- Notes that explain the keep
+- Upstream repos staying upstream
+- A library that looks maintained
 
 ## Contributing
 
-This is a curated library, not an open registry.
+This is a curated library.
 
 Read [CURATION.md](./CURATION.md) before opening a PR.
 

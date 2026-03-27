@@ -1788,7 +1788,7 @@ function listSkills(category = null, tags = null, collectionId = null, workArea 
     };
     log(`\n${colors.bold}Curated Library${colors.reset}`);
     log(`${colors.dim}${formatCount(counts.total, 'pick')} on ${formatCount(orderedAreas.length, 'shelf', 'shelves')} · ${formatCount(counts.house, 'house copy', 'house copies')} · ${formatCount(counts.upstream, 'cataloged upstream pick', 'cataloged upstream picks')}${colors.reset}`);
-    log(`${colors.dim}Small enough to scan. Opinionated enough to trust.${colors.reset}\n`);
+    log(`${colors.dim}Browse by shelf first.${colors.reset}\n`);
 
     orderedAreas.forEach(areaId => {
       const meta = getWorkAreaMeta(data, areaId);
@@ -2991,7 +2991,8 @@ function installFromLocalPath(source, agent = 'claude', dryRun = false) {
 
 function showHelp() {
   log(`
-${colors.bold}AI Agent Skills${colors.reset} \u2014 My curated agent skills library
+${colors.bold}AI Agent Skills${colors.reset}
+Curated agent skills library and installer
 
 ${colors.bold}Usage:${colors.reset}
   npx ai-agent-skills [command] [options]

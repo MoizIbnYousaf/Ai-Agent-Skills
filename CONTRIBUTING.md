@@ -1,12 +1,12 @@
 # Contributing to AI Agent Skills
 
-This repo is curated on purpose.
+This repo is curated.
 
 Most of the library is sourced from other repos, so attribution and provenance matter as much as the skill itself.
 
 Before you open a PR, read [CURATION.md](./CURATION.md).
 
-## What Makes A Good Addition
+## Good Additions
 
 A skill is a good fit when it is:
 
@@ -16,7 +16,7 @@ A skill is a good fit when it is:
 - well-structured and easy for an agent to follow
 - properly attributed
 
-If your skill is fine but does not really add much to the library, I would rather leave it out.
+If a skill is fine but does not add much, I would rather leave it out.
 
 ## Requirements
 
@@ -57,7 +57,7 @@ These are the top-level shelves:
 - `test-and-debug`
 - `docs-and-research`
 
-Not every skill needs to land in one of them. If it is better surfaced through tags and search, say that in the PR.
+Not every skill needs one. If tags and search do the job, say that in the PR.
 
 ## Review Bar
 
@@ -80,4 +80,4 @@ If you are improving a skill that is already here:
 
 ## Questions
 
-If you are not sure whether something belongs, open an issue first. That is usually faster than building the whole thing and finding out it is not a fit.
+If you are not sure whether something belongs, open an issue first. That is usually faster.

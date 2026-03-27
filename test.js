@@ -391,7 +391,7 @@ test('list command works', () => {
   const output = run('list');
   assertContains(output, 'Curated Library');
   assertContains(output, 'FRONTEND');
-  assertContains(output, 'Small enough to scan. Opinionated enough to trust.');
+  assertContains(output, 'Browse by shelf first.');
 });
 
 test('no-arg command falls back to help outside a TTY', () => {
@@ -470,7 +470,7 @@ test('README keeps the launch timeline and universal installer context', () => {
   const readme = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8');
   assertContains(readme, 'December 17, 2025');
   assertContains(readme, 'before `skills.sh` existed');
-  assertContains(readme, 'Originally this repo was that universal installer.');
+  assertContains(readme, 'Originally this repo was that installer.');
 });
 
 test('help output shows scope-based targets and legacy agent support', () => {

@@ -1,9 +1,9 @@
 # Curation Guide
 
-This repo is my keep pile.
+This is my keep pile.
 
-I am not trying to mirror every agent skill on the internet. I want a strong set of skills that I would actually keep on a machine, recommend to other developers, and keep improving over time.
-Most of those skills come from other repos, so curation here is as much about provenance and trust as it is about the skill text itself.
+I am not trying to mirror every agent skill on the internet. I want a strong set of skills I would actually keep on a machine, recommend, and keep improving.
+Most of them come from other repos, so curation here is as much about provenance and trust as it is about the skill text.
 
 ## What I Care About
 
@@ -15,7 +15,7 @@ I want skills here to be:
 - good enough to beat a generic prompt
 - worth maintaining
 
-If a skill does not clear that bar, I would rather leave it out.
+If a skill does not clear that bar, I leave it out.
 
 ## What Usually Does Not Belong
 
@@ -36,13 +36,13 @@ I keep the folder structure simple and let the catalog do the sorting.
 - `collections` are the shorter CLI shelves
 - `category`, `tags`, `source`, `sourceUrl`, `origin`, `syncMode`, `featured`, `verified`, and `trust` help with sorting and trust
 
-I do not want a deep folder tree. That usually makes install tooling worse and the repo harder to maintain.
+I do not want a deep folder tree. It makes install tooling worse and the repo harder to maintain.
 
 ## Work Areas And Collections
 
 The main browse model is work area first, source repo second.
 
-Collections are still useful, but they are not meant to cover everything.
+Collections are useful, but they are not meant to cover everything.
 
 - `my-picks`: the fastest way to understand my taste
 - `build-apps`: web and mobile product work with a high interface bar
@@ -57,7 +57,7 @@ Not every skill needs a collection. If something is useful but off to the side, 
 - `featured: true` means I would point people to that skill first
 - `verified: true` means I have personally checked it and I am comfortable signaling more trust
 
-I want those markers to mean something. They should stay a little hard to earn.
+Those markers should mean something. They should stay a little hard to earn.
 
 ## Trust Levels
 
@@ -76,7 +76,7 @@ I want those markers to mean something. They should stay a little hard to earn.
 
 I am keeping support focused on the major agents.
 
-I do not want to spend my time adding support for every new coding agent that launches, especially if I do not use it or do not think it will matter in six months.
+I do not want to spend time adding support for every new coding agent that launches, especially if I do not use it or do not think it will matter in six months.
 
 If support is here, it should be worth the maintenance burden.
 
@@ -94,11 +94,11 @@ When I add or update a skill, I try to answer these questions:
 
 ## If This Turns Into A Website
 
-The repo already has the shape for that.
+The structure is already here.
 
 - home page: library first, with work areas and source repos both visible
 - browse page: collections, tags, source repos, and search
 - skill page: source, tags, collections when relevant, install command
 - trust layer: featured, verified, and catalog trust state
 
-The repo should stay where the data lives. A site can just present it better.
+The repo should stay where the data lives. A site can present it better.

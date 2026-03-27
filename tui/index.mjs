@@ -105,8 +105,8 @@ const SOURCE_NOTES = {
 
 const CREATOR_HANDLE = '@moizibnyousaf';
 const LIBRARY_SIGNATURE = "Moiz's Curated Agent Skills Library";
-const LIBRARY_THESIS = 'Shelves, not search results.';
-const LIBRARY_SUPPORT = 'Small enough to scan. Opinionated enough to trust.';
+const LIBRARY_THESIS = 'Start with a shelf.';
+const LIBRARY_SUPPORT = 'A smaller library, kept by hand.';
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -1138,7 +1138,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
         title="Why it belongs"
         eyebrow="Editorial note"
         lines=${editorialLines}
-        footer="The first screen should explain why this earned a place on the shelf before it asks you to install anything."
+        footer="The first screen should tell you why a pick is here before it asks you to install it."
       />
       ${previewMode
         ? html`
@@ -1158,7 +1158,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
         title="Provenance"
         eyebrow="Shelf and source"
         lines=${provenanceLines}
-        footer="The library keeps placement and provenance visible so installs still feel trustworthy."
+        footer="Shelf placement and provenance stay visible here."
         variant="rail"
       />
       <${Inspector}
@@ -1193,7 +1193,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
                 'Use the open skills CLI to install this skill directly from its upstream repository.',
               ]}
               command=${skillsSpec.command}
-              footer="This path follows the external skills ecosystem instead of the vendored library copy."
+              footer="This path installs from the upstream repo."
               variant="rail"
             />
           `
@@ -1246,7 +1246,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
                       eyebrow="skills.sh"
                       lines=${['Use the open skills CLI to install this skill directly from its upstream repository.']}
                       command=${skillsSpec.command}
-                      footer="This path follows the external skills ecosystem instead of the vendored library copy."
+                      footer="This path follows the external skills ecosystem."
                     />
                   `
                 : null}
@@ -1254,7 +1254,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
                 title="Provenance"
                 eyebrow="Shelf and source"
                 lines=${provenanceLines}
-                footer="The library keeps placement and provenance visible on purpose."
+                footer="Shelf placement and provenance stay visible here."
               />
               <${Inspector}
                 title="Neighboring shelf picks"
@@ -2511,7 +2511,7 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
           breadcrumbs=${breadcrumbs}
           title=${rootMode === 'areas' ? LIBRARY_THESIS : 'Trusted publishers'}
           subtitle=${rootMode === 'areas'
-            ? 'Start with the work. Each shelf stays small enough to scan and opinionated enough to trust.'
+            ? 'Start with the work. Each shelf stays small enough to browse quickly.'
             : 'See where the picks come from and which lanes each publisher feeds into the library.'}
           metaItems=${[`${catalog.total} skills`, `${catalog.areas.length} shelves`, `${catalog.sources.length} sources`, activeTheme.label]}
           hint="Arrow keys move · Enter drills in · / searches · : command palette"
@@ -2913,7 +2913,7 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
       ${overlay?.type === 'repo-why'
         ? html`<${TextEntryOverlay}
             title="Why it belongs"
-            subtitle="The library only saves fully placed upstream picks."
+            subtitle="Only fully placed upstream picks get saved."
             value=${overlay.value}
             setValue=${(value) => setOverlay((currentOverlay) => ({...currentOverlay, value}))}
             viewport=${viewport}
