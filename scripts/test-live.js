@@ -139,8 +139,10 @@ function removeDir(dirPath) {
 function listFilesRecursive(rootDir, relativePrefix = '') {
   const entries = fs.readdirSync(path.join(rootDir, relativePrefix), { withFileTypes: true });
   const files = [];
+  const skipEntries = new Set(['.git', '.github', 'node_modules', '.DS_Store']);
 
   for (const entry of entries) {
+    if (skipEntries.has(entry.name)) continue;
     const relativePath = path.join(relativePrefix, entry.name);
     const absolutePath = path.join(rootDir, relativePath);
     if (entry.isDirectory()) {
@@ -442,6 +444,37 @@ function runInstallLifecycle(skill, sourceSnapshot, scope) {
   }
 }
 
+function runCollectionInstallFlow(collectionId, expectedSkills) {
+  const context = createIsolatedContext();
+
+  try {
+    const installResult = runCli(['install', '--collection', collectionId, '--project'], {
+      cwd: context.projectDir,
+      env: context.env,
+      timeout: 240000,
+    });
+    ensure(installResult.code === 0, `collection install failed for ${collectionId}`);
+
+    const installRoot = path.join(context.projectDir, '.agents', 'skills');
+    for (const skillName of expectedSkills) {
+      ensure(
+        fs.existsSync(path.join(installRoot, skillName, 'SKILL.md')),
+        `Expected ${skillName} to be installed for collection ${collectionId}`
+      );
+    }
+
+    return {
+      collectionId,
+      expectedSkills,
+      code: installResult.code,
+      durationMs: installResult.durationMs,
+      output: sanitizeForReport(installResult.combined),
+    };
+  } finally {
+    context.cleanup();
+  }
+}
+
 function resolveExpectBinary() {
   const result = runCommand('which', ['expect']);
   if (result.code !== 0) return null;
@@ -631,6 +664,7 @@ async function main() {
     catalogDiscovery: [],
     previews: [],
     skills: [],
+    collectionInstalls: [],
     tui: {
       enabled: !options.skipTui,
       available: false,
@@ -708,6 +742,17 @@ async function main() {
       }
     }
 
+    info('Running representative collection install flow');
+    const collectionInstall = runCollectionInstallFlow('test-and-debug', [
+      'playwright',
+      'webapp-testing',
+      'gh-fix-ci',
+      'sentry',
+      'best-practices',
+    ]);
+    report.collectionInstalls.push(collectionInstall);
+    pass('Collection install flow verified test-and-debug');
+
     const expectBinary = options.skipTui ? null : resolveExpectBinary();
     report.tui.available = Boolean(expectBinary);
 
@@ -735,7 +780,7 @@ async function main() {
         const viewportScenarios = [
           { columns: 80, rows: 24, expectedLines: ['Frontend', 'Backend'] },
           { columns: 100, rows: 30, expectedLines: ['Frontend', 'Backend', 'Docs', 'Testing'] },
-          { columns: 140, rows: 40, expectedLines: ['Frontend', 'Backend', 'Docs', 'Testing'] },
+          { columns: 140, rows: 40, expectedLines: ['Frontend', 'Mobile', 'Backend'] },
         ];
 
         report.tui.viewports = [];

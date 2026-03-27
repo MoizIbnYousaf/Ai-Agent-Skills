@@ -10,7 +10,7 @@ const path = require('path');
 const os = require('os');
 const { execSync, execFileSync } = require('child_process');
 const { loadCatalogData } = require('./lib/catalog-data.cjs');
-const { buildUpstreamCatalogEntry } = require('./lib/catalog-mutations.cjs');
+const { buildUpstreamCatalogEntry, addUpstreamSkillFromDiscovery } = require('./lib/catalog-mutations.cjs');
 const { generatedDocsAreInSync, renderGeneratedDocs } = require('./lib/render-docs.cjs');
 const { buildCatalog, getGitHubInstallSpec, getSkillsInstallSpec } = require('./tui/catalog.cjs');
 
@@ -283,6 +283,14 @@ test('catalog exposes curated collections with resolved skills', () => {
   assertContains(myPicks.skills.map(skill => skill.name).join(' '), 'frontend-design');
 });
 
+test('catalog collections expose install commands for curated packs', () => {
+  const catalog = buildCatalog();
+  const swiftPack = catalog.collections.find(collection => collection.id === 'swift-agent-skills');
+
+  assert(swiftPack, 'expected swift-agent-skills collection to exist');
+  assertEqual(swiftPack.installCommand, 'npx ai-agent-skills install --collection swift-agent-skills -p');
+});
+
 test('work area metadata is valid', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const workAreas = data.workAreas || [];
@@ -397,6 +405,8 @@ test('collections command works', () => {
   assertContains(output, 'Curated Collections');
   assertContains(output, 'My Picks');
   assertContains(output, 'build-apps');
+  assertContains(output, 'swift-agent-skills');
+  assertContains(output, 'install --collection swift-agent-skills -p');
 });
 
 test('collections command shows start-here recommendations', () => {
@@ -469,6 +479,10 @@ test('help output shows scope-based targets and legacy agent support', () => {
   assertContains(output, '.agents/skills/');
   assertContains(output, 'Legacy agents');
   assertContains(output, '--agent');
+  assertContains(output, '--collection');
+  assertContains(output, 'Direct repo install (defaults to Claude + Codex)');
+  assertContains(output, 'npx ai-agent-skills swift');
+  assertContains(output, 'swift-agent-skills');
 });
 
 test('invalid skill name rejected', () => {
@@ -480,6 +494,54 @@ test('dry-run shows preview', () => {
   const output = run('install pdf --dry-run');
   assertContains(output, 'Dry Run');
   assertContains(output, 'Would install');
+});
+
+test('collection dry-run shows resolved Swift pack', () => {
+  const output = run('install --collection swift-agent-skills --dry-run -p');
+  assertContains(output, 'Dry Run');
+  assertContains(output, 'Would install collection: Swift Agent Skills [swift-agent-skills]');
+  assertContains(output, 'Skills: 24');
+  assertContains(output, 'swiftui-pro');
+  assertContains(output, 'ios-simulator-skill');
+});
+
+test('swift shortcut installs the Swift hub to Claude and Codex by default', () => {
+  const output = run('swift --dry-run');
+  assertContains(output, 'Would install collection: Swift Agent Skills [swift-agent-skills]');
+  assertContains(output, path.join(os.homedir(), '.claude', 'skills'));
+  assertContains(output, path.join(os.homedir(), '.codex', 'skills'));
+});
+
+test('swift shortcut honors explicit project scope', () => {
+  const output = run('swift --dry-run -p');
+  assertContains(output, 'Would install collection: Swift Agent Skills [swift-agent-skills]');
+  assertContains(output, `Targets: ${path.join(__dirname, '.agents', 'skills')}`);
+  assertNotContains(output, path.join(os.homedir(), '.codex', 'skills'));
+});
+
+test('swift shortcut supports list mode', () => {
+  const output = run('swift --list');
+  assertContains(output, 'Swift Agent Skills');
+  assertContains(output, '24 picks');
+  assertContains(output, 'swiftui-pro');
+});
+
+test('collection install honors legacy aliases', () => {
+  const output = run('install --collection web-product --dry-run');
+  assertContains(output, 'now maps to "build-apps"');
+  assertContains(output, 'Would install collection: Build Apps [build-apps]');
+});
+
+test('collection install reports retired collections cleanly', () => {
+  const output = run('install --collection creative-media --dry-run');
+  assertContains(output, 'no longer a top-level collection');
+});
+
+test('collection install reports unknown collections cleanly', () => {
+  const output = run('install --collection totally-not-real --dry-run');
+  assertContains(output, 'Unknown collection "totally-not-real"');
+  assertContains(output, 'Available collections:');
+  assertContains(output, 'swift-agent-skills');
 });
 
 test('nested GitHub skill path install dry-run works', () => {
@@ -577,10 +639,26 @@ test('work area list shows collection badges', () => {
   assertContains(output, '{My Picks, Build Apps}');
 });
 
+test('mobile work area filter works', () => {
+  const output = run('list --work-area mobile');
+  assertContains(output, 'MOBILE');
+  assertContains(output, 'swiftui-pro');
+  assertContains(output, 'Mobile / Swift / SwiftUI');
+  assertContains(output, '{Swift Agent Skills}');
+});
+
 test('collection filter works', () => {
   const output = run('list --collection build-apps');
   assertContains(output, 'Build Apps');
   assertContains(output, 'frontend-design');
+});
+
+test('swift collection filter works', () => {
+  const output = run('list --collection swift-agent-skills');
+  assertContains(output, 'Swift Agent Skills');
+  assertContains(output, 'swiftui-pro');
+  assertContains(output, '24 picks');
+  assertContains(output, 'ios-simulator-skill');
 });
 
 test('legacy collection alias works', () => {
@@ -812,6 +890,40 @@ test('source parser: path traversal in source rejected', () => {
   );
 });
 
+test('direct source shortcut installs a local skill repo to Claude and Codex by default', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-direct-install-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'direct-shortcut');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: direct-shortcut\ndescription: Shortcut install\n---\n# Direct Shortcut');
+
+    const output = runArgs([tmpDir, '--dry-run']);
+    assertContains(output, 'Dry Run');
+    assertContains(output, 'Would install 1 skill(s) to 2 target(s)');
+    assertContains(output, path.join(os.homedir(), '.claude', 'skills'));
+    assertContains(output, path.join(os.homedir(), '.codex', 'skills'));
+    assertContains(output, 'direct-shortcut');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('direct source shortcut supports list mode for local skill repos', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-direct-list-'));
+  try {
+    const skillDir = path.join(tmpDir, 'skills', 'direct-list');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: direct-list\ndescription: Shortcut list\n---\n# Direct List');
+
+    const output = runArgs([tmpDir, '--list']);
+    assertContains(output, 'Available Skills');
+    assertContains(output, 'direct-list');
+    assertNotContains(output, 'Unknown command');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 // ============ V3 SOURCE-REPO INSTALL TESTS ============
 
 test('source-repo --list flag shows available skills', () => {
@@ -960,6 +1072,33 @@ test('cataloged upstream dry-run reports sparse checkout path', () => {
   const output = run('install frontend-skill --dry-run');
   assertContains(output, 'Clone mode: sparse checkout');
   assertContains(output, 'openai/skills/skills/.curated/frontend-skill');
+});
+
+test('collection install succeeds for project scope with mixed sources', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'collection-install-'));
+  const homeDir = path.join(tmpDir, 'home');
+  fs.mkdirSync(homeDir, { recursive: true });
+
+  try {
+    const result = runCommandResult(['install', '--collection', 'test-and-debug', '-p'], {
+      cwd: tmpDir,
+      env: { ...process.env, HOME: homeDir },
+    });
+    const combined = `${result.stdout}${result.stderr}`;
+    assertEqual(result.status, 0, 'collection install should succeed');
+    assertContains(combined, 'Collection install finished: 5 skills completed');
+    assertContains(combined, 'Installed 2 skill(s)');
+
+    const installRoot = path.join(tmpDir, '.agents', 'skills');
+    ['playwright', 'webapp-testing', 'gh-fix-ci', 'sentry', 'best-practices'].forEach((skillName) => {
+      assert(
+        fs.existsSync(path.join(installRoot, skillName, 'SKILL.md')),
+        `Expected ${skillName} to be installed into the project collection target`
+      );
+    });
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('skills.json keeps explicit tier, vendored, and distribution fields', () => {
@@ -1322,6 +1461,39 @@ test('upstream catalog entries are forced to upstream/live metadata', () => {
   assertEqual(entry.installSource, 'openai/skills/skills/tmp-upstream-skill');
 });
 
+test('upstream catalog addition can append collection membership', () => {
+  const snapshot = snapshotCatalogFiles();
+  const skillName = `tmp-upstream-${Date.now()}`;
+
+  try {
+    const nextData = addUpstreamSkillFromDiscovery({
+      source: 'openai/skills',
+      parsed: { type: 'github', owner: 'openai', repo: 'skills', url: 'https://github.com/openai/skills' },
+      discoveredSkill: {
+        name: skillName,
+        description: 'Use when testing upstream collection membership.',
+        relativeDir: `skills/${skillName}`,
+        frontmatter: { author: 'OpenAI', license: 'MIT' },
+      },
+      fields: {
+        workArea: 'frontend',
+        branch: 'Testing',
+        whyHere: 'This is a real whyHere long enough to verify collection membership on upstream additions.',
+        trust: 'reviewed',
+        tags: 'test,upstream',
+        labels: 'editorial',
+        collections: 'build-systems',
+      },
+    });
+
+    const collection = nextData.collections.find((entry) => entry.id === 'build-systems');
+    assert(collection, 'build-systems collection should exist');
+    assert(collection.skills.includes(skillName), 'new upstream skill should be added to the requested collection');
+  } finally {
+    restoreCatalogFiles(snapshot);
+  }
+});
+
 test('curate review command prints the derived queue', () => {
   const result = runCommandResult(['curate', 'review']);
   assertEqual(result.status, 0, 'curate review should succeed');
@@ -1342,6 +1514,46 @@ test('curate command updates a skill field and regenerates docs', () => {
     const sync = generatedDocsAreInSync(loadCatalogData());
     assert(sync.readmeMatches, 'README should stay synced after curate');
     assert(sync.workAreasMatches, 'WORK_AREAS should stay synced after curate');
+  } finally {
+    restoreCatalogFiles(snapshot);
+  }
+});
+
+test('curate command can add a skill to a collection', () => {
+  const snapshot = snapshotCatalogFiles();
+
+  try {
+    const result = runCommandResult(['curate', 'frontend-design', '--collection', 'build-systems']);
+    assertEqual(result.status, 0, 'curate add-to-collection should succeed');
+
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    const collection = data.collections.find((entry) => entry.id === 'build-systems');
+    assert(collection.skills.includes('frontend-design'), 'frontend-design should be added to build-systems');
+
+    const sync = generatedDocsAreInSync(loadCatalogData());
+    assert(sync.readmeMatches, 'README should stay synced after curate collection add');
+    assert(sync.workAreasMatches, 'WORK_AREAS should stay synced after curate collection add');
+  } finally {
+    restoreCatalogFiles(snapshot);
+  }
+});
+
+test('curate command can remove a skill from a selected collection', () => {
+  const snapshot = snapshotCatalogFiles();
+
+  try {
+    const result = runCommandResult(['curate', 'frontend-design', '--remove-from-collection', 'build-apps']);
+    assertEqual(result.status, 0, 'curate remove-from-collection should succeed');
+
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    const buildApps = data.collections.find((entry) => entry.id === 'build-apps');
+    const myPicks = data.collections.find((entry) => entry.id === 'my-picks');
+    assert(!buildApps.skills.includes('frontend-design'), 'frontend-design should be removed from build-apps');
+    assert(myPicks.skills.includes('frontend-design'), 'frontend-design should stay in unrelated collections');
+
+    const sync = generatedDocsAreInSync(loadCatalogData());
+    assert(sync.readmeMatches, 'README should stay synced after curate collection removal');
+    assert(sync.workAreasMatches, 'WORK_AREAS should stay synced after curate collection removal');
   } finally {
     restoreCatalogFiles(snapshot);
   }
@@ -1554,6 +1766,38 @@ test('vendor actually copies skill folder and updates skills.json', () => {
 
   } finally {
     // Revert: remove the vendored skill from catalog and disk
+    if (fs.existsSync(destFolder)) {
+      fs.rmSync(destFolder, { recursive: true, force: true });
+    }
+    restoreCatalogFiles(snapshot);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('vendor can add a house skill to a collection', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-collection-'));
+  const skillName = `vendor-collection-${Date.now()}`;
+  const destFolder = path.join(__dirname, 'skills', skillName);
+  const snapshot = snapshotCatalogFiles();
+
+  try {
+    const skillDir = path.join(tmpDir, 'skills', skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: Vendor collection test\n---\n# Test`);
+
+    const result = runCommandResult([
+      'vendor', tmpDir, '--skill', skillName,
+      '--area', 'frontend',
+      '--branch', 'Testing',
+      '--collection', 'build-apps',
+      '--why', 'This is a real whyHere long enough to verify vendor collection membership.',
+    ]);
+    assertEqual(result.status, 0, 'vendor with collection should succeed');
+
+    const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+    const collection = data.collections.find((entry) => entry.id === 'build-apps');
+    assert(collection.skills.includes(skillName), 'vendored skill should be added to the requested collection');
+  } finally {
     if (fs.existsSync(destFolder)) {
       fs.rmSync(destFolder, { recursive: true, force: true });
     }

@@ -16,6 +16,25 @@ The repo folders stay flat under `skills/<name>/` for house copies. The catalog 
 | Frontend (Community) | `userinterface-wiki` | raphaelsalaja |
 | Frontend (OpenAI) | `frontend-skill` | openai |
 
+## Mobile
+
+24 skills. Swift, SwiftUI, iOS, App Store, and Apple-platform development, with room for future React Native curation.
+
+| Branch | Skills | Source |
+| --- | --- | --- |
+| Swift / Accessibility | `ios-accessibility`, `swift-accessibility-skill`, `appkit-accessibility-auditor`, `swiftui-accessibility-auditor`, `uikit-accessibility-auditor` | dadederk, PasqualeVittoriosi, rgmez |
+| Swift / Architecture | `swift-architecture-skill` | efremidze |
+| Swift / Concurrency | `swift-concurrency-pro`, `swift-concurrency-expert`, `swift-concurrency` | twostraws, Dimillian, AvdLee |
+| Swift / Core Data | `core-data-expert` | AvdLee |
+| Swift / Language | `swift-api-design-guidelines-skill` | Erikote04 |
+| Swift / Performance | `swiftui-performance-audit` | Dimillian |
+| Swift / Security | `swift-security-expert` | ivan-magda |
+| Swift / SwiftData | `swiftdata-pro`, `swiftdata-expert-skill` | twostraws, vanab |
+| Swift / SwiftUI | `swiftui-pro`, `swiftui-ui-patterns`, `swiftui-design-principles`, `swiftui-view-refactor` | twostraws, Dimillian, arjitj2 |
+| Swift / Testing | `swift-testing-pro`, `swift-testing`, `swift-testing-expert` | twostraws, bocato, AvdLee |
+| Swift / Tools | `ios-simulator-skill` | conorluddy |
+| Swift / User Interface | `writing-for-interfaces` | andrewgleave |
+
 ## Backend
 
 3 skills. Infra, tooling, application architecture, and codebase depth.

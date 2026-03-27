@@ -100,6 +100,9 @@ const LEGACY_COLLECTION_ALIASES = {
   }
 };
 
+const SWIFT_SHORTCUT = 'swift';
+const UNIVERSAL_DEFAULT_AGENTS = ['claude', 'codex'];
+
 function log(msg) { console.log(msg); }
 function success(msg) { console.log(`${colors.green}${colors.bold}${msg}${colors.reset}`); }
 function info(msg) { console.log(`${colors.cyan}${msg}${colors.reset}`); }
@@ -301,6 +304,10 @@ function resolveCollection(data, collectionId) {
     unknown: false,
     retired: false
   };
+}
+
+function uniquePaths(paths) {
+  return [...new Set((paths || []).filter(Boolean))];
 }
 
 function getCollectionsForSkill(data, skillName) {
@@ -549,6 +556,7 @@ function parseArgs(args) {
     category: null,
     workArea: null,
     collection: null,
+    collectionRemove: null,
     skillFilters: [],     // v3: --skill flag values
     listMode: false,      // v3: --list flag
     yes: false,           // v3: --yes flag (non-interactive)
@@ -675,6 +683,10 @@ function parseArgs(args) {
       result.collection = args[i + 1];
       i++;
     }
+    else if (arg === '--remove-from-collection') {
+      result.collectionRemove = args[i + 1];
+      i++;
+    }
     else if (arg.startsWith('--')) {
       const potentialAgent = arg.replace(/^--/, '');
       if (validAgents.includes(potentialAgent)) {
@@ -708,18 +720,22 @@ function parseArgs(args) {
 }
 
 // v3: resolve install target path from scope/agent flags
-function resolveInstallPath(parsed) {
+function resolveInstallPath(parsed, options = {}) {
   // 1. Explicit legacy --agent override
   if (parsed.explicitAgent && parsed.agents.length > 0) {
-    return parsed.agents.map(a => AGENT_PATHS[a] || SCOPES.global);
+    return uniquePaths(parsed.agents.map(a => AGENT_PATHS[a] || SCOPES.global));
   }
   // 2. --all installs to both scopes
   if (parsed.all) {
-    return [SCOPES.global, SCOPES.project];
+    return uniquePaths([SCOPES.global, SCOPES.project]);
   }
   // 3. Explicit scope flag
   if (parsed.scope === 'project') return [SCOPES.project];
   if (parsed.scope === 'global') return [SCOPES.global];
+  // 4. Optional default agents for direct source shortcuts
+  if (Array.isArray(options.defaultAgents) && options.defaultAgents.length > 0) {
+    return uniquePaths(options.defaultAgents.map((agent) => AGENT_PATHS[agent] || SCOPES.global));
+  }
   // 4. Default: global
   return [SCOPES.global];
 }
@@ -751,6 +767,37 @@ function resolveScopeLabel(targetPath) {
   if (targetPath === SCOPES.global) return 'global';
   if (targetPath === SCOPES.project) return 'project';
   return 'legacy';
+}
+
+function isKnownCommand(command) {
+  return new Set([
+    'browse', 'b',
+    SWIFT_SHORTCUT,
+    'list', 'ls',
+    'collections',
+    'install', 'i', 'add',
+    'uninstall', 'remove', 'rm',
+    'update', 'upgrade',
+    'search', 's', 'find',
+    'info', 'show',
+    'preview',
+    'catalog',
+    'curate',
+    'vendor',
+    'check',
+    'doctor',
+    'validate',
+    'init',
+    'config',
+    'help',
+    '--help',
+    '-h',
+  ]).has(command);
+}
+
+function isImplicitSourceCommand(command) {
+  const parsed = parseSource(command);
+  return parsed.type !== 'catalog';
 }
 
 // ============ SAFE FILE OPERATIONS ============
@@ -983,6 +1030,133 @@ function installSkillToScope(skillName, scopePath, scopeLabel, dryRun = false) {
     error(`Failed to install skill: ${e.message}`);
     return false;
   }
+}
+
+function getCollectionSkillsInOrder(data, collection) {
+  const orderedSkills = [];
+  for (const skillName of collection.skills || []) {
+    const skill = findSkillByName(data, skillName);
+    if (skill) {
+      orderedSkills.push(skill);
+    }
+  }
+  return orderedSkills;
+}
+
+function buildCollectionInstallOperations(skills) {
+  const operations = [];
+
+  for (const skill of skills) {
+    if (!skill) continue;
+
+    if (skill.tier !== 'upstream' || !skill.source) {
+      operations.push({
+        type: 'skill',
+        skills: [skill],
+      });
+      continue;
+    }
+
+    const previous = operations[operations.length - 1];
+    if (previous && previous.type === 'upstream' && previous.source === skill.source) {
+      previous.skills.push(skill);
+      continue;
+    }
+
+    operations.push({
+      type: 'upstream',
+      source: skill.source,
+      skills: [skill],
+    });
+  }
+
+  return operations;
+}
+
+async function installCollection(collectionId, parsed, installPaths) {
+  const data = loadSkillsJson();
+  const resolution = resolveCollection(data, collectionId);
+
+  if (!resolution.collection) {
+    warn(resolution.message);
+    if (resolution.unknown) {
+      printCollectionSuggestions(data);
+    }
+    return false;
+  }
+
+  if (resolution.message) {
+    info(resolution.message);
+  }
+
+  const orderedSkills = getCollectionSkillsInOrder(data, resolution.collection);
+  if (orderedSkills.length === 0) {
+    warn(`Collection "${resolution.collection.id}" has no installable skills.`);
+    return false;
+  }
+
+  const operations = buildCollectionInstallOperations(orderedSkills);
+  const targetList = installPaths.join(', ');
+
+  if (parsed.dryRun) {
+    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+    info(`Would install collection: ${resolution.collection.title} [${resolution.collection.id}]`);
+    info(`Skills: ${orderedSkills.length}`);
+    info(`Targets: ${targetList}`);
+    orderedSkills.forEach((skill) => {
+      const sourceLabel = skill.tier === 'upstream'
+        ? `live from ${skill.installSource || skill.source}`
+        : 'bundled house copy';
+      log(`  ${colors.green}${skill.name}${colors.reset} ${colors.dim}(${sourceLabel})${colors.reset}`);
+    });
+    return true;
+  }
+
+  log(`\n${colors.bold}Installing Collection${colors.reset}`);
+  info(`${resolution.collection.title} [${resolution.collection.id}]`);
+  info(`Targets: ${targetList}`);
+
+  let completed = 0;
+  let failed = 0;
+
+  for (const operation of operations) {
+    if (operation.type === 'upstream') {
+      const success = await installFromSource(
+        operation.source,
+        parseSource(operation.source),
+        installPaths,
+        operation.skills.map((skill) => skill.name),
+        false,
+        true,
+        false,
+      );
+
+      if (success) completed += operation.skills.length;
+      else failed += operation.skills.length;
+      continue;
+    }
+
+    for (const skill of operation.skills) {
+      let skillSucceeded = true;
+      for (const targetPath of installPaths) {
+        if (!installSkill(skill.name, null, false, targetPath)) {
+          skillSucceeded = false;
+        }
+      }
+
+      if (skillSucceeded) completed += 1;
+      else failed += 1;
+    }
+  }
+
+  if (completed > 0) {
+    success(`\nCollection install finished: ${completed} skill${completed === 1 ? '' : 's'} completed`);
+  }
+  if (failed > 0) {
+    warn(`${failed} skill${failed === 1 ? '' : 's'} failed during collection install`);
+  }
+
+  return completed > 0;
 }
 
 function showAgentInstructions(agent, skillName, destPath) {
@@ -1747,7 +1921,7 @@ function showCollections() {
   }
 
   log(`\n${colors.bold}Curated Collections${colors.reset} (${collections.length} total)\n`);
-  log(`${colors.dim}These are cross-shelf reading lists layered on top of the main work-area shelves.${colors.reset}\n`);
+  log(`${colors.dim}These are curated sets layered on top of the main work-area shelves. Some are starter stacks; some are full installable packs.${colors.reset}\n`);
 
   collections.forEach(collection => {
     const startHere = getCollectionStartHere(collection);
@@ -1759,6 +1933,7 @@ function showCollections() {
     log(`  ${colors.dim}Start here:${colors.reset} ${startHere.join(', ')}`);
     log(`  ${colors.green}${collection.skills.length} skills${colors.reset} · ${sample}${more}`);
     log(`  ${colors.dim}npx ai-agent-skills list --collection ${collection.id}${colors.reset}\n`);
+    log(`  ${colors.dim}npx ai-agent-skills install --collection ${collection.id} -p${colors.reset}\n`);
   });
 }
 
@@ -1954,6 +2129,11 @@ async function promptForEditorialFields(initialFields, options = {}) {
         'Labels (comma-separated)',
         Array.isArray(fields.labels) ? fields.labels.join(', ') : fields.labels || ''
       );
+      fields.collections = await promptLine(
+        rl,
+        'Collections (comma-separated)',
+        Array.isArray(fields.collections) ? fields.collections.join(', ') : fields.collections || ''
+      );
       fields.notes = await promptLine(rl, 'Notes', fields.notes || '');
       fields.trust = await promptLine(rl, 'Trust', fields.trust || 'listed');
       if (!fields.description && options.allowDescriptionPrompt) {
@@ -2016,6 +2196,8 @@ function buildCurateChanges(parsed) {
   if (parsed.featured !== null) changes.featured = parsed.featured;
   if (parsed.lastVerified !== null) changes.lastVerified = parsed.lastVerified;
   if (parsed.clearVerified) changes.clearVerified = true;
+  if (parsed.collection !== null) changes.collectionsAdd = parsed.collection;
+  if (parsed.collectionRemove !== null) changes.collectionsRemove = parsed.collectionRemove;
 
   return changes;
 }
@@ -2360,6 +2542,7 @@ async function catalogSkills(source, options = {}) {
       labels: options.labels || '',
       notes: options.notes || '',
       trust: options.trust || 'listed',
+      collections: options.collections || '',
     }, {
       mode: 'catalog',
       title: 'Add upstream skill to the library',
@@ -2478,6 +2661,7 @@ async function vendorSkill(source, options = {}) {
       lastVerified: options.lastVerified || '',
       notes: options.notes || '',
       labels: options.labels || '',
+      collections: options.collections || '',
       lastCurated: currentCatalogTimestamp(),
     }, {
       mode: 'vendor',
@@ -2581,7 +2765,7 @@ function runCurateCommand(skillName, parsed) {
   const changes = buildCurateChanges(parsed);
   if (Object.keys(changes).length === 0) {
     error('No curator edits specified.');
-    log('Use flags like --area, --branch, --why, --notes, --tags, --labels, --trust, --feature, or --remove --yes.');
+    log('Use flags like --area, --branch, --why, --notes, --tags, --labels, --collection, --remove-from-collection, --trust, --feature, or --remove --yes.');
     process.exitCode = 1;
     return false;
   }
@@ -2659,7 +2843,7 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
           log(`    ${colors.dim}${skill.description}${colors.reset}`);
         }
       }
-      log(`\n${colors.dim}Install: npx ai-agent-skills install ${source} --skill <name>${colors.reset}`);
+      log(`\n${colors.dim}Install: npx ai-agent-skills ${source} --skill <name>${colors.reset}`);
       return true;
     }
 
@@ -2810,7 +2994,8 @@ ${colors.bold}Usage:${colors.reset}
 
 ${colors.bold}Commands:${colors.reset}
   ${colors.green}browse${colors.reset}                Browse the library in the terminal
-  ${colors.green}install <source>${colors.reset}      Install skills (from library, GitHub, git URL, or local path)
+  ${colors.green}swift${colors.reset}                 Install the curated Swift hub
+  ${colors.green}install <source>${colors.reset}      Install skills from the library, a collection, GitHub, git URL, or a local path
   ${colors.green}list${colors.reset}                  List catalog skills
   ${colors.green}search <query>${colors.reset}        Search the catalog
   ${colors.green}info <name>${colors.reset}           Show skill details and provenance
@@ -2832,7 +3017,11 @@ ${colors.bold}Scopes:${colors.reset}
   ${colors.cyan}-p, --project${colors.reset}         .agents/skills/          Project, committed with your repo
 
 ${colors.bold}Source formats:${colors.reset}
+  swift                                          Install the Swift hub (defaults to Claude + Codex)
   install pdf                                    From this library
+  install --collection swift-agent-skills        Install a curated collection
+  anthropics/skills                              Direct repo install (defaults to Claude + Codex)
+  ./local-path                                   Direct local repo install (defaults to Claude + Codex)
   install anthropics/skills                      All skills from a GitHub repo
   install anthropics/skills@frontend-design      One skill from a repo
   install anthropics/skills --skill pdf          Select specific skills
@@ -2842,6 +3031,7 @@ ${colors.bold}Source formats:${colors.reset}
 ${colors.bold}Options:${colors.reset}
   ${colors.cyan}-g, --global${colors.reset}          Install to global scope (default)
   ${colors.cyan}-p, --project${colors.reset}         Install to project scope (.agents/skills/)
+  ${colors.cyan}--collection <id>${colors.reset}     Install or filter a curated collection
   ${colors.cyan}--skill <name>${colors.reset}        Select specific skills from a source
   ${colors.cyan}--list${colors.reset}                List available skills without installing
   ${colors.cyan}--yes${colors.reset}                 Skip prompts (for CI/CD)
@@ -2853,15 +3043,18 @@ ${colors.bold}Categories:${colors.reset}
   development, document, creative, business, productivity
 
 ${colors.bold}Work areas:${colors.reset}
-  frontend, backend, docs, testing, workflow, research, design, business, ai, devops
+  frontend, backend, docs, testing, workflow, research, design, business, ai, devops, mobile
 
 ${colors.bold}Collections:${colors.reset}
-  my-picks, build-apps, build-systems, test-and-debug, docs-and-research
+  my-picks, build-apps, build-systems, test-and-debug, docs-and-research, swift-agent-skills
 
 ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills                            Launch the terminal browser
+  npx ai-agent-skills swift                      Install the Swift hub to Claude + Codex
   npx ai-agent-skills install frontend-design    Install to ~/.claude/skills/
   npx ai-agent-skills install pdf -p             Install to .agents/skills/
+  npx ai-agent-skills install --collection swift-agent-skills -p
+  npx ai-agent-skills anthropics/skills          Install repo skills to Claude + Codex
   npx ai-agent-skills install anthropics/skills  Install all skills from repo
   npx ai-agent-skills search testing             Search the catalog
   npx ai-agent-skills curate frontend-design --branch "UI Craft"
@@ -3184,6 +3377,24 @@ async function main() {
     return;
   }
 
+  if (command === SWIFT_SHORTCUT) {
+    if (listMode) {
+      listSkills(category, tags, 'swift-agent-skills', workArea);
+      return;
+    }
+
+    const swiftInstallPaths = resolveInstallPath(parsed, { defaultAgents: UNIVERSAL_DEFAULT_AGENTS });
+    await installCollection('swift-agent-skills', parsed, swiftInstallPaths);
+    return;
+  }
+
+  if (!isKnownCommand(command) && isImplicitSourceCommand(command)) {
+    const source = parseSource(command);
+    const installPaths = resolveInstallPath(parsed, { defaultAgents: UNIVERSAL_DEFAULT_AGENTS });
+    await installFromSource(command, source, installPaths, skillFilters, listMode, yes, dryRun);
+    return;
+  }
+
   // Handle config commands specially
   if (command === 'config') {
     const configArgs = args.slice(1);
@@ -3251,13 +3462,20 @@ async function main() {
     case 'install':
     case 'i':
     case 'add': {
-      if (!param) {
-        error('Please specify a skill name, GitHub repo, or local path.');
+      if (!param && !collection) {
+        error('Please specify a skill name, collection, GitHub repo, or local path.');
         log('Usage: npx ai-agent-skills install <source> [-p]');
+        log('       npx ai-agent-skills install --collection <id> [-p]');
         process.exit(1);
       }
-      const source = parseSource(param);
       const installPaths = resolveInstallPath(parsed);
+
+      if (collection) {
+        await installCollection(collection, parsed, installPaths);
+        return;
+      }
+
+      const source = parseSource(param);
 
       if (source.type === 'catalog') {
         // Install from bundled library (original flow)
@@ -3353,6 +3571,7 @@ async function main() {
         trust,
         whyHere: why,
         description,
+        collections: collection,
       });
       return;
     }
@@ -3381,6 +3600,7 @@ async function main() {
         trust,
         whyHere: why,
         description,
+        collections: collection,
         lastVerified,
         featured,
         clearVerified,

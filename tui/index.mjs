@@ -2560,7 +2560,7 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
             ...currentCollection.workAreaTitles.slice(0, 3),
             activeTheme.label,
           ]}
-          hint="Arrow keys move across skills · Enter opens a skill · b goes back"
+          hint="Arrow keys move across skills · Enter opens a skill · b goes back · install with the collection command below"
           viewport=${viewport}
         />
         ${viewport.compact
@@ -2573,7 +2573,7 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
                   startHere,
                   `Main sources: ${currentCollection.sourceTitles.join(', ')}`,
                 ]}
-                footer="These are the fastest entry points before you browse the full shelf."
+                footer=${`Install this set: ${currentCollection.installCommand}`}
               />
               <${ShelfStrip}
                 items=${getCollectionSkillItems({skills: startHereSkills})}
@@ -2602,7 +2602,7 @@ function App({catalog: initialCatalog, scope, agent, onExit}) {
                 title=${selectedSkill.title}
                 eyebrow=${`${selectedSkill.workAreaTitle} · ${selectedSkill.sourceTitle} · ${selectedSkill.trust}`}
                 lines=${[selectedSkill.description, selectedSkill.whyHere]}
-                footer="Enter opens the focused skill"
+                footer=${`Enter opens the focused skill · ${currentCollection.installCommand}`}
               />
             `
           : null}

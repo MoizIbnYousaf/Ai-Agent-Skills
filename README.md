@@ -5,10 +5,10 @@ My curated agent skills library.
 There are a lot of skills now. These are the ones I actually keep around.
 
 <!-- GENERATED:library-stats:start -->
-- 36 skills total
-- 10 shelves
+- 60 skills total
+- 11 shelves
 - 11 house copies
-- 25 cataloged upstream
+- 49 cataloged upstream
 <!-- GENERATED:library-stats:end -->
 
 The point is not to be a registry. The point is to be a bookshelf.
@@ -61,8 +61,17 @@ npx ai-agent-skills list
 # Install a skill from the library
 npx ai-agent-skills install frontend-design
 
+# Install the Swift hub straight to Claude + Codex
+npx ai-agent-skills swift
+
+# Install an entire curated pack
+npx ai-agent-skills install --collection swift-agent-skills -p
+
 # Install to the project shelf
 npx ai-agent-skills install pdf -p
+
+# Install all skills from an upstream repo straight to Claude + Codex
+npx ai-agent-skills anthropics/skills
 
 # Browse a repo before adding or installing from it
 npx ai-agent-skills install openai/skills --list
@@ -88,6 +97,7 @@ Secondary surfaces still exist, but they are not the main taxonomy:
 
 - `npx ai-agent-skills browse` for the TUI
 - `npx ai-agent-skills list --collection my-picks` for a cross-shelf starter stack
+- `npx ai-agent-skills install --collection swift-agent-skills -p` for an installable curated pack
 - `npx ai-agent-skills curate review` for the curator cleanup queue
 
 ## Shelves
@@ -98,6 +108,7 @@ These are the shelves. They are the product.
 | Shelf | Skills | What it covers |
 | --- | --- | --- |
 | Frontend | 5 | Interface systems, web product craft, and frontend execution. |
+| Mobile | 24 | Swift, SwiftUI, iOS, App Store, and Apple-platform development, with room for future React Native curation. |
 | Backend | 3 | Infra, tooling, application architecture, and codebase depth. |
 | Docs | 6 | Documents, specs, file handling, and long-form output. |
 | Testing | 2 | Review, QA, regression work, and keeping product quality sharp. |
@@ -113,13 +124,14 @@ The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
 
 ## Collections
 
-Collections still exist, but they are secondary. They are small cross-shelf reading lists, not the main taxonomy.
+Collections still exist, but they are secondary. They can be starter stacks or installable packs, but shelves are still the main taxonomy.
 
 <!-- GENERATED:collection-table:start -->
 | Collection | Why it exists | Start here |
 | --- | --- | --- |
 | `my-picks` | The smallest cross-shelf starter stack: the skills I would reach for first on a fresh setup. | `frontend-design`, `mcp-builder`, `pdf` |
 | `build-apps` | Frontend and design implementation skills for shipping polished product work. | `frontend-design`, `frontend-skill`, `shadcn` |
+| `swift-agent-skills` | A curated Swift and Apple-platform hub inside ai-agent-skills, collecting the main upstream Swift skills as one installable set. | `swiftui-pro`, `swiftui-ui-patterns`, `swiftui-design-principles` |
 | `build-systems` | Architecture, MCP, backend, and security picks for deeper engineering work. | `mcp-builder`, `backend-development`, `database-design` |
 | `test-and-debug` | The shelf for QA, regression, CI cleanup, observability, and debugging discipline. | `playwright`, `webapp-testing`, `gh-fix-ci` |
 | `docs-and-research` | File-heavy work, writing, docs, and research flows that end in something usable. | `pdf`, `doc-coauthoring`, `docx` |
@@ -133,6 +145,7 @@ The `catalog` command is how I pull from upstream repos without vendoring everyt
 npx ai-agent-skills catalog openai/skills --list
 npx ai-agent-skills catalog openai/skills --skill linear --area workflow --branch Linear
 npx ai-agent-skills catalog openai/skills --skill security-best-practices --area backend --branch Security
+npx ai-agent-skills catalog conorluddy/ios-simulator-skill --skill ios-simulator-skill --area mobile --branch "Swift / Tools" --collection swift-agent-skills
 npx ai-agent-skills catalog shadcn-ui/ui --skill shadcn --area frontend --branch Components
 ```
 
@@ -148,6 +161,8 @@ For existing picks, `curate` is the fast loop:
 
 ```bash
 npx ai-agent-skills curate frontend-design --branch "Frontend (Anthropic)"
+npx ai-agent-skills curate ios-simulator-skill --collection swift-agent-skills
+npx ai-agent-skills curate ios-simulator-skill --remove-from-collection swift-agent-skills
 npx ai-agent-skills curate frontend-design --why "A stronger note that matches how I actually use it."
 npx ai-agent-skills curate review
 ```
@@ -156,6 +171,7 @@ When I explicitly want a new house copy, `vendor` is the only path that does it:
 
 ```bash
 npx ai-agent-skills vendor <repo-or-path> --skill <name> --area <shelf> --branch <branch> --why "Why this deserves a local copy."
+npx ai-agent-skills vendor <repo-or-path> --skill <name> --area mobile --branch "Swift / Tools" --collection swift-agent-skills --why "Why this deserves a place in the Swift pack."
 ```
 
 ## Source Repos
@@ -168,11 +184,30 @@ Current source mix:
 | `anthropics/skills` | 13 |
 | `openai/skills` | 9 |
 | `ComposioHQ/awesome-claude-skills` | 4 |
+| `Dimillian/Skills` | 4 |
 | `wshobson/agents` | 4 |
 | `MoizIbnYousaf/Ai-Agent-Skills` | 3 |
+| `rgmez/apple-accessibility-skills` | 3 |
+| `andrewgleave/skills` | 1 |
+| `arjitj2/swiftui-design-principles` | 1 |
+| `AvdLee/Core-Data-Agent-Skill` | 1 |
+| `AvdLee/Swift-Concurrency-Agent-Skill` | 1 |
+| `AvdLee/Swift-Testing-Agent-Skill` | 1 |
+| `bocato/swift-testing-agent-skill` | 1 |
+| `conorluddy/ios-simulator-skill` | 1 |
+| `dadederk/iOS-Accessibility-Agent-Skill` | 1 |
+| `efremidze/swift-architecture-skill` | 1 |
 | `emilkowalski/skill` | 1 |
+| `Erikote04/Swift-API-Design-Guidelines-Agent-Skill` | 1 |
+| `ivan-magda/swift-security-skill` | 1 |
+| `PasqualeVittoriosi/swift-accessibility-skill` | 1 |
 | `raphaelsalaja/userinterface-wiki` | 1 |
 | `shadcn-ui/ui` | 1 |
+| `twostraws/Swift-Concurrency-Agent-Skill` | 1 |
+| `twostraws/Swift-Testing-Agent-Skill` | 1 |
+| `twostraws/SwiftData-Agent-Skill` | 1 |
+| `twostraws/SwiftUI-Agent-Skill` | 1 |
+| `vanab/swiftdata-agent-skill` | 1 |
 <!-- GENERATED:source-table:end -->
 
 The two major upstream publishers in this library are Anthropic and OpenAI.
@@ -193,7 +228,10 @@ npx ai-agent-skills preview pdf
 
 # Install
 npx ai-agent-skills install <skill-name>
+npx ai-agent-skills swift
 npx ai-agent-skills install <skill-name> -p
+npx ai-agent-skills install --collection swift-agent-skills -p
+npx ai-agent-skills <owner/repo>
 npx ai-agent-skills install <owner/repo>
 npx ai-agent-skills install <owner/repo>@<skill-name>
 npx ai-agent-skills install <owner/repo> --skill <name>

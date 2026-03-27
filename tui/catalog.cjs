@@ -397,6 +397,7 @@ function buildCatalog() {
         authoredCount,
         workAreaTitles,
         sourceTitles,
+        installCommand: `npx ai-agent-skills install --collection ${collection.id} -p`,
         searchText: buildSearchText([
           collection.id,
           collection.title,
