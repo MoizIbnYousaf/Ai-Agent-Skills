@@ -1,6 +1,6 @@
 # For Your Agent
 
-Use this when you want your agent to set up a library for you.
+Use this when you want your agent to set up a library for you. just copy paste to ur gippty or clawd
 
 ## Paste this into your agent
 
