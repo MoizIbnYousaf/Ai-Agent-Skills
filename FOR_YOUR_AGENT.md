@@ -45,6 +45,8 @@ Follow this curator decision protocol:
    - use `npx ai-agent-skills list --area <work-area>` to browse a shelf
    - use `npx ai-agent-skills search <query>` when the user names a stack, tool, or capability
    - use `npx ai-agent-skills collections` to inspect starter packs that may already exist
+   - keep machine-readable reads tight with `--fields name,tier,workArea`
+   - use `--limit 10` on larger result sets before asking for more
    - if the user named multiple primary shelves, browse each of them before deciding what to add
 7. Keep the first pass small, around 3 to 8 skills.
 8. Choose the right mutation path:
@@ -106,6 +108,8 @@ Before curating, inspect what already exists.
 - Browse shelves with `npx ai-agent-skills list --area <work-area>`.
 - Search by tools or capabilities with `npx ai-agent-skills search <query>`.
 - Check `npx ai-agent-skills collections` when a ready-made pack may already cover part of the use case.
+- In machine-readable flows, prefer `--fields name,tier,workArea` first so the response stays small.
+- Add `--limit 10` when a shelf or search looks broad, then page further only if needed.
 - If the user named multiple primary shelves, browse each one before you start curating.
 
 Do not jump straight from `init-library` to a few guessed names unless the user already told you the exact skills they want.

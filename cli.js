@@ -183,13 +183,13 @@ const COMMAND_REGISTRY = {
     aliases: [],
     summary: 'Browse curated collections.',
     args: [],
-    flags: ['format'],
+    flags: ['fields', 'limit', 'offset', 'format'],
   },
   install: {
     aliases: ['i'],
     summary: 'Install skills from the library or an external source.',
     args: [{ name: 'source', required: false, type: 'string' }],
-    flags: ['project', 'global', 'collection', 'skill', 'list', 'yes', 'all', 'dryRun', 'noDeps', 'agent', 'agents', 'format'],
+    flags: ['project', 'global', 'collection', 'skill', 'list', 'yes', 'all', 'dryRun', 'noDeps', 'agent', 'agents', 'fields', 'limit', 'offset', 'format'],
   },
   add: {
     aliases: [],
@@ -225,7 +225,7 @@ const COMMAND_REGISTRY = {
     aliases: [],
     summary: 'Preview a skill body or upstream summary.',
     args: [{ name: 'name', required: true, type: 'string' }],
-    flags: ['format'],
+    flags: ['fields', 'format'],
   },
   catalog: {
     aliases: [],
@@ -333,6 +333,556 @@ function getFlagSchema(flagName) {
   };
 }
 
+function stringSchema(description = null, extra = {}) {
+  return {
+    type: 'string',
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function booleanSchema(description = null, extra = {}) {
+  return {
+    type: 'boolean',
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function integerSchema(description = null, extra = {}) {
+  return {
+    type: 'integer',
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function enumSchema(values, description = null, extra = {}) {
+  return {
+    type: 'string',
+    enum: values,
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function arraySchema(items, description = null, extra = {}) {
+  return {
+    type: 'array',
+    items,
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function objectSchema(properties, required = [], description = null, extra = {}) {
+  return {
+    type: 'object',
+    properties,
+    required,
+    additionalProperties: false,
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function oneOfSchema(variants, description = null, extra = {}) {
+  return {
+    oneOf: variants,
+    ...(description ? { description } : {}),
+    ...extra,
+  };
+}
+
+function nullableSchema(schema) {
+  return {
+    ...schema,
+    nullable: true,
+  };
+}
+
+function buildEnvelopeSchema(commandName, dataSchema, description = null) {
+  return {
+    format: 'json-envelope',
+    schema: objectSchema({
+      command: stringSchema('Resolved command name.', { const: resolveCommandAlias(commandName) }),
+      status: enumSchema(['ok', 'error'], 'Command status.'),
+      data: dataSchema,
+      errors: arraySchema(
+        objectSchema({
+          code: stringSchema('Stable machine-readable error code.'),
+          message: stringSchema('Human-readable error message.'),
+          hint: nullableSchema(stringSchema('Optional recovery hint.')),
+        }, ['code', 'message']),
+        'Structured errors.'
+      ),
+    }, ['command', 'status', 'data', 'errors'], description),
+  };
+}
+
+function buildNdjsonSchema(commandName, summarySchema, itemSchema, description = null, extraKinds = {}) {
+  return {
+    format: 'ndjson',
+    stream: true,
+    recordSchema: objectSchema({
+      command: stringSchema('Resolved command name.', { const: resolveCommandAlias(commandName) }),
+      status: enumSchema(['ok', 'error'], 'Command status.'),
+      data: objectSchema({
+        kind: stringSchema('Record type discriminator.'),
+      }, ['kind'], 'Per-record payload.'),
+      errors: arraySchema(
+        objectSchema({
+          code: stringSchema('Stable machine-readable error code.'),
+          message: stringSchema('Human-readable error message.'),
+          hint: nullableSchema(stringSchema('Optional recovery hint.')),
+        }, ['code', 'message'])
+      ),
+    }, ['command', 'status', 'data', 'errors'], description),
+    records: {
+      summary: summarySchema,
+      item: itemSchema,
+      ...extraKinds,
+    },
+  };
+}
+
+const STRING_OR_STRING_ARRAY_SCHEMA = oneOfSchema([
+  stringSchema('Comma-separated string form.'),
+  arraySchema(stringSchema('Individual value.'), 'Array form.'),
+], 'Accepts either a comma-separated string or an array of strings.');
+
+const COLLECTION_INPUT_SCHEMA = oneOfSchema([
+  stringSchema('Collection id.'),
+  arraySchema(stringSchema('Collection id.'), 'Collection ids.'),
+], 'Accepts one collection id or an array of collection ids.');
+
+const WORK_AREA_INPUT_SCHEMA = oneOfSchema([
+  stringSchema('Work area id.'),
+  objectSchema({
+    id: stringSchema('Work area id.'),
+    title: stringSchema('Display title.'),
+    description: stringSchema('Optional description.'),
+  }, ['id']),
+], 'Accepts a work area id or a full work area object.');
+
+const STARTER_COLLECTION_INPUT_SCHEMA = oneOfSchema([
+  stringSchema('Collection id.'),
+  objectSchema({
+    id: stringSchema('Collection id.'),
+    title: stringSchema('Display title.'),
+    description: stringSchema('Optional description.'),
+    skills: arraySchema(stringSchema('Skill name.'), 'Optional starter skill ids.'),
+  }, ['id']),
+], 'Accepts a collection id or a full collection object.');
+
+const SERIALIZED_SKILL_SCHEMA = objectSchema({
+  name: stringSchema('Skill name.'),
+  description: stringSchema('Skill description after sanitization.'),
+  workArea: nullableSchema(stringSchema('Work area id.')),
+  branch: nullableSchema(stringSchema('Branch label.')),
+  category: nullableSchema(stringSchema('Category id.')),
+  tier: enumSchema(TIER_ENUM, 'Catalog tier.'),
+  distribution: enumSchema(DISTRIBUTION_ENUM, 'Distribution mode.'),
+  source: nullableSchema(stringSchema('Source repo or source reference.')),
+  installSource: nullableSchema(stringSchema('Install source reference.')),
+  trust: nullableSchema(stringSchema('Trust level.')),
+  origin: nullableSchema(stringSchema('Origin label.')),
+  featured: booleanSchema('Featured flag.'),
+  verified: booleanSchema('Verified flag.'),
+  tags: arraySchema(stringSchema('Tag.')),
+  collections: arraySchema(stringSchema('Collection id.')),
+  installState: nullableSchema(stringSchema('Install state label.')),
+  whyHere: stringSchema('Curator note after sanitization.'),
+}, ['name', 'description', 'tier', 'distribution', 'featured', 'verified', 'tags', 'collections', 'whyHere']);
+
+function buildMutationStdinSchema(commandName) {
+  if (commandName === 'init-library') {
+    return objectSchema({
+      name: stringSchema('Library name.'),
+      workAreas: arraySchema(WORK_AREA_INPUT_SCHEMA, 'Optional custom starter work areas.'),
+      collections: arraySchema(STARTER_COLLECTION_INPUT_SCHEMA, 'Optional starter collections.'),
+      dryRun: booleanSchema('Preview without writing files.'),
+    }, ['name'], 'Read from stdin when `--json` is passed.');
+  }
+
+  if (commandName === 'uninstall') {
+    return objectSchema({
+      name: stringSchema('Installed skill name to remove.'),
+      dryRun: booleanSchema('Preview without deleting files.'),
+    }, ['name'], 'Read from stdin when `--json` is passed.');
+  }
+
+  if (commandName === 'curate') {
+    return objectSchema({
+      name: stringSchema('Catalog skill name to edit.'),
+      workArea: enumSchema(WORK_AREA_ENUM, 'Work area shelf id.'),
+      branch: stringSchema('Branch label.'),
+      category: enumSchema(CATEGORY_ENUM, 'Category id.'),
+      tags: STRING_OR_STRING_ARRAY_SCHEMA,
+      labels: STRING_OR_STRING_ARRAY_SCHEMA,
+      notes: stringSchema('Curator notes.'),
+      trust: enumSchema(TRUST_ENUM, 'Trust level.'),
+      whyHere: stringSchema('Why the skill belongs in the library.'),
+      description: stringSchema('Description override.'),
+      collections: COLLECTION_INPUT_SCHEMA,
+      removeFromCollection: stringSchema('Collection id to remove membership from.'),
+      featured: booleanSchema('Mark as featured.'),
+      clearVerified: booleanSchema('Clear verified flag.'),
+      remove: booleanSchema('Remove the skill from the catalog.'),
+      yes: booleanSchema('Skip confirmation for destructive actions.'),
+      dryRun: booleanSchema('Preview the edit without writing files.'),
+    }, ['name'], 'Read from stdin when `--json` is passed.');
+  }
+
+  if (commandName === 'add' || commandName === 'catalog' || commandName === 'vendor') {
+    return objectSchema({
+      source: stringSchema(commandName === 'add'
+        ? 'Bundled skill name, GitHub repo, git URL, or local path.'
+        : 'GitHub repo, git URL, or local path.'),
+      name: stringSchema('Skill name or fallback selector when the source is a bundled catalog entry.'),
+      skill: stringSchema('Explicit discovered skill name inside the source.'),
+      list: booleanSchema('List discovered skills without mutating the workspace.'),
+      workArea: enumSchema(WORK_AREA_ENUM, 'Work area shelf id from skills.json.'),
+      branch: stringSchema('Branch label from skills.json.'),
+      category: enumSchema(CATEGORY_ENUM, 'Category id from skills.json.'),
+      tags: STRING_OR_STRING_ARRAY_SCHEMA,
+      labels: STRING_OR_STRING_ARRAY_SCHEMA,
+      notes: stringSchema('Curator notes.'),
+      trust: enumSchema(TRUST_ENUM, 'Trust level.'),
+      whyHere: stringSchema('Curator note stored as `whyHere` in skills.json.'),
+      description: stringSchema('Description override stored in skills.json.'),
+      collections: COLLECTION_INPUT_SCHEMA,
+      lastVerified: stringSchema('Last verification date.'),
+      featured: booleanSchema('Mark as featured.'),
+      clearVerified: booleanSchema('Clear verified flag.'),
+      remove: booleanSchema('Remove the matching catalog entry.'),
+      ref: stringSchema('Optional Git ref for upstream sources.'),
+      dryRun: booleanSchema('Preview the mutation without writing files.'),
+    }, commandName === 'add' ? [] : ['source'], 'Read from stdin when `--json` is passed. Field names match the editable skills.json entry shape.');
+  }
+
+  return null;
+}
+
+function buildCommandInputSchema(commandName) {
+  const stdin = buildMutationStdinSchema(commandName);
+  return {
+    stdin,
+  };
+}
+
+function buildCommandOutputSchema(commandName) {
+  if (commandName === 'list') {
+    return buildNdjsonSchema(
+      'list',
+      objectSchema({
+        kind: enumSchema(['summary']),
+        total: integerSchema('Total matching skills.'),
+        returned: integerSchema('Returned skills after pagination.'),
+        limit: nullableSchema(integerSchema('Requested page size.')),
+        offset: integerSchema('Requested offset.'),
+        fields: arraySchema(stringSchema('Requested field.')),
+        filters: objectSchema({
+          category: nullableSchema(stringSchema('Category filter.')),
+          tags: nullableSchema(stringSchema('Tags filter.')),
+          collection: nullableSchema(stringSchema('Collection filter.')),
+          workArea: nullableSchema(stringSchema('Work area filter.')),
+        }, []),
+        collection: nullableSchema(objectSchema({
+          id: stringSchema('Collection id.'),
+          title: stringSchema('Collection title.'),
+          description: stringSchema('Collection description.'),
+        }, ['id', 'title', 'description'])),
+      }, ['kind', 'total', 'returned', 'offset', 'fields', 'filters', 'collection']),
+      objectSchema({
+        kind: enumSchema(['item']),
+        skill: SERIALIZED_SKILL_SCHEMA,
+      }, ['kind', 'skill']),
+      'One record per line in JSON mode.'
+    );
+  }
+
+  if (commandName === 'search') {
+    return buildNdjsonSchema(
+      'search',
+      objectSchema({
+        kind: enumSchema(['summary']),
+        query: stringSchema('Search query.'),
+        total: integerSchema('Total matching skills.'),
+        returned: integerSchema('Returned skills after pagination.'),
+        limit: nullableSchema(integerSchema('Requested page size.')),
+        offset: integerSchema('Requested offset.'),
+        fields: arraySchema(stringSchema('Requested field.')),
+        filters: objectSchema({
+          category: nullableSchema(stringSchema('Category filter.')),
+          collection: nullableSchema(stringSchema('Collection filter.')),
+          workArea: nullableSchema(stringSchema('Work area filter.')),
+        }, []),
+        suggestions: arraySchema(stringSchema('Fuzzy suggestion.')),
+      }, ['kind', 'query', 'total', 'returned', 'offset', 'fields', 'filters', 'suggestions']),
+      objectSchema({
+        kind: enumSchema(['item']),
+        skill: SERIALIZED_SKILL_SCHEMA,
+      }, ['kind', 'skill']),
+      'One record per line in JSON mode.'
+    );
+  }
+
+  if (commandName === 'collections') {
+    return buildNdjsonSchema(
+      'collections',
+      objectSchema({
+        kind: enumSchema(['summary']),
+        total: integerSchema('Total collections.'),
+      }, ['kind', 'total']),
+      objectSchema({
+        kind: enumSchema(['item']),
+        collection: objectSchema({
+          id: stringSchema('Collection id.'),
+          title: stringSchema('Collection title.'),
+          description: stringSchema('Collection description.'),
+          skillCount: integerSchema('Number of skills in the collection.'),
+          installedCount: integerSchema('Installed skills in the collection.'),
+          startHere: arraySchema(stringSchema('Recommended first skill.')),
+          skills: arraySchema(stringSchema('Skill name.')),
+        }, ['id', 'title', 'description', 'skillCount', 'installedCount', 'startHere', 'skills']),
+      }, ['kind', 'collection']),
+      'One record per line in JSON mode.'
+    );
+  }
+
+  if (commandName === 'info') {
+    return buildEnvelopeSchema(
+      'info',
+      objectSchema({
+        name: stringSchema('Requested skill name.'),
+        description: stringSchema('Skill description.'),
+        fields: arraySchema(stringSchema('Requested top-level field.'), 'Present only when `--fields` is used.', { nullable: true }),
+        skill: objectSchema({
+          ...SERIALIZED_SKILL_SCHEMA.properties,
+          sourceUrl: stringSchema('Canonical source URL.'),
+          syncMode: stringSchema('Sync mode.'),
+          author: nullableSchema(stringSchema('Author.')),
+          license: nullableSchema(stringSchema('License.')),
+          labels: arraySchema(stringSchema('Label.')),
+          notes: stringSchema('Curator notes.'),
+          lastVerified: nullableSchema(stringSchema('Last verification date.')),
+          lastUpdated: nullableSchema(stringSchema('Last updated date.')),
+        }, ['sourceUrl', 'syncMode', 'labels', 'notes']),
+        collections: arraySchema(objectSchema({
+          id: stringSchema('Collection id.'),
+          title: stringSchema('Collection title.'),
+        }, ['id', 'title'])),
+        dependencies: objectSchema({
+          dependsOn: arraySchema(stringSchema('Dependency skill.')),
+          usedBy: arraySchema(stringSchema('Reverse dependency skill.')),
+        }, ['dependsOn', 'usedBy']),
+        neighboringShelfPicks: arraySchema(stringSchema('Nearby recommendation.')),
+        installCommands: arraySchema(stringSchema('Ready-to-run install command.')),
+      }, ['name', 'description', 'skill', 'collections', 'dependencies', 'neighboringShelfPicks', 'installCommands'])
+    );
+  }
+
+  if (commandName === 'preview') {
+    return buildEnvelopeSchema(
+      'preview',
+      objectSchema({
+        name: stringSchema('Skill name.'),
+        sourceType: enumSchema(['house', 'upstream'], 'Preview source type.'),
+        path: nullableSchema(stringSchema('Local SKILL.md path for house copies.')),
+        installSource: nullableSchema(stringSchema('Install source for upstream skills.')),
+        content: nullableSchema(stringSchema('Sanitized preview body.')),
+        sanitized: booleanSchema('Whether suspicious content was stripped.'),
+      }, ['name', 'sourceType', 'content', 'sanitized'])
+    );
+  }
+
+  if (commandName === 'install') {
+    return {
+      variants: [
+        buildEnvelopeSchema('install', objectSchema({
+          messages: arraySchema(objectSchema({
+            level: stringSchema('Captured log level.'),
+            message: stringSchema('Captured message.'),
+          }, ['level', 'message'])),
+        }, ['messages']), 'Default JSON envelope in non-streaming install flows.'),
+        buildNdjsonSchema(
+          'install',
+          objectSchema({
+            kind: enumSchema(['summary', 'plan']),
+            source: nullableSchema(stringSchema('Remote workspace source when listing.')),
+            total: nullableSchema(integerSchema('Total discovered skills when listing.')),
+            requested: nullableSchema(integerSchema('Requested skills in a plan.')),
+            resolved: nullableSchema(integerSchema('Resolved skills in a plan.')),
+            targets: arraySchema(stringSchema('Install target path.'), 'Present for plan rows.', { nullable: true }),
+          }, ['kind']),
+          objectSchema({
+            kind: enumSchema(['item', 'install']),
+            skill: objectSchema({
+              name: stringSchema('Skill name.'),
+              tier: enumSchema(TIER_ENUM, 'Skill tier.'),
+              workArea: nullableSchema(stringSchema('Work area when listing.')),
+              branch: nullableSchema(stringSchema('Branch when listing.')),
+              whyHere: nullableSchema(stringSchema('Curator note when listing.')),
+              source: nullableSchema(stringSchema('Resolved source reference when planning.')),
+            }, ['name', 'tier']),
+          }, ['kind', 'skill']),
+          'Streamed rows for remote workspace listing and parseable install plans.'
+        ),
+      ],
+    };
+  }
+
+  if (commandName === 'help' || commandName === 'describe') {
+    return buildEnvelopeSchema(
+      commandName,
+      objectSchema({
+        binary: stringSchema('CLI binary name.'),
+        version: stringSchema('CLI version.'),
+        defaults: objectSchema({
+          interactiveOutput: stringSchema('TTY default output format.'),
+          nonTtyOutput: stringSchema('Non-TTY default output format.'),
+        }, ['interactiveOutput', 'nonTtyOutput']),
+        sharedEnums: objectSchema({
+          format: arraySchema(stringSchema('Format value.')),
+          workArea: arraySchema(stringSchema('Work area enum.')),
+          category: arraySchema(stringSchema('Category enum.')),
+          trust: arraySchema(stringSchema('Trust enum.')),
+          tier: arraySchema(stringSchema('Tier enum.')),
+          distribution: arraySchema(stringSchema('Distribution enum.')),
+          origin: arraySchema(stringSchema('Origin enum.')),
+          syncMode: arraySchema(stringSchema('Sync mode enum.')),
+        }, ['format', 'workArea', 'category', 'trust', 'tier', 'distribution', 'origin', 'syncMode']),
+        globalFlags: arraySchema(objectSchema({
+          name: stringSchema('Flag name.'),
+          type: stringSchema('Flag type.'),
+        }, ['name', 'type'])),
+        commands: arraySchema(objectSchema({
+          name: stringSchema('Command name.'),
+          summary: stringSchema('Command summary.'),
+          inputSchema: objectSchema({
+            stdin: nullableSchema(objectSchema({}, [])),
+          }, []),
+          outputSchema: objectSchema({}, []),
+        }, ['name', 'summary', 'inputSchema', 'outputSchema']), 'Command schemas.'),
+      }, ['binary', 'version', 'defaults', 'sharedEnums', 'globalFlags', 'commands'])
+    );
+  }
+
+  if (commandName === 'init-library') {
+    return {
+      variants: [
+        buildEnvelopeSchema('init-library', objectSchema({
+          libraryName: stringSchema('Library name.'),
+          librarySlug: stringSchema('Slugified directory name.'),
+          targetDir: stringSchema('Workspace directory.'),
+          files: objectSchema({
+            config: stringSchema('Workspace config path.'),
+            readme: stringSchema('README path.'),
+            skillsJson: stringSchema('skills.json path.'),
+            workAreas: stringSchema('WORK_AREAS.md path.'),
+          }, ['config', 'readme', 'skillsJson', 'workAreas']),
+          workAreas: arraySchema(stringSchema('Seeded work area id.')),
+        }, ['libraryName', 'librarySlug', 'targetDir', 'files', 'workAreas'])),
+        buildEnvelopeSchema('init-library', objectSchema({
+          dryRun: booleanSchema('Always true in this variant.', { const: true }),
+          actions: arraySchema(objectSchema({
+            type: stringSchema('Planned action type.'),
+            target: stringSchema('Human-readable target.'),
+            detail: nullableSchema(stringSchema('Action detail.')),
+          }, ['type', 'target'])),
+        }, ['dryRun', 'actions']), 'Dry-run response variant.'),
+      ],
+    };
+  }
+
+  if (commandName === 'check') {
+    return buildEnvelopeSchema('check', objectSchema({
+      checked: integerSchema('Installed skills checked.'),
+      updatesAvailable: integerSchema('Potential updates found.'),
+      results: arraySchema(objectSchema({
+        scope: stringSchema('Install scope.'),
+        name: stringSchema('Skill name.'),
+        status: stringSchema('Check result status.'),
+        detail: stringSchema('Human-readable detail.'),
+        sourceType: nullableSchema(stringSchema('Recorded source type.')),
+      }, ['scope', 'name', 'status', 'detail', 'sourceType'])),
+    }, ['checked', 'updatesAvailable', 'results']));
+  }
+
+  if (commandName === 'doctor') {
+    return buildEnvelopeSchema('doctor', objectSchema({
+      checks: arraySchema(objectSchema({
+        name: stringSchema('Check name.'),
+        ok: booleanSchema('Pass/fail.'),
+        detail: stringSchema('Check detail.'),
+      }, ['name', 'ok', 'detail'])),
+      summary: objectSchema({
+        passed: integerSchema('Passed checks.'),
+        failed: integerSchema('Failed checks.'),
+      }, ['passed', 'failed']),
+    }, ['checks', 'summary']));
+  }
+
+  if (commandName === 'validate') {
+    return buildEnvelopeSchema('validate', objectSchema({
+      ok: booleanSchema('Validation result.'),
+      summary: objectSchema({
+        name: stringSchema('Skill name.'),
+      }, ['name']),
+      warnings: arraySchema(stringSchema('Validation warning.')),
+    }, ['ok', 'summary', 'warnings']));
+  }
+
+  if (commandName === 'build-docs') {
+    return buildEnvelopeSchema('build-docs', objectSchema({
+      readmePath: stringSchema('README path.'),
+      workAreasPath: stringSchema('WORK_AREAS.md path.'),
+    }, ['readmePath', 'workAreasPath']));
+  }
+
+  if (commandName === 'config') {
+    return buildEnvelopeSchema('config', objectSchema({
+      path: stringSchema('Resolved config path.'),
+      config: objectSchema({}, []),
+    }, ['path', 'config']));
+  }
+
+  if (commandName === 'version') {
+    return buildEnvelopeSchema('version', objectSchema({
+      version: stringSchema('CLI version.'),
+    }, ['version']));
+  }
+
+  if (['add', 'catalog', 'vendor', 'curate', 'uninstall', 'sync', 'browse', 'swift', 'init'].includes(commandName)) {
+    return {
+      variants: [
+        buildEnvelopeSchema(commandName, objectSchema({
+          messages: arraySchema(objectSchema({
+            level: stringSchema('Captured log level.'),
+            message: stringSchema('Captured message.'),
+          }, ['level', 'message'])),
+        }, ['messages'])),
+        buildEnvelopeSchema(commandName, objectSchema({
+          dryRun: booleanSchema('Always true in this variant.', { const: true }),
+          actions: arraySchema(objectSchema({
+            type: stringSchema('Planned action type.'),
+            target: stringSchema('Human-readable target.'),
+            detail: nullableSchema(stringSchema('Action detail.')),
+          }, ['type', 'target'])),
+        }, ['dryRun', 'actions']), 'Dry-run response variant when supported.'),
+      ],
+    };
+  }
+
+  return buildEnvelopeSchema(commandName, objectSchema({
+    messages: arraySchema(objectSchema({
+      level: stringSchema('Captured log level.'),
+      message: stringSchema('Captured message.'),
+    }, ['level', 'message'])),
+  }, ['messages']));
+}
+
 function getCommandSchema(command) {
   const canonical = resolveCommandAlias(command);
   const definition = getCommandDefinition(canonical);
@@ -346,6 +896,8 @@ function getCommandSchema(command) {
     flags: (definition.flags || [])
       .map((flagName) => getFlagSchema(flagName))
       .filter(Boolean),
+    inputSchema: buildCommandInputSchema(canonical),
+    outputSchema: buildCommandOutputSchema(canonical),
   };
 }
 
@@ -779,6 +1331,10 @@ function serializeSkillForJson(data, skill, installStateIndex = null) {
 }
 
 const DEFAULT_LIST_JSON_FIELDS = ['name', 'tier', 'workArea', 'description'];
+const DEFAULT_COLLECTIONS_JSON_FIELDS = ['id', 'title', 'description', 'skillCount', 'installedCount', 'startHere'];
+const DEFAULT_PREVIEW_JSON_FIELDS = ['name', 'sourceType', 'content', 'sanitized'];
+const DEFAULT_INSTALL_LIST_JSON_FIELDS = ['name', 'description'];
+const DEFAULT_REMOTE_INSTALL_LIST_JSON_FIELDS = ['name', 'tier', 'workArea', 'branch', 'whyHere'];
 
 function parseFieldMask(value, fallback = null) {
   if (value == null) return fallback;
@@ -812,6 +1368,18 @@ function paginateItems(items, limit = null, offset = null) {
     offset: normalizedOffset,
     returned: paged.length,
     total: items.length,
+  };
+}
+
+function applyTopLevelFieldMask(payload, fields, fallback = null) {
+  const resolvedFields = parseFieldMask(fields, fallback);
+  if (!resolvedFields || resolvedFields.length === 0) {
+    return payload;
+  }
+
+  return {
+    ...selectObjectFields(payload, resolvedFields),
+    fields: resolvedFields,
   };
 }
 
@@ -3417,29 +3985,38 @@ function searchSkills(query, category = null, collectionId = null, workArea = nu
   });
 }
 
-function showCollections() {
+function showCollections(options = {}) {
   const data = loadSkillsJson();
   const installStateIndex = buildInstallStateIndex();
   const collections = getCollections(data);
 
   if (isJsonOutput()) {
+    const fields = parseFieldMask(options.fields, DEFAULT_COLLECTIONS_JSON_FIELDS);
+    const serializedCollections = collections.map((collection) =>
+      selectObjectFields({
+        id: collection.id,
+        title: collection.title,
+        description: collection.description,
+        skillCount: collection.skills.length,
+        installedCount: collection.skills.filter((skillName) => getInstallState(installStateIndex, skillName).installed).length,
+        startHere: getCollectionStartHere(collection),
+        skills: collection.skills,
+      }, fields)
+    );
+    const pagination = paginateItems(serializedCollections, options.limit, options.offset);
+
     emitJsonRecord('collections', {
       kind: 'summary',
-      total: collections.length,
+      total: pagination.total,
+      returned: pagination.returned,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      fields,
     });
-    for (const collection of collections) {
-      const installedCount = collection.skills.filter((skillName) => getInstallState(installStateIndex, skillName).installed).length;
+    for (const collection of pagination.items) {
       emitJsonRecord('collections', {
         kind: 'item',
-        collection: {
-          id: collection.id,
-          title: collection.title,
-          description: collection.description,
-          skillCount: collection.skills.length,
-          installedCount,
-          startHere: getCollectionStartHere(collection),
-          skills: collection.skills,
-        },
+        collection,
       });
     }
     return;
@@ -3483,7 +4060,7 @@ function getBundledSkillFilePath(skillName) {
   return skillPath;
 }
 
-function showPreview(skillName) {
+function showPreview(skillName, options = {}) {
   const skillPath = getBundledSkillFilePath(skillName);
 
   if (!skillPath) {
@@ -3496,7 +4073,7 @@ function showPreview(skillName) {
         const safeWhyHere = sanitizeSkillContent(cataloged.whyHere || '');
         const sanitized = safeDescription.sanitized || safeWhyHere.sanitized;
         if (isJsonOutput()) {
-          setJsonResultData({
+          setJsonResultData(applyTopLevelFieldMask({
             name: skillName,
             sourceType: 'upstream',
             description: safeDescription.content,
@@ -3504,7 +4081,7 @@ function showPreview(skillName) {
             installSource: cataloged.installSource || cataloged.source,
             content: null,
             sanitized,
-          });
+          }, options.fields));
           return;
         }
         log(`\n${colors.bold}Preview:${colors.reset} ${skillName}\n`);
@@ -3538,13 +4115,13 @@ function showPreview(skillName) {
   const preview = sanitizeSkillContent(fs.readFileSync(skillPath, 'utf8'));
 
   if (isJsonOutput()) {
-    setJsonResultData({
+    setJsonResultData(applyTopLevelFieldMask({
       name: skillName,
       sourceType: 'house',
       path: skillPath,
       content: preview.content,
       sanitized: preview.sanitized,
-    });
+    }, options.fields));
     return;
   }
 
@@ -4631,25 +5208,36 @@ function getSourceLabel(parsed, fallbackSource = '') {
   return String(fallbackSource || '');
 }
 
-function printRemoteWorkspaceList(sourceLabel, data, skills) {
+function printRemoteWorkspaceList(sourceLabel, data, skills, options = {}) {
   const entries = Array.isArray(skills) ? skills : [];
 
   if (isJsonOutput()) {
+    const fields = parseFieldMask(options.fields, DEFAULT_REMOTE_INSTALL_LIST_JSON_FIELDS);
+    const serializedSkills = entries.map((skill) =>
+      selectObjectFields({
+        name: skill.name,
+        tier: skill.tier,
+        workArea: skill.workArea || '',
+        branch: skill.branch || '',
+        whyHere: skill.whyHere || '',
+        description: skill.description || '',
+      }, fields)
+    );
+    const pagination = paginateItems(serializedSkills, options.limit, options.offset);
+
     emitJsonRecord('install', {
       kind: 'summary',
       source: sourceLabel,
-      total: entries.length,
+      total: pagination.total,
+      returned: pagination.returned,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      fields,
     });
-    for (const skill of entries) {
+    for (const skill of pagination.items) {
       emitJsonRecord('install', {
         kind: 'item',
-        skill: {
-          name: skill.name,
-          tier: skill.tier,
-          workArea: skill.workArea || '',
-          branch: skill.branch || '',
-          whyHere: skill.whyHere || '',
-        },
+        skill,
       });
     }
     return;
@@ -4675,6 +5263,35 @@ function printRemoteWorkspaceList(sourceLabel, data, skills) {
   }
 }
 
+function emitInstallSourceListJson(sourceLabel, discovered, options = {}) {
+  const fields = parseFieldMask(options.fields, DEFAULT_INSTALL_LIST_JSON_FIELDS);
+  const serializedSkills = discovered.map((skill) =>
+    selectObjectFields({
+      name: skill.name,
+      description: skill.description || '',
+      relativeDir: skill.relativeDir && skill.relativeDir !== '.' ? skill.relativeDir : null,
+    }, fields)
+  );
+  const pagination = paginateItems(serializedSkills, options.limit, options.offset);
+
+  emitJsonRecord('install', {
+    kind: 'summary',
+    source: sourceLabel,
+    total: pagination.total,
+    returned: pagination.returned,
+    limit: pagination.limit,
+    offset: pagination.offset,
+    fields,
+  });
+
+  for (const skill of pagination.items) {
+    emitJsonRecord('install', {
+      kind: 'item',
+      skill,
+    });
+  }
+}
+
 async function installFromWorkspaceSource(source, parsed, prepared, installPaths, {
   skillFilters = [],
   collectionId = null,
@@ -4682,6 +5299,7 @@ async function installFromWorkspaceSource(source, parsed, prepared, installPaths
   yes = false,
   dryRun = false,
   noDeps = false,
+  readOptions = {},
 } = {}) {
   const remoteContext = createLibraryContext(prepared.rootDir, 'workspace');
   const remoteData = loadCatalogData(remoteContext);
@@ -4752,7 +5370,7 @@ async function installFromWorkspaceSource(source, parsed, prepared, installPaths
   }));
 
   if (listMode) {
-    printRemoteWorkspaceList(sourceLabel, remoteData, selectedSkills);
+    printRemoteWorkspaceList(sourceLabel, remoteData, selectedSkills, readOptions);
     return true;
   }
 
@@ -4814,6 +5432,7 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
         yes,
         dryRun,
         noDeps: options.noDeps || false,
+        readOptions: options.readOptions || {},
       });
     }
 
@@ -4831,6 +5450,10 @@ async function installFromSource(source, parsed, installPaths, skillFilters, lis
 
     // --list: show available skills and exit
     if (listMode) {
+      if (isJsonOutput()) {
+        emitInstallSourceListJson(getSourceLabel(parsed, source), discovered, options.readOptions || {});
+        return true;
+      }
       log(`\n${colors.bold}Available Skills${colors.reset} (${discovered.length} found)\n`);
       for (const skill of discovered) {
         log(`  ${colors.green}${skill.name}${colors.reset}`);
@@ -6003,7 +6626,13 @@ async function main() {
       return;
 
     case 'collections':
-      showCollections();
+      if (isJsonOutput()) {
+        const readOptions = resolveReadJsonOptions(parsed, 'collections');
+        if (!readOptions) return;
+        showCollections(readOptions);
+      } else {
+        showCollections();
+      }
       return;
 
     case 'install':
@@ -6016,6 +6645,12 @@ async function main() {
         return;
       }
       const installPaths = resolveInstallPath(parsed);
+      const installReadOptions = listMode && isJsonOutput()
+        ? resolveReadJsonOptions(parsed, 'install --list')
+        : null;
+      if (listMode && isJsonOutput() && !installReadOptions) {
+        return;
+      }
 
       if (collection && !param) {
         await installCollection(collection, parsed, installPaths);
@@ -6054,6 +6689,7 @@ async function main() {
         await installFromSource(param, source, installPaths, skillFilters, listMode, yes, dryRun, {
           collectionId: collection || null,
           noDeps,
+          readOptions: installReadOptions || undefined,
         });
       }
       return;
@@ -6147,7 +6783,7 @@ async function main() {
         process.exitCode = 1;
         return;
       }
-      showPreview(param);
+      showPreview(param, { fields: parsed.fields });
       return;
 
     case 'catalog': {

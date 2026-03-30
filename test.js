@@ -786,6 +786,8 @@ test('workflow docs exist and README links them', () => {
   assertContains(agentDoc, 'run `npx ai-agent-skills list --area <work-area>` for each primary shelf you touched');
   assertContains(agentDoc, 'run `npx ai-agent-skills collections` and confirm the install command looks right');
   assertContains(agentDoc, 'otherwise use `npx ai-agent-skills install <owner>/<repo> -p`');
+  assertContains(agentDoc, '`--fields name,tier,workArea`');
+  assertContains(agentDoc, '`--limit 10`');
   assertContains(agentDoc, 'gh repo create <owner>/<repo> --public --source=. --remote=origin --push');
   assertContains(agentDoc, 'npx ai-agent-skills install <owner>/<repo> --collection starter-pack -p');
   assertContains(agentDoc, 'npx ai-agent-skills install curate-a-team-library');
@@ -1762,6 +1764,22 @@ test('collections --format json emits summary and item rows', () => {
   assert(records.some((record) => record.data.kind === 'item' && record.data.collection.id === 'swift-agent-skills'), 'Expected swift-agent-skills collection item');
 });
 
+test('collections --format json supports field masks and pagination', () => {
+  const output = runArgs(['collections', '--format', 'json', '--fields', 'id,title', '--limit', '1', '--offset', '1']);
+  const records = parseJsonLines(output);
+  const summary = records[0];
+  const items = records.slice(1);
+
+  assertEqual(summary.command, 'collections');
+  assertEqual(summary.data.kind, 'summary');
+  assertEqual(summary.data.limit, 1);
+  assertEqual(summary.data.offset, 1);
+  assertEqual(summary.data.returned, 1);
+  assertEqual(summary.data.fields.join(','), 'id,title');
+  assertEqual(items.length, 1);
+  assertEqual(Object.keys(items[0].data.collection).sort().join(','), 'id,title');
+});
+
 test('search command works', () => {
   const output = run('search pdf');
   assertContains(output, 'pdf');
@@ -1863,6 +1881,15 @@ test('preview --format json emits structured payloads for vendored and upstream 
   assertEqual(upstream.data.name, 'pdf');
   assertEqual(upstream.data.content, null);
   assert(upstream.data.installSource, 'Expected upstream install source');
+});
+
+test('preview --format json supports field masks', () => {
+  const parsed = JSON.parse(runArgs(['preview', 'best-practices', '--format', 'json', '--fields', 'name,sanitized']));
+  assertEqual(parsed.command, 'preview');
+  assertEqual(parsed.status, 'ok');
+  assertEqual(parsed.data.name, 'best-practices');
+  assertEqual(parsed.data.fields.join(','), 'name,sanitized');
+  assertEqual(Object.keys(parsed.data).sort().join(','), 'fields,name,sanitized');
 });
 
 test('preview sanitizes suspicious content in text mode', () => {
@@ -2520,6 +2547,33 @@ test('source-repo --list flag shows available skills', () => {
   }
 });
 
+test('source-repo --list --format json supports field masks and pagination', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-list-json-'));
+  try {
+    for (const [name, description] of [['alpha-one', 'Alpha one'], ['beta-two', 'Beta two']]) {
+      const skillDir = path.join(tmpDir, 'skills', name);
+      fs.mkdirSync(skillDir, { recursive: true });
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n# ${name}`);
+    }
+
+    const output = runArgs(['install', tmpDir, '--list', '--format', 'json', '--fields', 'name', '--limit', '1', '--offset', '1']);
+    const records = parseJsonLines(output);
+    const summary = records[0];
+    const items = records.slice(1);
+
+    assertEqual(summary.command, 'install');
+    assertEqual(summary.data.kind, 'summary');
+    assertEqual(summary.data.limit, 1);
+    assertEqual(summary.data.offset, 1);
+    assertEqual(summary.data.returned, 1);
+    assertEqual(summary.data.fields.join(','), 'name');
+    assertEqual(items.length, 1);
+    assertEqual(Object.keys(items[0].data.skill).join(','), 'name');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('source-repo --skill flag installs only the named skill', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-filter-'));
   const installBase = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-target-'));
@@ -2814,8 +2868,16 @@ test('help --json emits CLI schema from the runtime command registry', () => {
   assert(parsed.data.commands.some((command) => command.name === 'install'), 'Expected install command in help schema');
   const install = parsed.data.commands.find((command) => command.name === 'install');
   assert(install.flags.some((flag) => flag.name === 'collection'), 'Expected install schema to expose collection flag');
+  assert(install.outputSchema, 'Expected install schema to expose outputSchema');
+  assert(Array.isArray(install.outputSchema.variants), 'Expected install output schema variants');
   const list = parsed.data.commands.find((command) => command.name === 'list');
   assert(list.flags.some((flag) => flag.name === 'fields'), 'Expected list schema to expose fields flag');
+  assertEqual(list.outputSchema.format, 'ndjson');
+  assert(list.outputSchema.records.summary.properties.limit, 'Expected paginated summary schema');
+  const add = parsed.data.commands.find((command) => command.name === 'add');
+  assert(add.inputSchema && add.inputSchema.stdin, 'Expected add schema to expose stdin JSON schema');
+  assert(add.inputSchema.stdin.properties.whyHere, 'Expected add stdin schema to include whyHere');
+  assert(add.inputSchema.stdin.properties.workArea.enum.includes('agent-engineering'), 'Expected add stdin schema to expose work area enum');
 });
 
 test('help <command> --json emits per-command schema', () => {
@@ -2827,6 +2889,7 @@ test('help <command> --json emits per-command schema', () => {
   assertEqual(parsed.data.commands.length, 1, 'Expected a single command schema');
   assertEqual(parsed.data.commands[0].name, 'install');
   assert(parsed.data.commands[0].flags.some((flag) => flag.name === 'format'), 'Expected install schema to expose format flag');
+  assert(parsed.data.commands[0].outputSchema.variants.some((variant) => variant.format === 'ndjson'), 'Expected install schema to describe NDJSON output');
 });
 
 test('describe is an alias for help <command> --json', () => {
@@ -2837,6 +2900,22 @@ test('describe is an alias for help <command> --json', () => {
   assertEqual(parsed.status, 'ok');
   assertEqual(parsed.data.commands.length, 1, 'Expected describe to emit one command schema');
   assertEqual(parsed.data.commands[0].name, 'search');
+  assertEqual(parsed.data.commands[0].outputSchema.format, 'ndjson');
+  assert(parsed.data.commands[0].outputSchema.records.item.properties.skill, 'Expected describe to expose streamed item schema');
+});
+
+test('help exposes stdin schemas for uninstall and init-library', () => {
+  const output = runArgs(['help', '--json']);
+  const parsed = JSON.parse(output);
+  const uninstall = parsed.data.commands.find((command) => command.name === 'uninstall');
+  const initLibrary = parsed.data.commands.find((command) => command.name === 'init-library');
+
+  assert(uninstall.inputSchema.stdin, 'Expected uninstall stdin schema');
+  assertEqual(uninstall.inputSchema.stdin.required.join(','), 'name');
+  assert(uninstall.inputSchema.stdin.properties.dryRun, 'Expected uninstall stdin dryRun support');
+  assert(initLibrary.inputSchema.stdin, 'Expected init-library stdin schema');
+  assert(initLibrary.inputSchema.stdin.properties.workAreas.items.oneOf, 'Expected nested workAreas schema');
+  assert(initLibrary.outputSchema.variants, 'Expected init-library to describe output variants');
 });
 
 test('version --format json emits structured version payload', () => {
