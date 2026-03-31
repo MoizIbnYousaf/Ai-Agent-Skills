@@ -74,38 +74,45 @@ Each skill here is either a house copy or a cataloged upstream pick.
 
 Upstream work stays upstream. That keeps the library lean.
 
-## Use It With Your Agent
+## For Your Agent
 
-Any Agent Skills-compatible agent with shell access can run this CLI for you.
+Tell your agent to build you a library. Paste this, or just point it at this repo — the protocol below has everything it needs.
 
-The CLI already supports that. Prompts help, but they are optional. When the agent passes explicit metadata like `--area`, `--branch`, and `--why`, it can set up and curate a library without editing files by hand.
-The block below includes the repo links so the agent can fetch its own context.
-
-Full handoff: [FOR_YOUR_AGENT.md](./FOR_YOUR_AGENT.md)
+Full protocol with curator decision framework: [FOR_YOUR_AGENT.md](./FOR_YOUR_AGENT.md)
 
 ### Paste this into your agent
 
 ```text
-Build me a small skills library with `ai-agent-skills`.
+Set up a managed team skills library for me with `ai-agent-skills`.
 
-Use this repo for reference if you need docs or examples:
-https://github.com/MoizIbnYousaf/Ai-Agent-Skills
-https://github.com/MoizIbnYousaf/Ai-Agent-Skills/blob/main/FOR_YOUR_AGENT.md
+Read the full agent protocol here before starting:
+https://raw.githubusercontent.com/MoizIbnYousaf/Ai-Agent-Skills/main/FOR_YOUR_AGENT.md
 
-Use the CLI with `npx`. Do not ask me to open the repo or link you to anything else.
-Do not hand-edit files if the command already exists.
+Use the CLI with `npx`. Do not hand-edit `skills.json`, `README.md`, or `WORK_AREAS.md` if the command already exists.
 
-1. Create a new folder called `my-skills-library` with `npx ai-agent-skills init-library my-skills-library`, unless I clearly ask for a different name.
-2. Move into that workspace and keep working there.
-3. Ask me only the minimum questions you need before acting:
-   - if you have a built-in question tool, use it
-   - which shelves or kinds of work matter most
-   - whether to start mostly from bundled picks or mix in upstream skills
-   - whether installs should default to project scope, global scope, or library setup only
-4. Add a small starter set, around 3 to 8 skills.
-5. Start with `add`. Use `catalog` when you need an upstream entry. Use `vendor` only for a real house copy.
-6. Run `npx ai-agent-skills build-docs` at the end.
-7. Tell me what you added, which shelves you used, and what you'd add next.
+1. Fetch and read FOR_YOUR_AGENT.md above — it has the full curator decision protocol.
+2. Create a workspace with `npx ai-agent-skills init-library <name>`.
+3. Ask me at most 3 short questions: what kinds of work, small or broad, local draft or shared repo.
+4. Map my stack to shelves: frontend, backend, mobile, workflow, agent-engineering.
+5. Run a discovery loop: `list --area <shelf>`, `search <query>`, `collections`.
+6. Add 3-8 skills with explicit `--area`, `--branch`, and `--why` on every mutation.
+7. Run `npx ai-agent-skills build-docs` before finishing.
+8. If I want it shared: `git init && git add . && git commit -m "Initialize skills library" && gh repo create`.
+9. Tell me what you added, which shelves, and the install command for teammates.
+```
+
+The companion workflow skills (installed automatically when you use the library):
+
+```
+npx ai-agent-skills install install-from-remote-library
+npx ai-agent-skills install curate-a-team-library
+npx ai-agent-skills install share-a-library
+npx ai-agent-skills install browse-and-evaluate
+npx ai-agent-skills install update-installed-skills
+npx ai-agent-skills install build-workspace-docs
+npx ai-agent-skills install review-a-skill
+npx ai-agent-skills install audit-library-health
+npx ai-agent-skills install migrate-skills-between-libraries
 ```
 
 ## Quick Start
