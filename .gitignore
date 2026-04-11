@@ -38,3 +38,12 @@ docs/releases/*
 
 # Local install artifacts
 .skills/
+
+# Local workspace and desktop state
+.agents/
+.codex/
+test-lib/
+ws-test/
+tmp-test-review-lib/
+ai-agent-skills-*.tgz
+ai-agent-skills-workflow.html

@@ -44,13 +44,13 @@ The bundled library is organized the way I work:
 Use `skills.sh` for the broad ecosystem.
 Use `ai-agent-skills` when you want a smaller library with shelves, provenance, and notes.
 
-## What's New in 4.0.0
+## What's New in 4.2.0
 
-- Managed library workspaces with `init-library`
-- `add <source>` for bringing bundled picks, upstream repo skills, or house copies into your own library
-- `sync [name]` as the main refresh command; `update` stays as an alias
-- Dependency-aware installs with `requires` and `--no-deps`
-- Installed status in both the CLI and TUI
+- Managed team libraries you can share over GitHub and install with `install <owner>/<repo>`
+- Machine-readable CLI flows with `--format json`, `--fields`, pagination, and safer non-interactive output
+- More authored workflow skills for curating, reviewing, syncing, and sharing libraries
+- Dependency-aware installs, `sync` as the main refresh verb, and stronger installed-state visibility across the CLI and TUI
+- A cleaner curator loop around shelves, provenance, trust, and shared starter packs
 
 ## What It Is Now
 

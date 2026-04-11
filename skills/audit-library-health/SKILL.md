@@ -55,7 +55,7 @@ npx ai-agent-skills build-docs
 5. Review the curation queue for skills needing attention.
 
 ```bash
-npx ai-agent-skills curate --review --format json
+npx ai-agent-skills curate review --format json
 ```
 
 ## Health Checklist
@@ -71,4 +71,4 @@ npx ai-agent-skills curate --review --format json
 
 - `validate` and `doctor` are read-only — they never mutate the library.
 - `check` makes network requests to verify upstream sources. It may be slow or timeout on unreachable repos.
-- The `curate --review` queue is derived from missing fields and stale verification dates — it is a heuristic, not a mandate.
+- The `curate review` queue is derived from missing fields and stale verification dates — it is a heuristic, not a mandate.

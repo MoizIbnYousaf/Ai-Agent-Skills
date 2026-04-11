@@ -14,7 +14,7 @@ Keep workspace documentation in sync with the skills catalog after adding, remov
 ## Guardrails
 
 - Always use `--dry-run` before regenerating docs to preview what will change.
-- Only run from inside an initialized library workspace (a directory with `.workspace.json`).
+- Only run from inside an initialized library workspace (a directory with `.ai-agent-skills/config.json`).
 - Never hand-edit the generated sections of README.md or WORK_AREAS.md. The CLI will overwrite them.
 - Use `--format json` to capture structured results for automation pipelines.
 

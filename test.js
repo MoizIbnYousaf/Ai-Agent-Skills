@@ -762,12 +762,12 @@ test('workflow docs exist and README links them', () => {
   });
   assert(fs.existsSync(agentDocPath), 'Expected FOR_YOUR_AGENT.md to exist');
   assertContains(readme, './FOR_YOUR_AGENT.md');
-  assertContains(readme, '## Use It With Your Agent');
+  assertContains(readme, '## For Your Agent');
   assertContains(readme, 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills');
-  assertContains(readme, 'Do not ask me to open the repo or link you to anything else.');
   assertNotContains(readme, 'If you cannot run local commands here');
   assertContains(readme, '## Workspace Mode');
   const agentDoc = fs.readFileSync(agentDocPath, 'utf8');
+  assertContains(agentDoc, 'Do not ask me to open the repo or link you to anything else.');
   assertContains(agentDoc, 'https://github.com/MoizIbnYousaf/Ai-Agent-Skills/blob/main/FOR_YOUR_AGENT.md');
   assertContains(agentDoc, 'Follow this curator decision protocol:');
   assertContains(agentDoc, '`frontend`');
@@ -794,6 +794,30 @@ test('workflow docs exist and README links them', () => {
   assertContains(agentDoc, 'npx ai-agent-skills install install-from-remote-library');
   assertContains(agentDoc, 'npx ai-agent-skills install share-a-library');
   assertNotContains(agentDoc, 'If you cannot run local commands here');
+});
+
+test('latest release docs stay aligned with the current package version', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+  const readme = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8');
+  const changelog = fs.readFileSync(path.join(__dirname, 'CHANGELOG.md'), 'utf8');
+  const releaseNotesPath = path.join(__dirname, 'docs', 'releases', `${pkg.version}-changelog.md`);
+
+  assert(fs.existsSync(releaseNotesPath), `Expected release notes for ${pkg.version}`);
+  const releaseNotes = fs.readFileSync(releaseNotesPath, 'utf8');
+
+  assertContains(readme, `## What's New in ${pkg.version}`);
+  assertContains(changelog, `## [${pkg.version}]`);
+  assertContains(releaseNotes, `# ${pkg.version} —`);
+});
+
+test('authored workflow skills use the current workspace marker and review command', () => {
+  const buildWorkspaceDocs = fs.readFileSync(path.join(__dirname, 'skills', 'build-workspace-docs', 'SKILL.md'), 'utf8');
+  const auditLibraryHealth = fs.readFileSync(path.join(__dirname, 'skills', 'audit-library-health', 'SKILL.md'), 'utf8');
+
+  assertContains(buildWorkspaceDocs, '.ai-agent-skills/config.json');
+  assertNotContains(buildWorkspaceDocs, '.workspace.json');
+  assertContains(auditLibraryHealth, 'npx ai-agent-skills curate review --format json');
+  assertNotContains(auditLibraryHealth, 'curate --review');
 });
 
 test('phase 4 workflow skills ship as vendored catalog entries', () => {
@@ -1946,6 +1970,7 @@ test('README keeps the launch timeline and universal installer context', () => {
   assertContains(readme, 'December 17, 2025');
   assertContains(readme, 'before `skills.sh` existed');
   assertContains(readme, 'Originally this repo was that installer.');
+  assertContains(readme, '## What\'s New in 4.2.0');
   assertContains(readme, 'init-library my-library');
   assertContains(readme, 'Paste this into your agent');
 });

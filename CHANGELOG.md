@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.2.0] - 2026-03-31
+
+### Added
+- Remote shared-library installs that detect managed workspaces, expose parseable `--list` and `--dry-run` output, and resolve house copies plus upstream picks from one install flow.
+- Authored workflow skills for `audit-library-health`, `browse-and-evaluate`, `build-workspace-docs`, `migrate-skills-between-libraries`, `review-a-skill`, and `update-installed-skills`.
+- Wider machine-readable command support with JSON schemas, stdin mutation input, field masks, pagination, and dry-run coverage across more workflows.
+
+### Changed
+- Refined the shared-library story around team curation, shelf-first browsing, and a stronger "for your agent" handoff protocol.
+- Tightened remote install errors and dry-run plans so non-interactive use stays predictable and actionable.
+- Updated the README and curator-facing docs so the public surface matches the 4.2.0 library-manager state.
+
+### Fixed
+- Corrected shared-library dependency resolution so house copies install from the library while upstream entries keep their own recorded source.
+- Hardened preview and install surfaces against suspicious content and invalid path-style inputs.
+- Preserved workspace installs after workspace moves and improved unavailable-source messaging when a shared library can no longer be found.
+
 ## [4.0.0] - 2026-03-27
 
 ### Added
