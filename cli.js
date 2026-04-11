@@ -44,9 +44,19 @@ const {
 } = require('./lib/catalog-data.cjs');
 const { buildDependencyGraph, resolveInstallOrder } = require('./lib/dependency-graph.cjs');
 const { buildInstallStateIndex, formatInstallStateLabel, getInstallState, getInstalledSkillNames, listInstalledSkillNamesInDir } = require('./lib/install-state.cjs');
-const { generatedDocsAreInSync, writeGeneratedDocs } = require('./lib/render-docs.cjs');
+const { README_MARKERS, generatedDocsAreInSync, renderGeneratedDocs, writeGeneratedDocs } = require('./lib/render-docs.cjs');
 const { parseSkillMarkdown: parseSkillMarkdownFile } = require('./lib/frontmatter.cjs');
 const { readInstalledMeta, writeInstalledMeta } = require('./lib/install-metadata.cjs');
+const {
+  getCatalogSkillRelativePath,
+  hasLocalCatalogSkillFiles,
+  resolveCatalogSkillSourcePath,
+  shouldTreatCatalogSkillAsHouse,
+} = require('./lib/catalog-paths.cjs');
+const {
+  classifyImportedSkill,
+  discoverImportCandidates,
+} = require('./lib/workspace-import.cjs');
 const {
   classifyGitError: classifyGitErrorLib,
   discoverSkills: discoverSkillsLib,
@@ -143,7 +153,8 @@ const FLAG_DEFINITIONS = {
   agents: { type: 'string[]', default: [], description: 'Legacy explicit agent targets.' },
   installed: { type: 'boolean', alias: '-i', default: false, description: 'Show installed skills instead of the catalog.' },
   category: { type: 'enum', alias: '-c', enum: CATEGORY_ENUM, default: null, description: 'Filter by category.' },
-  area: { type: 'enum', enum: WORK_AREA_ENUM, default: null, description: 'Filter or place a skill into a work area shelf.' },
+  area: { type: 'string', default: null, description: 'Filter or place a skill into a work area shelf.' },
+  areas: { type: 'string', default: null, description: 'Comma-separated work area ids for init-library.' },
   collection: { type: 'string', default: null, description: 'Filter or target a curated collection.' },
   removeFromCollection: { type: 'string', default: null, description: 'Remove a skill from a curated collection.' },
   tags: { type: 'string', alias: '-t', default: null, description: 'Comma-separated tags.' },
@@ -163,6 +174,8 @@ const FLAG_DEFINITIONS = {
   fields: { type: 'string', default: null, description: 'Comma-separated field mask for JSON read output.' },
   limit: { type: 'integer', default: null, description: 'Limit JSON read results.' },
   offset: { type: 'integer', default: null, description: 'Offset JSON read results.' },
+  import: { type: 'boolean', default: false, description: 'Import discovered skills into a workspace.' },
+  autoClassify: { type: 'boolean', default: false, description: 'Attempt heuristic work area assignment during import.' },
 };
 
 const COMMAND_REGISTRY = {
@@ -278,7 +291,13 @@ const COMMAND_REGISTRY = {
     aliases: [],
     summary: 'Create a managed library workspace.',
     args: [{ name: 'name', required: true, type: 'string' }],
-    flags: ['dryRun', 'json', 'format'],
+    flags: ['areas', 'import', 'autoClassify', 'dryRun', 'json', 'format'],
+  },
+  import: {
+    aliases: [],
+    summary: 'Import local skills into the active managed workspace.',
+    args: [{ name: 'path', required: false, type: 'string' }],
+    flags: ['autoClassify', 'dryRun', 'format'],
   },
   'build-docs': {
     aliases: [],
@@ -506,6 +525,8 @@ function buildMutationStdinSchema(commandName) {
       name: stringSchema('Library name.'),
       workAreas: arraySchema(WORK_AREA_INPUT_SCHEMA, 'Optional custom starter work areas.'),
       collections: arraySchema(STARTER_COLLECTION_INPUT_SCHEMA, 'Optional starter collections.'),
+      import: booleanSchema('Import discovered skills immediately after bootstrap.'),
+      autoClassify: booleanSchema('Attempt heuristic work area assignment during import.'),
       dryRun: booleanSchema('Preview without writing files.'),
     }, ['name'], 'Read from stdin when `--json` is passed.');
   }
@@ -520,7 +541,7 @@ function buildMutationStdinSchema(commandName) {
   if (commandName === 'curate') {
     return objectSchema({
       name: stringSchema('Catalog skill name to edit.'),
-      workArea: enumSchema(WORK_AREA_ENUM, 'Work area shelf id.'),
+      workArea: stringSchema('Work area shelf id.'),
       branch: stringSchema('Branch label.'),
       category: enumSchema(CATEGORY_ENUM, 'Category id.'),
       tags: STRING_OR_STRING_ARRAY_SCHEMA,
@@ -547,7 +568,7 @@ function buildMutationStdinSchema(commandName) {
       name: stringSchema('Skill name or fallback selector when the source is a bundled catalog entry.'),
       skill: stringSchema('Explicit discovered skill name inside the source.'),
       list: booleanSchema('List discovered skills without mutating the workspace.'),
-      workArea: enumSchema(WORK_AREA_ENUM, 'Work area shelf id from skills.json.'),
+      workArea: stringSchema('Work area shelf id from skills.json.'),
       branch: stringSchema('Branch label from skills.json.'),
       category: enumSchema(CATEGORY_ENUM, 'Category id from skills.json.'),
       tags: STRING_OR_STRING_ARRAY_SCHEMA,
@@ -575,6 +596,34 @@ function buildCommandInputSchema(commandName) {
     stdin,
   };
 }
+
+const IMPORT_RESULT_SCHEMA = objectSchema({
+  rootDir: stringSchema('Import root directory.'),
+  importedCount: integerSchema('Imported skills.'),
+  copiedCount: integerSchema('Copied skills.'),
+  inPlaceCount: integerSchema('In-place imported skills.'),
+  autoClassifiedCount: integerSchema('Auto-classified skills.'),
+  needsCurationCount: integerSchema('Skills still needing manual review.'),
+  skippedCount: integerSchema('Skipped candidates.'),
+  failedCount: integerSchema('Failed candidates.'),
+  imported: arraySchema(objectSchema({
+    name: stringSchema('Skill name.'),
+    path: stringSchema('Catalog path.'),
+    workArea: stringSchema('Assigned work area.'),
+    copied: booleanSchema('Whether files were copied into the workspace.'),
+    autoClassified: booleanSchema('Whether work area was inferred heuristically.'),
+    needsCuration: booleanSchema('Whether the skill should be reviewed manually.'),
+  }, ['name', 'path', 'workArea', 'copied', 'autoClassified', 'needsCuration'])),
+  skipped: arraySchema(objectSchema({
+    name: nullableSchema(stringSchema('Skill name.')),
+    path: stringSchema('Original path.'),
+    reason: stringSchema('Skip reason.'),
+  }, ['path', 'reason'])),
+  failures: arraySchema(objectSchema({
+    path: stringSchema('Original path.'),
+    reason: stringSchema('Failure reason.'),
+  }, ['path', 'reason'])),
+}, ['rootDir', 'importedCount', 'copiedCount', 'inPlaceCount', 'autoClassifiedCount', 'needsCurationCount', 'skippedCount', 'failedCount', 'imported', 'skipped', 'failures']);
 
 function buildCommandOutputSchema(commandName) {
   if (commandName === 'list') {
@@ -665,7 +714,7 @@ function buildCommandOutputSchema(commandName) {
         fields: arraySchema(stringSchema('Requested top-level field.'), 'Present only when `--fields` is used.', { nullable: true }),
         skill: objectSchema({
           ...SERIALIZED_SKILL_SCHEMA.properties,
-          sourceUrl: stringSchema('Canonical source URL.'),
+          sourceUrl: nullableSchema(stringSchema('Canonical source URL.')),
           syncMode: stringSchema('Sync mode.'),
           author: nullableSchema(stringSchema('Author.')),
           license: nullableSchema(stringSchema('License.')),
@@ -673,7 +722,7 @@ function buildCommandOutputSchema(commandName) {
           notes: stringSchema('Curator notes.'),
           lastVerified: nullableSchema(stringSchema('Last verification date.')),
           lastUpdated: nullableSchema(stringSchema('Last updated date.')),
-        }, ['sourceUrl', 'syncMode', 'labels', 'notes']),
+        }, ['syncMode', 'labels', 'notes']),
         collections: arraySchema(objectSchema({
           id: stringSchema('Collection id.'),
           title: stringSchema('Collection title.'),
@@ -788,7 +837,14 @@ function buildCommandOutputSchema(commandName) {
             workAreas: stringSchema('WORK_AREAS.md path.'),
           }, ['config', 'readme', 'skillsJson', 'workAreas']),
           workAreas: arraySchema(stringSchema('Seeded work area id.')),
+          import: nullableSchema(objectSchema({
+            rootDir: stringSchema('Import root.'),
+            discovered: integerSchema('Discovered skills.'),
+            skipped: integerSchema('Skipped skills.'),
+            failed: integerSchema('Failed candidates.'),
+          }, ['rootDir', 'discovered', 'skipped', 'failed'])),
         }, ['libraryName', 'librarySlug', 'targetDir', 'files', 'workAreas'])),
+        buildEnvelopeSchema('init-library', IMPORT_RESULT_SCHEMA, 'Returned when `init-library` chains directly into `--import`.'),
         buildEnvelopeSchema('init-library', objectSchema({
           dryRun: booleanSchema('Always true in this variant.', { const: true }),
           actions: arraySchema(objectSchema({
@@ -799,6 +855,10 @@ function buildCommandOutputSchema(commandName) {
         }, ['dryRun', 'actions']), 'Dry-run response variant.'),
       ],
     };
+  }
+
+  if (commandName === 'import') {
+    return buildEnvelopeSchema('import', IMPORT_RESULT_SCHEMA);
   }
 
   if (commandName === 'check') {
@@ -1833,28 +1893,6 @@ function validateRemoteWorkspaceCatalog(data) {
   return errors;
 }
 
-function getCatalogSkillRelativePath(skill) {
-  if (skill && typeof skill.path === 'string' && skill.path.trim()) {
-    return skill.path.trim().replace(/\\/g, '/');
-  }
-  return `skills/${skill?.name || ''}`;
-}
-
-function resolveCatalogSkillSourcePath(skillName, { sourceContext = getActiveLibraryContext(), skill = null } = {}) {
-  return path.join(sourceContext.rootDir, getCatalogSkillRelativePath(skill || { name: skillName }));
-}
-
-function hasLocalCatalogSkillFiles(skill, sourceContext = getActiveLibraryContext()) {
-  if (!skill || !sourceContext) return false;
-  return fs.existsSync(resolveCatalogSkillSourcePath(skill.name, { sourceContext, skill }));
-}
-
-function shouldTreatCatalogSkillAsHouse(skill, sourceContext = getActiveLibraryContext()) {
-  if (!skill) return false;
-  if (hasLocalCatalogSkillFiles(skill, sourceContext)) return true;
-  return skill.tier !== 'upstream' || !skill.source;
-}
-
 function getSearchMatchScore(skill, query) {
   const q = query.toLowerCase();
   let score = 0;
@@ -2088,6 +2126,7 @@ function parseArgs(args) {
     remove: false,
     category: null,
     workArea: null,
+    workAreas: null,
     collection: null,
     collectionRemove: null,
     fields: null,
@@ -2096,6 +2135,8 @@ function parseArgs(args) {
     skillFilters: [],     // v3: --skill flag values
     listMode: false,      // v3: --list flag
     yes: false,           // v3: --yes flag (non-interactive)
+    importMode: false,
+    autoClassify: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -2225,6 +2266,10 @@ function parseArgs(args) {
       result.workArea = args[i + 1];
       i++;
     }
+    else if (arg === '--areas') {
+      result.workAreas = args[i + 1] || null;
+      i++;
+    }
     else if (arg === '--collection') {
       result.collection = args[i + 1];
       i++;
@@ -2246,6 +2291,12 @@ function parseArgs(args) {
       const value = args[i + 1];
       result.offset = value == null ? NaN : Number.parseInt(value, 10);
       i++;
+    }
+    else if (arg === '--import') {
+      result.importMode = true;
+    }
+    else if (arg === '--auto-classify') {
+      result.autoClassify = true;
     }
     else if (arg.startsWith('--')) {
       const potentialAgent = arg.replace(/^--/, '');
@@ -2781,15 +2832,16 @@ function buildCollectionInstallOperations(skills, { sourceContext = getActiveLib
       continue;
     }
 
+    const upstreamSourceRef = getCatalogSkillSourceRef(skill, { sourceContext });
     const previous = operations[operations.length - 1];
-    if (previous && previous.type === 'upstream' && previous.source === skill.source) {
+    if (previous && previous.type === 'upstream' && previous.source === upstreamSourceRef) {
       previous.skills.push(skill);
       continue;
     }
 
     operations.push({
       type: 'upstream',
-      source: skill.source,
+      source: upstreamSourceRef,
       skills: [skill],
     });
   }
@@ -3153,7 +3205,7 @@ function runDoctor(agentsToCheck = Object.keys(AGENT_PATHS)) {
     const vendoredSkills = (data.skills || []).filter(s => s.tier === 'house');
     const catalogedSkills = (data.skills || []).filter(s => s.tier === 'upstream');
     const missingSkills = vendoredSkills.filter((skill) => {
-      const skillPath = path.join(context.skillsDir, skill.name, 'SKILL.md');
+      const skillPath = path.join(resolveCatalogSkillSourcePath(skill.name, { sourceContext: context, skill }), 'SKILL.md');
       return !fs.existsSync(skillPath);
     });
 
@@ -3311,7 +3363,11 @@ function updateFromRegistry(skillName, targetLabel, destPath, dryRun, meta = nul
     log(`${colors.dim}Run this command from inside the workspace or reinstall the skill.${colors.reset}`);
     return false;
   }
-  const sourcePath = path.join(catalogContext.skillsDir, skillName);
+  const data = loadCatalogData(catalogContext);
+  const skill = findSkillByName(data, skillName);
+  const sourcePath = skill
+    ? resolveCatalogSkillSourcePath(skillName, { sourceContext: catalogContext, skill })
+    : path.join(catalogContext.skillsDir, skillName);
 
   if (!fs.existsSync(sourcePath)) {
     error(`Skill "${skillName}" not found in ${catalogContext.mode === 'workspace' ? 'workspace' : 'bundled'} library.`);
@@ -4061,14 +4117,22 @@ function showCollections(options = {}) {
   });
 }
 
-function getBundledSkillFilePath(skillName) {
+function getBundledSkillFilePath(skillName, options = {}) {
   try {
     validateSkillName(skillName);
   } catch (e) {
     return null;
   }
 
-  const skillPath = path.join(getActiveSkillsDir(), skillName, 'SKILL.md');
+  const sourceContext = options.sourceContext || getActiveLibraryContext();
+  const data = options.data || loadSkillsJson();
+  const skill = options.skill || data.skills.find((entry) => entry.name === skillName) || null;
+  if (!skill || !shouldTreatCatalogSkillAsHouse(skill, sourceContext)) {
+    const fallbackPath = path.join(getActiveSkillsDir(), skillName, 'SKILL.md');
+    return fs.existsSync(fallbackPath) ? fallbackPath : null;
+  }
+
+  const skillPath = path.join(resolveCatalogSkillSourcePath(skillName, { sourceContext, skill }), 'SKILL.md');
   if (!fs.existsSync(skillPath)) {
     return null;
   }
@@ -4077,12 +4141,18 @@ function getBundledSkillFilePath(skillName) {
 }
 
 function showPreview(skillName, options = {}) {
-  const skillPath = getBundledSkillFilePath(skillName);
+  const data = loadSkillsJson();
+  const sourceContext = getActiveLibraryContext();
+  const selectedSkill = data.skills.find((entry) => entry.name === skillName) || null;
+  const skillPath = getBundledSkillFilePath(skillName, {
+    sourceContext,
+    data,
+    skill: selectedSkill,
+  });
 
   if (!skillPath) {
     // Check if it's a non-vendored cataloged skill
     try {
-      const data = loadSkillsJson();
       const cataloged = data.skills.find(s => s.name === skillName && s.tier === 'upstream');
       if (cataloged) {
         const safeDescription = sanitizeSkillContent(cataloged.description || '');
@@ -5117,7 +5187,7 @@ function runCurateCommand(skillName, parsed) {
     }
     removeSkillFromCatalog(skillName, context);
     if (target.tier === 'house') {
-      const bundledDir = path.join(context.skillsDir, skillName);
+      const bundledDir = resolveCatalogSkillSourcePath(skillName, { sourceContext: context, skill: target });
       if (fs.existsSync(bundledDir)) {
         fs.rmSync(bundledDir, { recursive: true, force: true });
       }
@@ -5208,6 +5278,272 @@ function copySkillFiles(srcDir, destDir, sandboxRoot) {
     } else if (entry.isFile()) {
       fs.copyFileSync(srcPath, destPath);
     }
+  }
+}
+
+function defaultImportClassification(workAreas) {
+  const workAreaIds = new Set((workAreas || []).map((area) => area.id));
+  return {
+    workArea: workAreaIds.has('workflow') ? 'workflow' : (workAreas[0]?.id || 'workflow'),
+    autoClassified: false,
+    needsCuration: true,
+  };
+}
+
+function buildImportedSkillEntry(candidate, workspaceData, options = {}) {
+  const classification = options.autoClassify
+    ? classifyImportedSkill(candidate, workspaceData.workAreas || [])
+    : defaultImportClassification(workspaceData.workAreas || []);
+  const labels = ['imported'];
+  if (classification.needsCuration) {
+    labels.push('needs-curation');
+  }
+
+  const sourceLabel = workspaceData.librarySlug || slugifyLibraryName(workspaceData.libraryName || path.basename(options.context.rootDir));
+  const notePrefix = options.inPlace
+    ? `Imported in place from ${candidate.relativeDir}.`
+    : `Copied from ${path.join(options.importRoot, candidate.relativeDir)}.`;
+  const whyHere = options.bootstrap
+    ? 'Imported from an existing private skill library during workspace bootstrap.'
+    : 'Imported from an existing private skill library into this managed workspace.';
+
+  return {
+    entry: buildHouseCatalogEntry({
+      name: candidate.name,
+      description: candidate.description,
+      category: 'development',
+      workArea: classification.workArea,
+      branch: 'Imported',
+      author: String(candidate.frontmatter.author || 'workspace').trim(),
+      source: sourceLabel,
+      license: String(candidate.frontmatter.license || 'MIT').trim(),
+      path: options.inPlace ? candidate.relativeDir : `skills/${candidate.name}`,
+      tier: 'house',
+      distribution: 'bundled',
+      vendored: true,
+      installSource: '',
+      tags: Array.isArray(candidate.frontmatter.tags) ? candidate.frontmatter.tags : [],
+      featured: false,
+      verified: true,
+      origin: 'authored',
+      trust: 'verified',
+      syncMode: 'authored',
+      sourceUrl: '',
+      whyHere,
+      addedDate: currentIsoDay(),
+      lastVerified: currentIsoDay(),
+      notes: `${notePrefix}${classification.needsCuration ? ' Needs work area review.' : ''}`,
+      labels,
+      lastCurated: currentCatalogTimestamp(),
+    }, workspaceData),
+    classification,
+  };
+}
+
+function emitImportResult(result, options = {}) {
+  if (isJsonOutput()) {
+    setJsonResultData(result);
+    return;
+  }
+
+  if (options.dryRun) {
+    log(`\n${colors.bold}Dry Run${colors.reset} (no changes made)\n`);
+  }
+
+  log(`${colors.bold}Import Summary${colors.reset}`);
+  log(`  Root: ${result.rootDir}`);
+  log(`  Imported: ${result.importedCount}`);
+  log(`  Copied: ${result.copiedCount}`);
+  log(`  In place: ${result.inPlaceCount}`);
+  log(`  Auto-classified: ${result.autoClassifiedCount}`);
+  log(`  Needs curation: ${result.needsCurationCount}`);
+  log(`  Skipped: ${result.skippedCount}`);
+  log(`  Failed: ${result.failedCount}`);
+
+  if (result.skipped.length > 0) {
+    log(`\n${colors.bold}Skipped${colors.reset}`);
+    result.skipped.slice(0, 10).forEach((item) => {
+      log(`  ${colors.yellow}${item.name || item.path}${colors.reset} ${colors.dim}- ${item.reason}${colors.reset}`);
+    });
+    if (result.skipped.length > 10) {
+      log(`  ${colors.dim}...and ${result.skipped.length - 10} more${colors.reset}`);
+    }
+  }
+
+  if (result.failures.length > 0) {
+    log(`\n${colors.bold}Failed${colors.reset}`);
+    result.failures.slice(0, 10).forEach((item) => {
+      log(`  ${colors.red}${item.path}${colors.reset} ${colors.dim}- ${item.reason}${colors.reset}`);
+    });
+    if (result.failures.length > 10) {
+      log(`  ${colors.dim}...and ${result.failures.length - 10} more${colors.reset}`);
+    }
+  }
+}
+
+function importWorkspaceSkills(importPath = null, options = {}) {
+  const context = options.context || requireWorkspaceContext('import');
+  if (!context) {
+    log(`${colors.dim}Hint: run npx ai-agent-skills init-library . --import from the root of an existing skill repo.${colors.reset}`);
+    return false;
+  }
+
+  try {
+    const importRoot = path.resolve(importPath || context.rootDir);
+    if (!fs.existsSync(importRoot)) {
+      error(`Import path not found: ${importRoot}`);
+      process.exitCode = 1;
+      return false;
+    }
+
+    const workspaceData = loadCatalogData(context);
+    const discovery = discoverImportCandidates(importRoot);
+    const inPlace = importRoot === context.rootDir;
+    const planned = [];
+    const skipped = [...discovery.skipped];
+    const failures = [...discovery.failures];
+    let nextData = workspaceData;
+
+    for (const candidate of discovery.discovered) {
+      if (findSkillByName(nextData, candidate.name)) {
+        skipped.push({
+          name: candidate.name,
+          path: candidate.relativeDir,
+          reason: 'Skill already exists in the workspace catalog.',
+        });
+        continue;
+      }
+
+      const targetDir = inPlace
+        ? resolveCatalogSkillSourcePath(candidate.name, {
+            sourceContext: context,
+            skill: { name: candidate.name, path: candidate.relativeDir },
+          })
+        : path.join(context.skillsDir, candidate.name);
+
+      if (!inPlace && fs.existsSync(targetDir)) {
+        skipped.push({
+          name: candidate.name,
+          path: candidate.relativeDir,
+          reason: `Destination already exists at skills/${candidate.name}.`,
+        });
+        continue;
+      }
+
+      const built = buildImportedSkillEntry(candidate, nextData, {
+        context,
+        importRoot,
+        inPlace,
+        autoClassify: options.autoClassify,
+        bootstrap: options.bootstrap,
+      });
+
+      planned.push({
+        candidate,
+        entry: built.entry,
+        classification: built.classification,
+        targetDir,
+      });
+      nextData = {
+        ...nextData,
+        skills: [...nextData.skills, built.entry],
+      };
+    }
+
+    const summary = {
+      command: 'import',
+      rootDir: importRoot,
+      importedCount: 0,
+      copiedCount: 0,
+      inPlaceCount: 0,
+      autoClassifiedCount: 0,
+      needsCurationCount: 0,
+      skippedCount: skipped.length,
+      failedCount: failures.length,
+      imported: [],
+      skipped,
+      failures,
+    };
+
+    if (options.dryRun) {
+      for (const item of planned) {
+        summary.imported.push({
+          name: item.entry.name,
+          path: item.entry.path,
+          workArea: item.entry.workArea,
+          copied: !inPlace,
+          autoClassified: item.classification.autoClassified,
+          needsCuration: item.classification.needsCuration,
+        });
+      }
+      summary.importedCount = planned.length;
+      summary.copiedCount = planned.filter((item) => !inPlace).length;
+      summary.inPlaceCount = planned.filter((item) => inPlace).length;
+      summary.autoClassifiedCount = planned.filter((item) => item.classification.autoClassified).length;
+      summary.needsCurationCount = planned.filter((item) => item.classification.needsCuration).length;
+      emitImportResult(summary, { dryRun: true });
+      return true;
+    }
+
+    const entriesToCommit = [];
+    const copiedDirs = [];
+    for (const item of planned) {
+      if (!inPlace) {
+        const tempDestDir = path.join(context.skillsDir, `.${item.entry.name}.tmp-${Date.now()}`);
+        try {
+          copySkillFiles(item.candidate.dirPath, tempDestDir, context.rootDir);
+          fs.renameSync(tempDestDir, item.targetDir);
+          copiedDirs.push(item.targetDir);
+        } catch (copyError) {
+          fs.rmSync(tempDestDir, { recursive: true, force: true });
+          failures.push({
+            path: item.candidate.relativeDir,
+            reason: `Copy failed: ${copyError.message}`,
+          });
+          continue;
+        }
+      }
+
+      entriesToCommit.push(item.entry);
+      summary.imported.push({
+        name: item.entry.name,
+        path: item.entry.path,
+        workArea: item.entry.workArea,
+        copied: !inPlace,
+        autoClassified: item.classification.autoClassified,
+        needsCuration: item.classification.needsCuration,
+      });
+    }
+
+    if (entriesToCommit.length > 0) {
+      try {
+        commitCatalogData({
+          ...workspaceData,
+          updated: currentCatalogTimestamp(),
+          skills: [...workspaceData.skills, ...entriesToCommit],
+        }, context, {
+          preserveWorkAreas: Boolean(options.preserveWorkAreas),
+        });
+      } catch (commitError) {
+        copiedDirs.forEach((dirPath) => fs.rmSync(dirPath, { recursive: true, force: true }));
+        throw commitError;
+      }
+    }
+
+    summary.importedCount = entriesToCommit.length;
+    summary.copiedCount = summary.imported.filter((item) => item.copied).length;
+    summary.inPlaceCount = summary.imported.filter((item) => !item.copied).length;
+    summary.autoClassifiedCount = summary.imported.filter((item) => item.autoClassified).length;
+    summary.needsCurationCount = summary.imported.filter((item) => item.needsCuration).length;
+    summary.skippedCount = skipped.length;
+    summary.failedCount = failures.length;
+
+    emitImportResult(summary);
+    return true;
+  } catch (err) {
+    error(err && err.message ? err.message : String(err));
+    process.exitCode = 1;
+    return false;
   }
 }
 
@@ -5661,6 +5997,7 @@ ${colors.bold}Commands:${colors.reset}
   ${colors.green}check${colors.reset}                 Check for available updates
   ${colors.green}init [name]${colors.reset}           Create a new SKILL.md template
   ${colors.green}init-library <name>${colors.reset}   Create a managed library workspace
+  ${colors.green}import [path]${colors.reset}         Import local skills into the active managed workspace
   ${colors.green}build-docs${colors.reset}            Regenerate README.md and WORK_AREAS.md in a workspace
   ${colors.green}config${colors.reset}                Manage CLI settings
   ${colors.green}catalog <repo>${colors.reset}       Add upstream skills to the catalog (no local copy)
@@ -5713,7 +6050,9 @@ ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills install pdf -p             Install to .agents/skills/
   npx ai-agent-skills install --collection swift-agent-skills -p
   npx ai-agent-skills init-library my-library    Create a managed workspace
+  npx ai-agent-skills init-library . --areas "mobile,workflow,research" --import
   npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "I want this in my own library."
+  npx ai-agent-skills import --auto-classify     Import skills from the active workspace root
   npx ai-agent-skills install frontend-design -p Install one workspace pick to project scope
   npx ai-agent-skills sync frontend-design -p    Refresh one installed skill in project scope
   npx ai-agent-skills build-docs                 Regenerate workspace docs
@@ -5773,7 +6112,7 @@ function showInfo(skillName, options = {}) {
     .map(collection => `${collection.title} [${collection.id}]`)
     .join(', ') || 'none';
   const syncMode = getSyncMode(skill);
-  const sourceUrl = skill.sourceUrl || `https://github.com/${skill.source}`;
+  const sourceUrl = skill.sourceUrl || null;
   const safeDescription = sanitizeSkillContent(skill.description || '');
   const safeWhyHere = sanitizeSkillContent(skill.whyHere || 'This skill still earns a place in the library.');
   const safeNotes = sanitizeSkillContent(skill.notes || '');
@@ -5870,8 +6209,8 @@ ${colors.bold}Provenance:${colors.reset}
   Collections: ${collectionStr}
   Depends On: ${dependsOn.length > 0 ? dependsOn.join(', ') : 'none'}
   Used By: ${usedBy.length > 0 ? usedBy.join(', ') : 'none'}
-  Source Repo: ${skill.source}
-  Source URL: ${sourceUrl}
+  Source: ${skill.source || 'local library'}
+${sourceUrl ? `  Source URL: ${sourceUrl}\n` : ''}
 
 ${colors.bold}Catalog Notes:${colors.reset}
   Category: ${skill.category}
@@ -6169,6 +6508,82 @@ function normalizeStarterCollections(collections) {
   });
 }
 
+function normalizeAreasFlag(value) {
+  if (value == null) return undefined;
+  const parsed = normalizeListInput(value);
+  if (parsed.length === 0) {
+    throw new Error('--areas requires at least one non-empty work area id.');
+  }
+  return parsed;
+}
+
+function readIfExists(targetPath) {
+  try {
+    return fs.readFileSync(targetPath, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function hasGeneratedReadmeMarkers(content) {
+  if (!content) return false;
+  return Object.values(README_MARKERS).every(([start, end]) => content.includes(start) && content.includes(end));
+}
+
+function buildManagedReadmeSection() {
+  return [
+    '## Managed Library',
+    '',
+    'This repo is initialized as an `ai-agent-skills` workspace.',
+    '',
+    'Use `ai-agent-skills` to keep the catalog, shelf docs, and house copies in sync.',
+    '',
+    '<!-- GENERATED:library-stats:start -->',
+    '<!-- GENERATED:library-stats:end -->',
+    '',
+    '### Shelves',
+    '',
+    '<!-- GENERATED:shelf-table:start -->',
+    '<!-- GENERATED:shelf-table:end -->',
+    '',
+    '### Collections',
+    '',
+    '<!-- GENERATED:collection-table:start -->',
+    '<!-- GENERATED:collection-table:end -->',
+    '',
+    '### Sources',
+    '',
+    '<!-- GENERATED:source-table:start -->',
+    '<!-- GENERATED:source-table:end -->',
+    '',
+  ].join('\n');
+}
+
+function ensureWorkspaceReadme(context, libraryName) {
+  const existing = readIfExists(context.readmePath);
+  if (!existing) {
+    fs.writeFileSync(context.readmePath, buildWorkspaceReadmeTemplate(libraryName));
+    return { created: true, appended: false, preserved: false };
+  }
+
+  if (hasGeneratedReadmeMarkers(existing)) {
+    return { created: false, appended: false, preserved: false };
+  }
+
+  const trimmed = existing.endsWith('\n') ? existing : `${existing}\n`;
+  fs.writeFileSync(context.readmePath, `${trimmed}\n${buildManagedReadmeSection()}`);
+  return { created: false, appended: true, preserved: false };
+}
+
+function ensureWorkspaceWorkAreasFile(context, starterData) {
+  if (fs.existsSync(context.workAreasPath)) {
+    return { created: false, preserved: true };
+  }
+
+  writeGeneratedDocs(starterData, context);
+  return { created: true, preserved: false };
+}
+
 function createStarterLibraryData(libraryName, librarySlug, options = {}) {
   const pkg = require('./package.json');
   return {
@@ -6184,23 +6599,26 @@ function createStarterLibraryData(libraryName, librarySlug, options = {}) {
 }
 
 function initLibrary(name, options = {}) {
-  const libraryName = String(name || '').trim();
-  if (!libraryName) {
+  const rawName = String(name || '').trim();
+  if (!rawName) {
     error('Please provide a workspace name.');
     log('Usage: npx ai-agent-skills init-library <name>');
     process.exitCode = 1;
     return false;
   }
 
-  const librarySlug = slugifyLibraryName(libraryName);
+  const inPlace = rawName === '.';
+  const targetDir = inPlace ? process.cwd() : path.resolve(process.cwd(), slugifyLibraryName(rawName));
+  const derivedName = inPlace ? path.basename(targetDir) : rawName;
+  const libraryName = derivedName;
+  const librarySlug = slugifyLibraryName(derivedName);
   if (!librarySlug) {
     error('The workspace name needs at least one letter or number.');
     process.exitCode = 1;
     return false;
   }
 
-  const targetDir = path.resolve(process.cwd(), librarySlug);
-  sandboxOutputPath(targetDir, process.cwd());
+  sandboxOutputPath(targetDir, inPlace ? targetDir : process.cwd());
   if (isManagedWorkspaceRoot(targetDir)) {
     error(`Workspace already initialized at ${targetDir}`);
     process.exitCode = 1;
@@ -6209,7 +6627,7 @@ function initLibrary(name, options = {}) {
 
   if (fs.existsSync(targetDir)) {
     const existing = fs.readdirSync(targetDir);
-    if (existing.length > 0) {
+    if (!inPlace && existing.length > 0) {
       error(`Refusing to overwrite existing directory: ${targetDir}`);
       process.exitCode = 1;
       return false;
@@ -6227,10 +6645,12 @@ function initLibrary(name, options = {}) {
   };
 
   if (options.dryRun) {
+    const importRoot = options.importMode ? path.resolve(options.importPath || targetDir) : null;
+    const importDiscovery = options.importMode ? discoverImportCandidates(importRoot) : null;
     emitDryRunResult('init-library', [
       {
         type: 'create-workspace',
-        target: `Create workspace ${librarySlug}`,
+        target: inPlace ? `Initialize workspace in ${targetDir}` : `Create workspace ${librarySlug}`,
         detail: targetDir,
       },
       {
@@ -6243,6 +6663,11 @@ function initLibrary(name, options = {}) {
         target: 'Seed collections',
         detail: starterData.collections.length > 0 ? starterData.collections.map((collection) => collection.id).join(', ') : 'none',
       },
+      ...(options.importMode ? [{
+        type: 'import-skills',
+        target: `Import discovered skills from ${importRoot}`,
+        detail: `${importDiscovery.discovered.length} importable, ${importDiscovery.skipped.length} skipped, ${importDiscovery.failures.length} failed`,
+      }] : []),
     ], {
       command: 'init-library',
       libraryName,
@@ -6250,17 +6675,33 @@ function initLibrary(name, options = {}) {
       targetDir,
       workAreas: starterData.workAreas.map((area) => area.id),
       collections: starterData.collections.map((collection) => collection.id),
+      import: options.importMode ? {
+        rootDir: importRoot,
+        discovered: importDiscovery.discovered.length,
+        skipped: importDiscovery.skipped.length,
+        failed: importDiscovery.failures.length,
+      } : null,
     });
     return true;
   }
 
   fs.mkdirSync(workspaceContext.workspaceDir, { recursive: true });
   fs.mkdirSync(workspaceContext.skillsDir, { recursive: true });
-  fs.writeFileSync(path.join(workspaceContext.skillsDir, '.gitkeep'), '');
+  if (!fs.existsSync(path.join(workspaceContext.skillsDir, '.gitkeep'))) {
+    fs.writeFileSync(path.join(workspaceContext.skillsDir, '.gitkeep'), '');
+  }
   fs.writeFileSync(workspaceContext.workspaceConfigPath, `${JSON.stringify(workspaceConfig, null, 2)}\n`);
-  fs.writeFileSync(workspaceContext.readmePath, buildWorkspaceReadmeTemplate(libraryName));
   fs.writeFileSync(workspaceContext.skillsJsonPath, `${JSON.stringify(starterData, null, 2)}\n`);
-  writeGeneratedDocs(starterData, workspaceContext);
+  const readmeStatus = ensureWorkspaceReadme(workspaceContext, libraryName);
+  const workAreasStatus = ensureWorkspaceWorkAreasFile(workspaceContext, starterData);
+  const rendered = renderGeneratedDocs(starterData, {
+    context: workspaceContext,
+    readmeSource: fs.readFileSync(workspaceContext.readmePath, 'utf8'),
+  });
+  fs.writeFileSync(workspaceContext.readmePath, rendered.readme);
+  if (!workAreasStatus.preserved) {
+    fs.writeFileSync(workspaceContext.workAreasPath, rendered.workAreas);
+  }
 
   if (isJsonOutput()) {
     setJsonResultData({
@@ -6274,12 +6715,19 @@ function initLibrary(name, options = {}) {
         workAreas: workspaceContext.workAreasPath,
       },
       workAreas: starterData.workAreas.map((area) => area.id),
+      import: null,
     });
   }
   success(`Created library workspace: ${libraryName}`);
   info(`Path: ${targetDir}`);
+  if (readmeStatus.appended) {
+    info('README.md already existed. Appended a managed-library section with generated markers.');
+  }
+  if (workAreasStatus.preserved) {
+    info('WORK_AREAS.md already existed. Preserved it as-is; run build-docs later if you want to replace it.');
+  }
   log(`\n${colors.dim}Next steps:${colors.reset}`);
-  log(`  cd ${librarySlug}`);
+  if (!inPlace) log(`  cd ${librarySlug}`);
   log(`  npx ai-agent-skills list --area frontend`);
   log(`  npx ai-agent-skills search react-native`);
   log(`  npx ai-agent-skills add frontend-design --area frontend --branch Implementation --why "Anchors the frontend shelf with stronger UI craft and production-ready interface direction."`);
@@ -6289,6 +6737,16 @@ function initLibrary(name, options = {}) {
   log(`  git commit -m "Initialize skills library"`);
   log(`  gh repo create <owner>/${librarySlug} --public --source=. --remote=origin --push`);
   log(`  npx ai-agent-skills install <owner>/${librarySlug} --collection starter-pack -p`);
+
+  if (options.importMode) {
+    return importWorkspaceSkills(options.importPath || targetDir, {
+      context: workspaceContext,
+      autoClassify: options.autoClassify,
+      preserveWorkAreas: workAreasStatus.preserved,
+      bootstrap: true,
+    });
+  }
+
   return true;
 }
 
@@ -6419,7 +6877,11 @@ function collectCheckResults(scope) {
             });
             continue;
           }
-          const catalogPath = path.join(catalogContext.skillsDir, entry.name);
+          const workspaceData = loadCatalogData(catalogContext);
+          const workspaceSkill = findSkillByName(workspaceData, entry.name);
+          const catalogPath = workspaceSkill
+            ? resolveCatalogSkillSourcePath(entry.name, { sourceContext: catalogContext, skill: workspaceSkill })
+            : path.join(catalogContext.skillsDir, entry.name);
           results.push({
             scope: target.label,
             name: entry.name,
@@ -6510,6 +6972,7 @@ async function main() {
     noDeps,
     category,
     workArea,
+    workAreas,
     collection,
     tags,
     labels,
@@ -6527,6 +6990,8 @@ async function main() {
     skillFilters,
     listMode,
     yes,
+    importMode,
+    autoClassify,
   } = parsed;
   const managedTargets = resolveManagedTargets(parsed);
 
@@ -6894,9 +7359,19 @@ async function main() {
 
     case 'init-library':
       initLibrary(param || getPayloadValue(mutationPayload || {}, 'name'), {
-        workAreas: getPayloadValue(mutationPayload || {}, 'workAreas'),
+        workAreas: getPayloadValue(mutationPayload || {}, 'workAreas') || normalizeAreasFlag(parsed.workAreas),
         collections: getPayloadValue(mutationPayload || {}, 'collections'),
+        importMode: mergeMutationBoolean(parsed.importMode, mutationPayload || {}, 'import'),
+        autoClassify: mergeMutationBoolean(parsed.autoClassify, mutationPayload || {}, 'autoClassify'),
+        importPath: getPayloadValue(mutationPayload || {}, 'importPath') || null,
         dryRun: mergeMutationBoolean(parsed.dryRun, mutationPayload || {}, 'dryRun'),
+      });
+      return;
+
+    case 'import':
+      importWorkspaceSkills(param || null, {
+        autoClassify,
+        dryRun,
       });
       return;
 

@@ -1073,6 +1073,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
     ? Math.max(48, columns - leftWidth - rightWidth - 6)
     : clamp(columns - 2, 46, 96);
   const installSummary = getInstallSummary(skill);
+  const hasUpstreamUrl = Boolean(skill.sourceUrl);
   const whyHere = skill.whyHere || skill.description;
   const editorialLines = [
     whyHere,
@@ -1082,7 +1083,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
   ].filter(Boolean);
   const previewContent = previewLines.length > 0
     ? previewLines
-    : ['No bundled SKILL.md is stored locally for this pick.', 'Use the install command or upstream link when you want the live source directly.'];
+    : ['No bundled SKILL.md is stored locally for this pick.', hasUpstreamUrl ? 'Use the install command or upstream link when you want the live source directly.' : 'Use the install command or local source path when you want the full skill body directly.'];
   const provenanceLines = getSkillProvenanceLines(skill, {wide: wideLayout});
   const neighboringLines = getNeighboringPickLines(relatedSkills);
 
@@ -1124,7 +1125,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
             provenanceLines[0],
           ]}
           command=${installCommand}
-          footer="i install · p preview · o upstream"
+          footer=${hasUpstreamUrl ? 'i install · p preview · o upstream' : 'i install · p preview'}
           variant="rail"
         />
         <${Inspector}
@@ -1187,7 +1188,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
           skillsSpec ? 'skills.sh is available if you want to install directly from the upstream repo.' : 'This skill currently installs through the curated library path only.',
         ]}
         command=${installCommand}
-        footer="Press i to choose install path · o opens the upstream source"
+        footer=${hasUpstreamUrl ? 'Press i to choose install path · o opens the upstream source' : 'Press i to choose install path'}
         variant="rail"
       />
       ${skillsSpec
@@ -1204,13 +1205,17 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
             />
           `
         : null}
-      <${Inspector}
-        title="Source URL"
-        eyebrow="Upstream provenance"
-        lines=${[compactText(skill.sourceUrl, wideLayout ? 54 : 72)]}
-        footer="o opens the upstream source in your browser."
-        variant="rail"
-      />
+      ${hasUpstreamUrl
+        ? html`
+            <${Inspector}
+              title="Source URL"
+              eyebrow="Upstream provenance"
+              lines=${[compactText(skill.sourceUrl, wideLayout ? 54 : 72)]}
+              footer="o opens the upstream source in your browser."
+              variant="rail"
+            />
+          `
+        : null}
     <//>
   `;
 
@@ -1220,7 +1225,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
         items=${[
           {label: 'i Install this skill', primary: true},
           {label: previewMode ? 'p Hide preview' : 'p Preview bundled SKILL.md'},
-          {label: 'o Open upstream'},
+          ...(hasUpstreamUrl ? [{label: 'o Open upstream'}] : []),
         ]}
       />
       ${wideLayout
@@ -1244,7 +1249,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
                   skillsSpec ? 'skills.sh is also available if you want the upstream repository path.' : 'Use the curated install path when you want the library copy and the shelf context.',
                 ]}
                 command=${installCommand}
-                footer="Press i to choose install path · o opens the upstream source"
+                footer=${hasUpstreamUrl ? 'Press i to choose install path · o opens the upstream source' : 'Press i to choose install path'}
               />
               ${skillsSpec
                 ? html`
@@ -1277,6 +1282,7 @@ function SkillScreen({skill, previewMode, scope, agent, columns, viewport = null
 
 function InstallChooser({skill, scope, agent, selectedIndex, columns, viewport = null}) {
   const skillsSpec = agent ? getSkillsInstallSpec(skill, agent) : null;
+  const hasUpstreamUrl = Boolean(skill.sourceUrl);
   const chooserWidth = clamp(columns - (viewport?.micro ? 4 : 2), 46, viewport?.micro ? 72 : 104);
   const installType = `${getTierLabel(skill)} / ${getDistributionLabel(skill)}`;
   const options = agent
@@ -1297,13 +1303,15 @@ function InstallChooser({skill, scope, agent, selectedIndex, columns, viewport =
               command: skillsSpec.command,
             }]
           : []),
-        {
-          id: 'open',
-          label: 'Open upstream',
-          meta: 'Browser action',
-          description: 'Open the upstream source in the browser.',
-          command: skill.sourceUrl,
-        },
+        ...(hasUpstreamUrl
+          ? [{
+              id: 'open',
+              label: 'Open upstream',
+              meta: 'Browser action',
+              description: 'Open the upstream source in the browser.',
+              command: skill.sourceUrl,
+            }]
+          : []),
         {
           id: 'cancel',
           label: 'Cancel',
@@ -1327,13 +1335,15 @@ function InstallChooser({skill, scope, agent, selectedIndex, columns, viewport =
           description: 'Install to .agents/skills/ so the team can share the same shelf through git.',
           command: getInstallCommand(skill, 'project'),
         },
-        {
-          id: 'open',
-          label: 'Open upstream',
-          meta: 'Browser action',
-          description: 'Open the upstream source in the browser.',
-          command: skill.sourceUrl,
-        },
+        ...(hasUpstreamUrl
+          ? [{
+              id: 'open',
+              label: 'Open upstream',
+              meta: 'Browser action',
+              description: 'Open the upstream source in the browser.',
+              command: skill.sourceUrl,
+            }]
+          : []),
         {
           id: 'cancel',
           label: 'Cancel',
@@ -1498,7 +1508,7 @@ function getSkillProvenanceLines(skill, {wide = false} = {}) {
     `${skill.workAreaTitle} shelf · ${skill.branchTitle}`,
     `${getTierLabel(skill)} · ${getDistributionLabel(skill)} · ${skill.trust}`,
     `Install state: ${skill.installStateLabel || 'not installed in the standard scopes'}`,
-    `Source repo: ${skill.source}`,
+    `Source: ${skill.source}`,
     wide
       ? `Collections: ${(skill.collections || []).join(', ') || 'none'}`
       : `Collections: ${(skill.collections || []).slice(0, 2).join(', ') || 'none'}`,
@@ -1879,18 +1889,18 @@ function App({catalog: initialCatalog, scope, agent, onExit, libraryContext}) {
             },
           },
           ...(currentSkillsSpec
-            ? [{
-                id: 'skills',
-                action: {
+          ? [{
+              id: 'skills',
+              action: {
                   type: 'skills-install',
                   skillName: currentSkill.name,
                   command: currentSkillsSpec.command,
                   binary: currentSkillsSpec.binary,
-                  args: currentSkillsSpec.args,
-                },
-              }]
+                args: currentSkillsSpec.args,
+              },
+            }]
             : []),
-          {id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}},
+          ...(currentSkill.sourceUrl ? [{id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}}] : []),
           {id: 'cancel', action: null},
         ]
       : [
@@ -1910,7 +1920,7 @@ function App({catalog: initialCatalog, scope, agent, onExit, libraryContext}) {
               scope: 'project',
             },
           },
-          {id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}},
+          ...(currentSkill.sourceUrl ? [{id: 'open', action: {type: 'open-upstream', url: currentSkill.sourceUrl}}] : []),
           {id: 'cancel', action: null},
         ]
     : [];
@@ -1987,9 +1997,11 @@ function App({catalog: initialCatalog, scope, agent, onExit, libraryContext}) {
       items.push({id: 'toggle-preview', label: previewMode ? 'Hide Preview' : 'Show Preview', detail: 'Toggle the SKILL.md preview', run: () => {
         setPreviewMode((value) => !value);
       }});
-      items.push({id: 'open-upstream', label: 'Open Upstream', detail: 'Open the source repo URL in the browser', run: () => {
-        spawnSync('open', [currentSkill.sourceUrl], {stdio: 'ignore'});
-      }});
+      if (currentSkill.sourceUrl) {
+        items.push({id: 'open-upstream', label: 'Open Upstream', detail: 'Open the source repo URL in the browser', run: () => {
+          spawnSync('open', [currentSkill.sourceUrl], {stdio: 'ignore'});
+        }});
+      }
     }
 
     items.push({id: 'help', label: 'Help', detail: 'Show keyboard help', run: () => {
@@ -2449,7 +2461,9 @@ function App({catalog: initialCatalog, scope, agent, onExit, libraryContext}) {
         return;
       }
       if (input === 'o') {
-        spawnSync('open', [currentSkill.sourceUrl], {stdio: 'ignore'});
+        if (currentSkill.sourceUrl) {
+          spawnSync('open', [currentSkill.sourceUrl], {stdio: 'ignore'});
+        }
         return;
       }
     }
@@ -2907,10 +2921,14 @@ function App({catalog: initialCatalog, scope, agent, onExit, libraryContext}) {
 
   const footerHint = viewport.micro
     ? current.type === 'skill'
-      ? 'c curate · i install · p preview · o upstream · b back · q quit'
+      ? (currentSkill?.sourceUrl
+        ? 'c curate · i install · p preview · o upstream · b back · q quit'
+        : 'c curate · i install · p preview · b back · q quit')
       : 'Enter open · b back · : commands · w/r/e views · q quit'
     : current.type === 'skill'
-      ? '/ search · : palette · b back · c curate · i install · p preview · o upstream · t theme · ? help · q quit'
+      ? (currentSkill?.sourceUrl
+        ? '/ search · : palette · b back · c curate · i install · p preview · o upstream · t theme · ? help · q quit'
+        : '/ search · : palette · b back · c curate · i install · p preview · t theme · ? help · q quit')
       : '/ search · : palette · Enter open · b back · w/r/e switch views · t theme · ? help · q quit';
   const footerMode = current.type === 'skill'
     ? 'DETAIL'

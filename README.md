@@ -165,6 +165,11 @@ npx ai-agent-skills install frontend-design -p
 npx ai-agent-skills sync frontend-design -p
 npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing --why "I use this when I want browser-level checks in the workspace."
 npx ai-agent-skills build-docs
+
+# Or bootstrap an existing flat repo of skills in place
+cd ~/projects/my-skills
+npx ai-agent-skills init-library . --areas "mobile,workflow,agent-engineering" --import --auto-classify
+npx ai-agent-skills browse
 ```
 
 ## Workspace Mode
@@ -182,6 +187,9 @@ npx ai-agent-skills install frontend-design -p
 npx ai-agent-skills add anthropics/skills --skill webapp-testing --area workflow --branch Testing --why "I use this when I want browser-level checks in the workspace."
 npx ai-agent-skills sync frontend-design -p
 npx ai-agent-skills build-docs
+
+# Bulk import an existing library after bootstrap
+npx ai-agent-skills import --auto-classify
 ```
 
 Workflow guides:
@@ -357,6 +365,7 @@ npx ai-agent-skills catalog <owner/repo> --skill <name> --area <shelf> --branch 
 npx ai-agent-skills curate <skill-name> --branch "<branch>"
 npx ai-agent-skills curate review
 npx ai-agent-skills vendor <repo-or-path> --skill <name> --area <shelf> --branch <branch> --why "<editorial note>"
+npx ai-agent-skills import [path] --auto-classify
 ```
 
 ## Testing

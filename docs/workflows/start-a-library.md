@@ -13,11 +13,12 @@ Use this repo for reference if you need docs or examples:
 https://github.com/MoizIbnYousaf/Ai-Agent-Skills
 https://github.com/MoizIbnYousaf/Ai-Agent-Skills/blob/main/FOR_YOUR_AGENT.md
 
-Use `init-library`, `add`, `install`, `sync`, and `build-docs`.
+Use `init-library`, `import`, `add`, `install`, `sync`, and `build-docs`.
 Use the CLI with `npx`. Do not ask me to open the repo or link you to anything else.
 Do not hand-edit files if the command already exists.
 Create a new folder called `my-skills-library` with `npx ai-agent-skills init-library my-skills-library`, unless I clearly ask for a different name.
 Move into that workspace and keep working there.
+If I already have a flat repo of skills, use `npx ai-agent-skills init-library . --import` from that repo root instead.
 Keep the first pass small and opinionated, around 3 to 8 skills.
 If you have a built-in question tool, use it.
 Ask only what you need to choose shelves, starting sources, and default install scope.
@@ -35,6 +36,13 @@ npx ai-agent-skills sync frontend-design -p
 npx ai-agent-skills build-docs
 ```
 
+To bootstrap an existing flat repo of skills in place:
+
+```bash
+cd ~/projects/my-skills
+npx ai-agent-skills init-library . --areas "mobile,workflow,agent-engineering" --import --auto-classify
+```
+
 That creates:
 
 - `skills.json`
@@ -43,10 +51,12 @@ That creates:
 - `skills/`
 - `.ai-agent-skills/config.json`
 
-The workspace starts small on purpose:
+The default workspace starts with five shelves:
 
 - `frontend`
 - `backend`
+- `mobile`
 - `workflow`
+- `agent-engineering`
 
 Run `list`, `search`, `collections`, and `browse` from inside the workspace when you want the CLI and TUI to read your library instead of the bundled one.

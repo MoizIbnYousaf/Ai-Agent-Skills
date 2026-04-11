@@ -121,7 +121,11 @@ function runCommand(command, args, options = {}) {
 }
 
 function runCli(args, options = {}) {
-  return runCommand(process.execPath, [path.join(ROOT_DIR, 'cli.js'), ...args], options);
+  const effectiveArgs = [...args];
+  if (!effectiveArgs.includes('--format') && !effectiveArgs.includes('--json')) {
+    effectiveArgs.push('--format', 'text');
+  }
+  return runCommand(process.execPath, [path.join(ROOT_DIR, 'cli.js'), ...effectiveArgs], options);
 }
 
 function runExpect(script, options = {}) {
@@ -335,7 +339,10 @@ function verifyInstalledMeta(skill, scope, meta) {
   ensure(meta.scope === scope, `Installed metadata scope mismatch for ${skill.name}`);
 
   if (skill.tier === 'house') {
-    ensure(meta.sourceType === 'registry', `Expected registry sourceType for house skill ${skill.name}`);
+    ensure(
+      meta.sourceType === 'catalog' || meta.sourceType === 'registry',
+      `Expected catalog/registry sourceType for house skill ${skill.name}`
+    );
     return;
   }
 
@@ -779,7 +786,7 @@ async function main() {
 
         const viewportScenarios = [
           { columns: 80, rows: 24, expectedLines: ['Frontend', 'Backend'] },
-          { columns: 100, rows: 30, expectedLines: ['Frontend', 'Backend', 'Docs', 'Testing'] },
+          { columns: 100, rows: 30, expectedLines: ['Frontend', 'Backend', 'Mobile', 'Workflow'] },
           { columns: 140, rows: 40, expectedLines: ['Frontend', 'Mobile', 'Backend'] },
         ];
 

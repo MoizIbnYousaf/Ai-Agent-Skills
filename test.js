@@ -280,6 +280,24 @@ function createLocalSkillRepo(skillName, description = 'Fixture skill') {
   return repoDir;
 }
 
+function createFlatSkillLibraryFixture(skillDefs = []) {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'flat-skill-library-'));
+  for (const definition of skillDefs) {
+    const skillDir = path.join(rootDir, definition.dirName || definition.name);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      `---\nname: ${definition.name}\ndescription: ${definition.description}\n${definition.extraFrontmatter || ''}---\n\n# ${definition.name}\n\n${definition.body || definition.description}\n`
+    );
+  }
+  return {
+    rootDir,
+    cleanup() {
+      fs.rmSync(rootDir, { recursive: true, force: true });
+    },
+  };
+}
+
 console.log('\n🧪 Running tests...\n');
 
 // ============ SKILLS.JSON TESTS ============
@@ -292,7 +310,7 @@ test('skills.json exists and is valid JSON', () => {
 
 test('skills.json has skills with required fields', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
-  const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'sourceUrl', 'origin', 'trust', 'syncMode'];
+  const required = ['name', 'description', 'category', 'workArea', 'branch', 'author', 'license', 'source', 'origin', 'trust', 'syncMode'];
   const vendoredRequired = [...required, 'whyHere'];
 
   data.skills.forEach(skill => {
@@ -311,10 +329,12 @@ test('skills.json provenance metadata is valid', () => {
   data.skills.forEach(skill => {
     assert(validOrigins.includes(skill.origin), `Invalid origin "${skill.origin}" for ${skill.name}`);
     assert(validSyncModes.includes(skill.syncMode), `Invalid syncMode "${skill.syncMode}" for ${skill.name}`);
-    assert(
-      typeof skill.sourceUrl === 'string' && skill.sourceUrl.startsWith('https://github.com/'),
-      `Invalid sourceUrl for ${skill.name}`
-    );
+    if (skill.sourceUrl) {
+      assert(
+        typeof skill.sourceUrl === 'string' && skill.sourceUrl.startsWith('https://github.com/'),
+        `Invalid sourceUrl for ${skill.name}`
+      );
+    }
 
     // whyHere is required for vendored skills, optional for cataloged upstream
     if (skill.vendored !== false) {
@@ -642,6 +662,141 @@ test('init-library --dry-run previews workspace creation without writing files',
   }
 });
 
+test('init-library supports current-directory bootstrap with custom work areas and preserves existing docs', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'halaali-ops', description: 'Halaali operations helper', body: 'Halaali deployment and data management.' },
+  ]);
+
+  try {
+    const readmePath = path.join(fixture.rootDir, 'README.md');
+    const workAreasPath = path.join(fixture.rootDir, 'WORK_AREAS.md');
+    fs.writeFileSync(readmePath, '# Existing Repo\n\nKeep this intro.\n');
+    fs.writeFileSync(workAreasPath, '# Existing Work Areas\n\nDo not replace on init.\n');
+
+    const result = runCommandResult(['init-library', '.', '--areas', 'halaali,browser,workflow', '--format', 'json'], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `init-library . should succeed: ${result.stdout}${result.stderr}`);
+
+    const config = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, '.ai-agent-skills', 'config.json'), 'utf8'));
+    const skillsJson = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+    const readme = fs.readFileSync(readmePath, 'utf8');
+    const workAreas = fs.readFileSync(workAreasPath, 'utf8');
+
+    assertEqual(config.librarySlug, slugifyName(path.basename(fixture.rootDir)));
+    assertEqual(skillsJson.workAreas.map((area) => area.id).join(','), 'halaali,browser,workflow');
+    assertContains(readme, 'Keep this intro.');
+    assertContains(readme, '## Managed Library');
+    assertContains(readme, '<!-- GENERATED:library-stats:start -->');
+    assertEqual(workAreas, '# Existing Work Areas\n\nDo not replace on init.\n');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('init-library . --import --auto-classify imports flat skills in place', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'halaali-ops', description: 'Use when handling Halaali operations.', body: 'Halaali deployment and data management.' },
+    { name: 'browser-bot', description: 'Use when automating Chrome browser flows.', body: 'Browser automation with Playwright and Chrome.' },
+    { name: 'general-helper', description: 'Use when doing general helper work.', body: 'Generic helper.' },
+  ]);
+
+  try {
+    const result = runCommandResult(['init-library', '.', '--areas', 'halaali,browser,workflow', '--import', '--auto-classify', '--format', 'json'], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `init-library . --import should succeed: ${result.stdout}${result.stderr}`);
+
+    const parsed = JSON.parse(result.stdout);
+    const data = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+    const halaaliOps = data.skills.find((skill) => skill.name === 'halaali-ops');
+    const browserBot = data.skills.find((skill) => skill.name === 'browser-bot');
+    const generalHelper = data.skills.find((skill) => skill.name === 'general-helper');
+
+    assertEqual(parsed.command, 'init-library');
+    assertEqual(parsed.data.importedCount, 3);
+    assertEqual(halaaliOps.path, 'halaali-ops');
+    assertEqual(browserBot.path, 'browser-bot');
+    assertEqual(generalHelper.path, 'general-helper');
+    assertEqual(halaaliOps.workArea, 'halaali');
+    assertEqual(browserBot.workArea, 'browser');
+    assertEqual(generalHelper.workArea, 'workflow');
+    assert(generalHelper.labels.includes('needs-curation'), 'Expected fallback imports to carry needs-curation label');
+    assert(!halaaliOps.sourceUrl, 'Imported private skills should not synthesize a sourceUrl');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('import fails outside a workspace with a bootstrap hint', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'flat-skill', description: 'Flat skill', body: 'Skill body.' },
+  ]);
+
+  try {
+    const result = runCommandResult(['import'], { cwd: fixture.rootDir, rawFormat: true });
+    const combined = `${result.stdout}${result.stderr}`;
+    assert(result.status !== 0, 'import should fail outside a workspace');
+    assertContains(combined, 'only works inside an initialized library workspace');
+    assertContains(combined, 'init-library . --import');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('import copies external skills into the current workspace', () => {
+  const workspace = createWorkspaceFixture('Import Workspace');
+  const external = createFlatSkillLibraryFixture([
+    { name: 'external-skill', description: 'External skill', body: 'External import body.' },
+  ]);
+
+  try {
+    const result = runCommandResult(['import', external.rootDir, '--format', 'json'], {
+      cwd: workspace.workspaceDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `external import should succeed: ${result.stdout}${result.stderr}`);
+
+    const parsed = JSON.parse(result.stdout);
+    const data = JSON.parse(fs.readFileSync(path.join(workspace.workspaceDir, 'skills.json'), 'utf8'));
+    const imported = data.skills.find((skill) => skill.name === 'external-skill');
+
+    assertEqual(parsed.command, 'import');
+    assertEqual(parsed.data.copiedCount, 1);
+    assertEqual(imported.path, 'skills/external-skill');
+    assert(fs.existsSync(path.join(workspace.workspaceDir, 'skills', 'external-skill', 'SKILL.md')), 'Expected copied skill files in workspace/skills');
+  } finally {
+    external.cleanup();
+    workspace.cleanup();
+  }
+});
+
+test('import --dry-run reports planned in-place imports without mutating the workspace', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'dry-run-skill', description: 'Dry-run skill', body: 'Dry-run import body.' },
+  ]);
+
+  try {
+    runCommandResult(['init-library', '.', '--areas', 'workflow'], { cwd: fixture.rootDir });
+    const before = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+    const result = runCommandResult(['import', '--dry-run', '--format', 'json'], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `import --dry-run should succeed: ${result.stdout}${result.stderr}`);
+    const parsed = JSON.parse(result.stdout);
+    const after = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+
+    assertEqual(parsed.data.importedCount, 1);
+    assertEqual(parsed.data.inPlaceCount, 1);
+    assertEqual(before.skills.length, after.skills.length, 'dry-run import should not change skills.json');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test('build-docs is workspace-only', () => {
   const result = runCommandResult(['build-docs']);
   assert(result.status !== 0, 'build-docs should fail outside a workspace');
@@ -780,6 +935,8 @@ test('workflow docs exist and README links them', () => {
   assertContains(agentDoc, 'create a `starter-pack` collection');
   assertContains(agentDoc, 'keep it to about 2 to 3 featured skills per shelf');
   assertContains(agentDoc, 'Make sure the first pass covers every primary shelf the user explicitly named.');
+  assertContains(agentDoc, 'If I already have a flat repo of local skills, run `npx ai-agent-skills init-library . --import`');
+  assertContains(agentDoc, 'npx ai-agent-skills init-library . --areas "mobile,workflow,agent-engineering" --import --auto-classify');
   assertContains(agentDoc, 'React Native / UI');
   assertContains(agentDoc, 'Node / APIs');
   assertContains(agentDoc, 'Sanity-check the library before finishing.');
@@ -1838,7 +1995,7 @@ test('info command works', () => {
   assertContains(output, 'Provenance:');
   assertContains(output, 'Category:');
   assertContains(output, 'Trust:');
-  assertContains(output, 'Source Repo:');
+  assertContains(output, 'Source:');
   assertContains(output, 'Source URL:');
   assertContains(output, 'Sync Mode:');
   assertContains(output, 'Collections:');
@@ -1905,6 +2062,38 @@ test('preview --format json emits structured payloads for vendored and upstream 
   assertEqual(upstream.data.name, 'pdf');
   assertEqual(upstream.data.content, null);
   assert(upstream.data.installSource, 'Expected upstream install source');
+});
+
+test('preview, info, and TUI catalog respect flat imported skill paths', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'halaali-ops', description: 'Use when handling Halaali operations.', body: 'Halaali deployment and data management.' },
+  ]);
+
+  try {
+    runCommandResult(['init-library', '.', '--areas', 'halaali,workflow', '--import'], { cwd: fixture.rootDir });
+
+    const preview = runArgsWithOptions(['preview', 'halaali-ops'], { cwd: fixture.rootDir });
+    assertContains(preview, 'Halaali deployment and data management.');
+
+    const info = JSON.parse(runArgsWithOptions(['info', 'halaali-ops', '--format', 'json'], { cwd: fixture.rootDir }));
+    assertEqual(info.data.skill.sourceUrl, null);
+
+    const catalogJson = runModule(`
+      import { createRequire } from 'module';
+      const require = createRequire(import.meta.url);
+      const { createLibraryContext } = require('./lib/library-context.cjs');
+      const { buildCatalog } = require('./tui/catalog.cjs');
+      const context = createLibraryContext(${JSON.stringify(fixture.rootDir)}, 'workspace');
+      const catalog = buildCatalog(context);
+      const skill = catalog.skills.find((entry) => entry.name === 'halaali-ops');
+      console.log(JSON.stringify({ markdown: skill.markdown, repoUrl: skill.repoUrl }));
+    `);
+    const parsed = JSON.parse(catalogJson);
+    assertContains(parsed.markdown, 'Halaali deployment and data management.');
+    assertEqual(parsed.repoUrl, null);
+  } finally {
+    fixture.cleanup();
+  }
 });
 
 test('preview --format json supports field masks', () => {
@@ -2902,7 +3091,8 @@ test('help --json emits CLI schema from the runtime command registry', () => {
   const add = parsed.data.commands.find((command) => command.name === 'add');
   assert(add.inputSchema && add.inputSchema.stdin, 'Expected add schema to expose stdin JSON schema');
   assert(add.inputSchema.stdin.properties.whyHere, 'Expected add stdin schema to include whyHere');
-  assert(add.inputSchema.stdin.properties.workArea.enum.includes('agent-engineering'), 'Expected add stdin schema to expose work area enum');
+  assertEqual(add.inputSchema.stdin.properties.workArea.type, 'string');
+  assert(parsed.data.commands.some((command) => command.name === 'import'), 'Expected import command in help schema');
 });
 
 test('help <command> --json emits per-command schema', () => {
@@ -2940,7 +3130,11 @@ test('help exposes stdin schemas for uninstall and init-library', () => {
   assert(uninstall.inputSchema.stdin.properties.dryRun, 'Expected uninstall stdin dryRun support');
   assert(initLibrary.inputSchema.stdin, 'Expected init-library stdin schema');
   assert(initLibrary.inputSchema.stdin.properties.workAreas.items.oneOf, 'Expected nested workAreas schema');
+  assert(initLibrary.inputSchema.stdin.properties.import, 'Expected init-library stdin import support');
+  assert(initLibrary.inputSchema.stdin.properties.autoClassify, 'Expected init-library stdin autoClassify support');
   assert(initLibrary.outputSchema.variants, 'Expected init-library to describe output variants');
+  const importCommand = parsed.data.commands.find((command) => command.name === 'import');
+  assert(importCommand.outputSchema, 'Expected import command to describe output');
 });
 
 test('version --format json emits structured version payload', () => {

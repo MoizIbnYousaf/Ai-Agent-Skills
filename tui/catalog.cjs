@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const { loadCatalogData } = require('../lib/catalog-data.cjs');
+const {
+  resolveCatalogSkillSourcePath,
+  shouldTreatCatalogSkillAsHouse,
+} = require('../lib/catalog-paths.cjs');
 const { buildDependencyGraph } = require('../lib/dependency-graph.cjs');
 const { buildInstallStateIndex, getInstallState } = require('../lib/install-state.cjs');
 const { resolveLibraryContext } = require('../lib/library-context.cjs');
@@ -68,9 +72,9 @@ function readSkillsJson(context) {
   return loadCatalogData(context);
 }
 
-function readSkillMarkdown(skillName, context) {
+function readSkillMarkdown(skillName, context, skill = null) {
   try {
-    const skillPath = path.join(context.skillsDir, skillName, 'SKILL.md');
+    const skillPath = path.join(resolveCatalogSkillSourcePath(skillName, { sourceContext: context, skill }), 'SKILL.md');
     return fs.readFileSync(skillPath, 'utf8');
   } catch {
     return null;
@@ -343,8 +347,8 @@ function buildCatalog(context = resolveLibraryContext()) {
       description: '',
     };
     const branchTitle = humanizeSlug(skill.branch || 'misc');
-    const isVendored = skill.tier !== 'upstream';
-    const markdown = isVendored ? readSkillMarkdown(skill.name, context) : null;
+    const isVendored = shouldTreatCatalogSkillAsHouse(skill, context);
+    const markdown = isVendored ? readSkillMarkdown(skill.name, context, skill) : null;
     const source = skill.source;
     const title = humanizeSlug(skill.name);
     const installState = getInstallState(installStateIndex, skill.name);
@@ -360,7 +364,7 @@ function buildCatalog(context = resolveLibraryContext()) {
       workAreaTitle: workArea.title,
       workAreaDescription: workArea.description,
       branchTitle,
-      repoUrl: `https://github.com/${source}`,
+      repoUrl: skill.sourceUrl || null,
       sourceTitle: sourceTitle(source),
       collections: collectionTitlesBySkill.get(skill.name) || [],
       installStateLabel: installState.label,
