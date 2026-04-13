@@ -2415,6 +2415,13 @@ test('mktg shortcut supports list mode', () => {
   assertContains(output, 'brand-voice');
 });
 
+test('marketing-cli alias installs the same marketing pack', () => {
+  const output = run('marketing-cli --dry-run');
+  assertContains(output, 'Would install collection: mktg Marketing Pack [mktg]');
+  assertContains(output, path.join(os.homedir(), '.claude', 'skills'));
+  assertContains(output, path.join(os.homedir(), '.codex', 'skills'));
+});
+
 test('collection install honors legacy aliases', () => {
   const output = run('install --collection web-product --dry-run');
   assertContains(output, 'now maps to "build-apps"');

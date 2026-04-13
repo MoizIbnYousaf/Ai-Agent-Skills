@@ -196,7 +196,7 @@ const COMMAND_REGISTRY = {
     flags: ['project', 'global', 'all', 'list', 'dryRun', 'format'],
   },
   [MKTG_SHORTCUT]: {
-    aliases: [],
+    aliases: ['marketing-cli'],
     summary: 'Install the curated mktg marketing pack.',
     args: [],
     flags: ['project', 'global', 'all', 'list', 'dryRun', 'format'],
@@ -7044,9 +7044,10 @@ async function main() {
   const args = process.argv.slice(2);
   setActiveLibraryContext(resolveLibraryContext(process.cwd()));
   const parsed = parseArgs(args);
-  resetOutputState(resolveOutputFormat(parsed), resolveCommandAlias(parsed.command || 'help'), parsed.format != null);
+  const canonicalCommand = resolveCommandAlias(parsed.command || '');
+  resetOutputState(resolveOutputFormat(parsed), canonicalCommand || 'help', parsed.format != null);
   const {
-    command,
+    command: rawCommand,
     param,
     format,
     json,
@@ -7078,6 +7079,7 @@ async function main() {
     importMode,
     autoClassify,
   } = parsed;
+  const command = canonicalCommand || rawCommand;
   const managedTargets = resolveManagedTargets(parsed);
 
   try {

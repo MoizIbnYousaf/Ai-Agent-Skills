@@ -137,6 +137,7 @@ npx ai-agent-skills install --collection swift-agent-skills -p
 
 # Install the mktg marketing pack
 npx ai-agent-skills mktg
+npx ai-agent-skills marketing-cli
 
 # Install to the project shelf
 npx ai-agent-skills install pdf -p
@@ -356,6 +357,7 @@ npx ai-agent-skills preview pdf
 npx ai-agent-skills install <skill-name>
 npx ai-agent-skills swift
 npx ai-agent-skills mktg
+npx ai-agent-skills marketing-cli
 npx ai-agent-skills install <skill-name> -p
 npx ai-agent-skills install --collection swift-agent-skills -p
 npx ai-agent-skills install --collection mktg -p
