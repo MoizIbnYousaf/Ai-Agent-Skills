@@ -32,6 +32,7 @@ Follow this curator decision protocol:
 
 1. Create a new workspace with `npx ai-agent-skills init-library <name>`, unless I already gave you a library name.
    - If I already have a flat repo of local skills, run `npx ai-agent-skills init-library . --import` from that repo root instead of creating a new directory.
+   - Invalid private-only names such as colon or underscore variants should be skipped and reported, not allowed to kill the whole batch.
 2. Move into that workspace and keep working there.
 3. Ask me at most 3 short questions before acting:
    - what kinds of work the library needs to support
@@ -213,6 +214,8 @@ npx ai-agent-skills build-docs
 # Existing flat repo of skills
 cd ~/projects/my-skills
 npx ai-agent-skills init-library . --areas "mobile,workflow,agent-engineering" --import --auto-classify
+npx ai-agent-skills list --area workflow
+npx ai-agent-skills curate my-skill --area mobile --branch "Mobile / Imported" --why "Why it belongs."
 
 git init
 git add .

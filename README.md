@@ -13,10 +13,10 @@
   <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills"><img alt="GitHub stars" src="https://img.shields.io/github/stars/MoizIbnYousaf/Ai-Agent-Skills?style=for-the-badge&label=stars&labelColor=313244&color=89b4fa&logo=github&logoColor=cdd6f4" /></a>
   <a href="https://www.npmjs.com/package/ai-agent-skills"><img alt="npm version" src="https://img.shields.io/npm/v/ai-agent-skills?style=for-the-badge&label=version&labelColor=313244&color=b4befe&logo=npm&logoColor=cdd6f4" /></a>
   <a href="https://www.npmjs.com/package/ai-agent-skills"><img alt="npm total downloads" src="https://img.shields.io/npm/dt/ai-agent-skills?style=for-the-badge&label=downloads&labelColor=313244&color=f5e0dc&logo=npm&logoColor=cdd6f4" /></a>
-  <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills#shelves"><img alt="Library structure" src="https://img.shields.io/badge/library-64%20skills%20%C2%B7%205%20shelves-cba6f7?style=for-the-badge&labelColor=313244&logo=bookstack&logoColor=cdd6f4" /></a>
+  <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills#shelves"><img alt="Library structure" src="https://img.shields.io/badge/library-110%20skills%20%C2%B7%206%20shelves-cba6f7?style=for-the-badge&labelColor=313244&logo=bookstack&logoColor=cdd6f4" /></a>
 </p>
 
-<p align="center"><sub>17 house copies · 47 cataloged upstream</sub></p>
+<p align="center"><sub>17 house copies · 93 cataloged upstream</sub></p>
 <!-- GENERATED:library-stats:end -->
 
 <p align="center"><em>Picked, shelved, and maintained by hand.</em></p>
@@ -135,6 +135,9 @@ npx ai-agent-skills swift
 # Install an entire curated pack
 npx ai-agent-skills install --collection swift-agent-skills -p
 
+# Install the mktg marketing pack
+npx ai-agent-skills mktg
+
 # Install to the project shelf
 npx ai-agent-skills install pdf -p
 
@@ -170,6 +173,9 @@ npx ai-agent-skills build-docs
 cd ~/projects/my-skills
 npx ai-agent-skills init-library . --areas "mobile,workflow,agent-engineering" --import --auto-classify
 npx ai-agent-skills browse
+
+# Invalid private-only names are skipped and reported.
+# Low-confidence imports fall back to workflow with a needs-curation label.
 ```
 
 ## Workspace Mode
@@ -190,6 +196,10 @@ npx ai-agent-skills build-docs
 
 # Bulk import an existing library after bootstrap
 npx ai-agent-skills import --auto-classify
+
+# Review the fallback bucket and fix shelf placement
+npx ai-agent-skills list --area workflow
+npx ai-agent-skills curate some-skill --area mobile --branch "Mobile / Testing" --why "Why it belongs."
 ```
 
 Workflow guides:
@@ -228,6 +238,7 @@ The shelves are the main structure.
 | Mobile | 24 | Swift, SwiftUI, iOS, and Apple-platform development, with room for future React Native branches. |
 | Workflow | 11 | Files, docs, planning, release work, and research-to-output flows. |
 | Agent Engineering | 14 | MCP, skill-building, prompting discipline, and LLM application work. |
+| Marketing | 46 | Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work. |
 <!-- GENERATED:shelf-table:end -->
 
 The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
@@ -245,6 +256,7 @@ Collections are smaller sets. Useful, but secondary to the shelves.
 | `build-systems` | Backend, architecture, MCP, and security work. | `mcp-builder`, `backend-development`, `database-design` |
 | `test-and-debug` | QA, debugging, CI cleanup, and observability. | `playwright`, `webapp-testing`, `gh-fix-ci` |
 | `docs-and-research` | Docs, files, research, and writing work. | `pdf`, `doc-coauthoring`, `docx` |
+| `mktg` | The full upstream mktg marketing playbook. Install the whole set at once or pick from it. | `cmo`, `brand-voice`, `positioning-angles` |
 <!-- GENERATED:collection-table:end -->
 
 ## Curating the catalog
@@ -294,6 +306,7 @@ Current upstream mix:
 <!-- GENERATED:source-table:start -->
 | Source repo | Skills |
 | --- | --- |
+| `MoizIbnYousaf/mktg` | 46 |
 | `anthropics/skills` | 11 |
 | `MoizIbnYousaf/Ai-Agent-Skills` | 11 |
 | `openai/skills` | 9 |
@@ -342,8 +355,10 @@ npx ai-agent-skills preview pdf
 # Install
 npx ai-agent-skills install <skill-name>
 npx ai-agent-skills swift
+npx ai-agent-skills mktg
 npx ai-agent-skills install <skill-name> -p
 npx ai-agent-skills install --collection swift-agent-skills -p
+npx ai-agent-skills install --collection mktg -p
 npx ai-agent-skills <owner/repo>
 npx ai-agent-skills install <owner/repo>
 npx ai-agent-skills install <owner/repo>@<skill-name>

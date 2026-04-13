@@ -290,6 +290,7 @@ function pickQuickSkills(catalog) {
     'frontend-design',
     'frontend-skill',
     'shadcn',
+    'brand-voice',
   ]);
   return catalog.skills.filter((skill) => quickNames.has(skill.name));
 }
@@ -307,20 +308,58 @@ function selectSkills(catalog, options) {
   return catalog.skills;
 }
 
-function createIsolatedContext() {
+function createIsolatedContext(options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-live-'));
   const homeDir = path.join(root, 'home');
   const projectDir = path.join(root, 'project');
   maybeMkdir(homeDir);
   maybeMkdir(projectDir);
+  const effectiveHome = options.useRealHomeForAuth ? (process.env.HOME || os.homedir()) : homeDir;
   return {
     root,
     homeDir,
     projectDir,
     env: {
       ...process.env,
-      HOME: homeDir,
+      HOME: effectiveHome,
     },
+    cleanup() {
+      removeDir(root);
+    },
+  };
+}
+
+function createPrivateLibraryFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-skills-private-'));
+  const skills = [
+    ['ha-sync-docs', 'Use when syncing Halaali docs.', 'Halaali deployment and docs workflow.'],
+    ['ply-akhi', 'Use when automating browser profiles.', 'Chrome browser profile automation with Playwright.'],
+    ['asc-submit', 'Use when handling App Store submissions.', 'App Store metadata submission and review workflow.'],
+    ['my-resume', 'Use when working on resume updates.', 'Resume and personal profile maintenance.'],
+    ['firecrawl', 'Use when running research and web extraction.', 'Research, exa, firecrawl, competitive intel, and web extraction.'],
+    ['general-helper', 'Use when doing general helper work.', 'Generic helper body with no strong shelf signal.'],
+  ];
+
+  for (const [name, description, body] of skills) {
+    const dir = path.join(root, name);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n\n${body}\n`);
+  }
+
+  const invalidEntries = [
+    ['ce:brainstorm', 'Invalid colon name.'],
+    ['generate_command', 'Invalid underscore name.'],
+  ];
+
+  for (const [name, description] of invalidEntries) {
+    const safeDir = name.replace(/[^a-zA-Z0-9_-]/g, '-');
+    const dir = path.join(root, safeDir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n\n${description}\n`);
+  }
+
+  return {
+    root,
     cleanup() {
       removeDir(root);
     },
@@ -332,6 +371,100 @@ function expectedInstallDir(scope, context, skillName) {
     return path.join(context.projectDir, '.agents', 'skills', skillName);
   }
   return path.join(context.homeDir, '.claude', 'skills', skillName);
+}
+
+function runWorkspaceBrowseSmoke(env, cwd, expectedLines) {
+  const expectations = expectedLines.map((line) => `expect "${line}"`).join('\n    ');
+  const script = `
+    log_user 1
+    set timeout 30
+    spawn sh -lc "stty rows 24 columns 100; node ${path.join(ROOT_DIR, 'cli.js')}"
+    expect "Start with a shelf."
+    ${expectations}
+    send "q"
+    expect eof
+  `;
+
+  return runExpect(script, { cwd, env, timeout: 60000 });
+}
+
+function runPrivateLibraryScenario() {
+  const fixture = createPrivateLibraryFixture();
+  const installContext = createIsolatedContext();
+
+  try {
+    const bootstrap = runCli([
+      'init-library',
+      '.',
+      '--areas',
+      'halaali,browser,app-store,mobile,workflow,agent-engineering,research,personal',
+      '--import',
+      '--auto-classify',
+      '--format',
+      'json',
+    ], {
+      cwd: fixture.root,
+      env: installContext.env,
+      timeout: 180000,
+    });
+    ensure(bootstrap.code === 0, 'private library bootstrap/import failed');
+    const parsed = JSON.parse(bootstrap.stdout || bootstrap.combined);
+    ensure(parsed.data.importedCount === 6, 'private library should import 6 valid skills');
+    ensure(parsed.data.skippedInvalidNameCount === 2, 'private library should skip 2 invalid names');
+    ensure(parsed.data.distribution.halaali === 1, 'expected halaali distribution');
+    ensure(parsed.data.distribution.browser === 1, 'expected browser distribution');
+    ensure(parsed.data.distribution['app-store'] === 1, 'expected app-store distribution');
+    ensure(parsed.data.distribution.personal === 1, 'expected personal distribution');
+    ensure(parsed.data.distribution.research === 1, 'expected research distribution');
+    ensure(parsed.data.fallbackWorkflowCount === 1, 'expected one workflow fallback');
+
+    const preview = runCli(['preview', 'ha-sync-docs'], {
+      cwd: fixture.root,
+      env: installContext.env,
+    });
+    ensure(preview.code === 0, 'private library preview failed');
+    ensure(preview.combined.includes('Halaali deployment and docs workflow.'), 'private library preview missing imported content');
+
+    const info = runCli(['info', 'my-resume', '--format', 'json'], {
+      cwd: fixture.root,
+      env: installContext.env,
+    });
+    ensure(info.code === 0, 'private library info failed');
+    const infoJson = JSON.parse(info.stdout || info.combined);
+    ensure(infoJson.data.skill.sourceUrl === null, 'private library imported skill should not expose sourceUrl');
+    ensure(infoJson.data.skill.branch === 'Personal / Resume', 'private library branch derivation mismatch');
+
+    const browse = runWorkspaceBrowseSmoke(installContext.env, fixture.root, ['Halaali', 'Browser']);
+    ensure(browse.code === 0, 'private library browse smoke failed');
+
+    const buildDocs = runCli(['build-docs'], {
+      cwd: fixture.root,
+      env: installContext.env,
+    });
+    ensure(buildDocs.code === 0, 'private library build-docs failed');
+
+    const install = runCli(['install', fixture.root, '--project', '--skill', 'ha-sync-docs'], {
+      cwd: installContext.projectDir,
+      env: installContext.env,
+      timeout: 180000,
+    });
+    ensure(install.code === 0, 'private library remote install failed');
+    const installedSkill = path.join(installContext.projectDir, '.agents', 'skills', 'ha-sync-docs', 'SKILL.md');
+    ensure(fs.existsSync(installedSkill), 'private library remote install did not create skill');
+    ensure(fs.readFileSync(installedSkill, 'utf8').includes('Halaali deployment and docs workflow.'), 'private library remote install copied wrong content');
+
+    return {
+      bootstrap: sanitizeForReport(bootstrap.combined),
+      preview: sanitizeForReport(preview.combined),
+      info: sanitizeForReport(info.combined),
+      browse: sanitizeForReport(browse.combined),
+      buildDocs: sanitizeForReport(buildDocs.combined),
+      install: sanitizeForReport(install.combined),
+    };
+  } finally {
+    fixture.cleanup();
+    installContext.cleanup();
+  }
 }
 
 function verifyInstalledMeta(skill, scope, meta) {
@@ -380,7 +513,8 @@ function runCatalogListFlow(sourceRepo, expectedSkills) {
 }
 
 function runInstallLifecycle(skill, sourceSnapshot, scope) {
-  const context = createIsolatedContext();
+  const isPrivateMktg = skill.source === 'MoizIbnYousaf/mktg';
+  const context = createIsolatedContext({ useRealHomeForAuth: isPrivateMktg });
 
   try {
     const scopeFlag = scope === 'project' ? '--project' : '--global';
@@ -452,7 +586,8 @@ function runInstallLifecycle(skill, sourceSnapshot, scope) {
 }
 
 function runCollectionInstallFlow(collectionId, expectedSkills) {
-  const context = createIsolatedContext();
+  const useRealHomeForAuth = collectionId === 'mktg';
+  const context = createIsolatedContext({ useRealHomeForAuth });
 
   try {
     const installResult = runCli(['install', '--collection', collectionId, '--project'], {
@@ -672,6 +807,7 @@ async function main() {
     previews: [],
     skills: [],
     collectionInstalls: [],
+    privateLibrary: null,
     tui: {
       enabled: !options.skipTui,
       available: false,
@@ -711,7 +847,9 @@ async function main() {
         const preview = runPreviewFlow(skill);
         report.previews.push(preview);
 
-        const scopes = options.fullScopes ? ['global', 'project'] : ['project'];
+        const scopes = skill.source === 'MoizIbnYousaf/mktg'
+          ? ['project']
+          : (options.fullScopes ? ['global', 'project'] : ['project']);
         const lifecycles = [];
         for (const scope of scopes) {
           info(`Running ${scope} lifecycle for ${skill.name}`);
@@ -759,6 +897,21 @@ async function main() {
     ]);
     report.collectionInstalls.push(collectionInstall);
     pass('Collection install flow verified test-and-debug');
+
+    info('Running mktg collection install flow');
+    const mktgInstall = runCollectionInstallFlow('mktg', [
+      'cmo',
+      'brand-voice',
+      'creative',
+      'seo-audit',
+      'typefully',
+    ]);
+    report.collectionInstalls.push(mktgInstall);
+    pass('Collection install flow verified mktg');
+
+    info('Running private library bootstrap/import scenario');
+    report.privateLibrary = runPrivateLibraryScenario();
+    pass('Private library bootstrap/import flow verified');
 
     const expectBinary = options.skipTui ? null : resolveExpectBinary();
     report.tui.available = Boolean(expectBinary);

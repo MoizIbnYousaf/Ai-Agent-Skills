@@ -54,8 +54,11 @@ const {
   shouldTreatCatalogSkillAsHouse,
 } = require('./lib/catalog-paths.cjs');
 const {
+  buildImportedWhyHere,
+  buildWorkAreaDistribution,
   classifyImportedSkill,
   discoverImportCandidates,
+  inferImportedBranch,
 } = require('./lib/workspace-import.cjs');
 const {
   classifyGitError: classifyGitErrorLib,
@@ -129,9 +132,10 @@ const LEGACY_COLLECTION_ALIASES = {
 };
 
 const SWIFT_SHORTCUT = 'swift';
+const MKTG_SHORTCUT = 'mktg';
 const UNIVERSAL_DEFAULT_AGENTS = ['claude', 'codex'];
 const FORMAT_ENUM = ['text', 'json'];
-const WORK_AREA_ENUM = ['frontend', 'backend', 'mobile', 'workflow', 'agent-engineering'];
+const WORK_AREA_ENUM = ['frontend', 'backend', 'mobile', 'workflow', 'agent-engineering', 'marketing'];
 const CATEGORY_ENUM = ['development', 'document', 'creative', 'business', 'productivity'];
 const TRUST_ENUM = ['listed', 'verified'];
 const TIER_ENUM = ['house', 'upstream'];
@@ -188,6 +192,12 @@ const COMMAND_REGISTRY = {
   [SWIFT_SHORTCUT]: {
     aliases: [],
     summary: 'Install the curated Swift hub.',
+    args: [],
+    flags: ['project', 'global', 'all', 'list', 'dryRun', 'format'],
+  },
+  [MKTG_SHORTCUT]: {
+    aliases: [],
+    summary: 'Install the curated mktg marketing pack.',
     args: [],
     flags: ['project', 'global', 'all', 'list', 'dryRun', 'format'],
   },
@@ -599,13 +609,18 @@ function buildCommandInputSchema(commandName) {
 
 const IMPORT_RESULT_SCHEMA = objectSchema({
   rootDir: stringSchema('Import root directory.'),
+  discoveredCount: integerSchema('Total discovered skill folders, including invalid-name candidates.'),
   importedCount: integerSchema('Imported skills.'),
   copiedCount: integerSchema('Copied skills.'),
   inPlaceCount: integerSchema('In-place imported skills.'),
   autoClassifiedCount: integerSchema('Auto-classified skills.'),
+  fallbackWorkflowCount: integerSchema('Skills assigned to workflow as a fallback.'),
   needsCurationCount: integerSchema('Skills still needing manual review.'),
-  skippedCount: integerSchema('Skipped candidates.'),
+  skippedCount: integerSchema('All skipped candidates.'),
+  skippedInvalidNameCount: integerSchema('Skipped invalid-name candidates.'),
+  skippedDuplicateCount: integerSchema('Skipped duplicates.'),
   failedCount: integerSchema('Failed candidates.'),
+  distribution: objectSchema({}, [], 'Imported skill counts by work area.'),
   imported: arraySchema(objectSchema({
     name: stringSchema('Skill name.'),
     path: stringSchema('Catalog path.'),
@@ -619,11 +634,21 @@ const IMPORT_RESULT_SCHEMA = objectSchema({
     path: stringSchema('Original path.'),
     reason: stringSchema('Skip reason.'),
   }, ['path', 'reason'])),
+  skippedInvalidNames: arraySchema(objectSchema({
+    name: nullableSchema(stringSchema('Skill name.')),
+    path: stringSchema('Original path.'),
+    reason: stringSchema('Invalid-name reason.'),
+  }, ['path', 'reason'])),
+  skippedDuplicates: arraySchema(objectSchema({
+    name: nullableSchema(stringSchema('Skill name.')),
+    path: stringSchema('Original path.'),
+    reason: stringSchema('Duplicate-skip reason.'),
+  }, ['path', 'reason'])),
   failures: arraySchema(objectSchema({
     path: stringSchema('Original path.'),
     reason: stringSchema('Failure reason.'),
   }, ['path', 'reason'])),
-}, ['rootDir', 'importedCount', 'copiedCount', 'inPlaceCount', 'autoClassifiedCount', 'needsCurationCount', 'skippedCount', 'failedCount', 'imported', 'skipped', 'failures']);
+}, ['rootDir', 'discoveredCount', 'importedCount', 'copiedCount', 'inPlaceCount', 'autoClassifiedCount', 'fallbackWorkflowCount', 'needsCurationCount', 'skippedCount', 'skippedInvalidNameCount', 'skippedDuplicateCount', 'failedCount', 'distribution', 'imported', 'skipped', 'skippedInvalidNames', 'skippedDuplicates', 'failures']);
 
 function buildCommandOutputSchema(commandName) {
   if (commandName === 'list') {
@@ -5294,6 +5319,7 @@ function buildImportedSkillEntry(candidate, workspaceData, options = {}) {
   const classification = options.autoClassify
     ? classifyImportedSkill(candidate, workspaceData.workAreas || [])
     : defaultImportClassification(workspaceData.workAreas || []);
+  const firstTokenCounts = options.firstTokenCounts || new Map();
   const labels = ['imported'];
   if (classification.needsCuration) {
     labels.push('needs-curation');
@@ -5303,9 +5329,8 @@ function buildImportedSkillEntry(candidate, workspaceData, options = {}) {
   const notePrefix = options.inPlace
     ? `Imported in place from ${candidate.relativeDir}.`
     : `Copied from ${path.join(options.importRoot, candidate.relativeDir)}.`;
-  const whyHere = options.bootstrap
-    ? 'Imported from an existing private skill library during workspace bootstrap.'
-    : 'Imported from an existing private skill library into this managed workspace.';
+  const whyHere = buildImportedWhyHere(candidate, classification);
+  const branch = inferImportedBranch(candidate, classification.workArea, firstTokenCounts);
 
   return {
     entry: buildHouseCatalogEntry({
@@ -5313,7 +5338,7 @@ function buildImportedSkillEntry(candidate, workspaceData, options = {}) {
       description: candidate.description,
       category: 'development',
       workArea: classification.workArea,
-      branch: 'Imported',
+      branch,
       author: String(candidate.frontmatter.author || 'workspace').trim(),
       source: sourceLabel,
       license: String(candidate.frontmatter.license || 'MIT').trim(),
@@ -5352,21 +5377,43 @@ function emitImportResult(result, options = {}) {
 
   log(`${colors.bold}Import Summary${colors.reset}`);
   log(`  Root: ${result.rootDir}`);
+  log(`  Discovered: ${result.discoveredCount}`);
   log(`  Imported: ${result.importedCount}`);
   log(`  Copied: ${result.copiedCount}`);
   log(`  In place: ${result.inPlaceCount}`);
   log(`  Auto-classified: ${result.autoClassifiedCount}`);
+  log(`  Workflow fallback: ${result.fallbackWorkflowCount}`);
   log(`  Needs curation: ${result.needsCurationCount}`);
-  log(`  Skipped: ${result.skippedCount}`);
+  log(`  Skipped invalid names: ${result.skippedInvalidNameCount}`);
+  log(`  Skipped duplicates: ${result.skippedDuplicateCount}`);
   log(`  Failed: ${result.failedCount}`);
 
-  if (result.skipped.length > 0) {
-    log(`\n${colors.bold}Skipped${colors.reset}`);
-    result.skipped.slice(0, 10).forEach((item) => {
+  const distributionEntries = Object.entries(result.distribution || {});
+  if (distributionEntries.length > 0) {
+    log(`  Work areas: ${distributionEntries.map(([workArea, count]) => `${workArea}=${count}`).join(', ')}`);
+  }
+
+  if (result.fallbackWorkflowCount > 0) {
+    log(`  ${colors.dim}${result.fallbackWorkflowCount} skill(s) were assigned to workflow as a fallback and still need review.${colors.reset}`);
+  }
+
+  if ((result.skippedInvalidNames || []).length > 0) {
+    log(`\n${colors.bold}Skipped Invalid Names${colors.reset}`);
+    result.skippedInvalidNames.slice(0, 10).forEach((item) => {
       log(`  ${colors.yellow}${item.name || item.path}${colors.reset} ${colors.dim}- ${item.reason}${colors.reset}`);
     });
-    if (result.skipped.length > 10) {
-      log(`  ${colors.dim}...and ${result.skipped.length - 10} more${colors.reset}`);
+    if (result.skippedInvalidNames.length > 10) {
+      log(`  ${colors.dim}...and ${result.skippedInvalidNames.length - 10} more${colors.reset}`);
+    }
+  }
+
+  if ((result.skippedDuplicates || []).length > 0) {
+    log(`\n${colors.bold}Skipped Duplicates${colors.reset}`);
+    result.skippedDuplicates.slice(0, 10).forEach((item) => {
+      log(`  ${colors.yellow}${item.name || item.path}${colors.reset} ${colors.dim}- ${item.reason}${colors.reset}`);
+    });
+    if (result.skippedDuplicates.length > 10) {
+      log(`  ${colors.dim}...and ${result.skippedDuplicates.length - 10} more${colors.reset}`);
     }
   }
 
@@ -5377,6 +5424,21 @@ function emitImportResult(result, options = {}) {
     });
     if (result.failures.length > 10) {
       log(`  ${colors.dim}...and ${result.failures.length - 10} more${colors.reset}`);
+    }
+  }
+
+  if (result.importedCount > 0) {
+    log(`\n${colors.bold}Next steps${colors.reset}`);
+    const areaIds = Object.keys(result.distribution || {}).slice(0, 4);
+    areaIds.forEach((areaId) => {
+      log(`  npx ai-agent-skills list --area ${areaId}`);
+    });
+    log('  npx ai-agent-skills browse');
+    if (result.needsCurationCount > 0) {
+      const firstNeedsCuration = result.imported.find((item) => item.needsCuration);
+      if (firstNeedsCuration) {
+        log(`  npx ai-agent-skills curate ${firstNeedsCuration.name} --area <shelf> --branch "<branch>" --why "<why it belongs>"`);
+      }
     }
   }
 }
@@ -5400,13 +5462,21 @@ function importWorkspaceSkills(importPath = null, options = {}) {
     const discovery = discoverImportCandidates(importRoot);
     const inPlace = importRoot === context.rootDir;
     const planned = [];
-    const skipped = [...discovery.skipped];
+    const skippedInvalidNames = [...discovery.skippedInvalidNames];
+    const skippedDuplicates = [...discovery.skippedDuplicates];
     const failures = [...discovery.failures];
     let nextData = workspaceData;
+    const firstTokenCounts = new Map();
+
+    for (const candidate of discovery.discovered) {
+      const firstToken = String(candidate.name || '').split('-').filter(Boolean)[0];
+      if (!firstToken) continue;
+      firstTokenCounts.set(firstToken, (firstTokenCounts.get(firstToken) || 0) + 1);
+    }
 
     for (const candidate of discovery.discovered) {
       if (findSkillByName(nextData, candidate.name)) {
-        skipped.push({
+        skippedDuplicates.push({
           name: candidate.name,
           path: candidate.relativeDir,
           reason: 'Skill already exists in the workspace catalog.',
@@ -5422,7 +5492,7 @@ function importWorkspaceSkills(importPath = null, options = {}) {
         : path.join(context.skillsDir, candidate.name);
 
       if (!inPlace && fs.existsSync(targetDir)) {
-        skipped.push({
+        skippedDuplicates.push({
           name: candidate.name,
           path: candidate.relativeDir,
           reason: `Destination already exists at skills/${candidate.name}.`,
@@ -5436,6 +5506,7 @@ function importWorkspaceSkills(importPath = null, options = {}) {
         inPlace,
         autoClassify: options.autoClassify,
         bootstrap: options.bootstrap,
+        firstTokenCounts,
       });
 
       planned.push({
@@ -5453,15 +5524,21 @@ function importWorkspaceSkills(importPath = null, options = {}) {
     const summary = {
       command: 'import',
       rootDir: importRoot,
+      discoveredCount: discovery.discovered.length + skippedInvalidNames.length + skippedDuplicates.length + failures.length,
       importedCount: 0,
       copiedCount: 0,
       inPlaceCount: 0,
       autoClassifiedCount: 0,
+      fallbackWorkflowCount: 0,
       needsCurationCount: 0,
-      skippedCount: skipped.length,
+      skippedInvalidNameCount: skippedInvalidNames.length,
+      skippedDuplicateCount: skippedDuplicates.length,
       failedCount: failures.length,
+      distribution: {},
       imported: [],
-      skipped,
+      skipped: [...skippedInvalidNames, ...skippedDuplicates],
+      skippedInvalidNames,
+      skippedDuplicates,
       failures,
     };
 
@@ -5480,7 +5557,10 @@ function importWorkspaceSkills(importPath = null, options = {}) {
       summary.copiedCount = planned.filter((item) => !inPlace).length;
       summary.inPlaceCount = planned.filter((item) => inPlace).length;
       summary.autoClassifiedCount = planned.filter((item) => item.classification.autoClassified).length;
+      summary.fallbackWorkflowCount = planned.filter((item) => item.classification.needsCuration && item.entry.workArea === 'workflow').length;
       summary.needsCurationCount = planned.filter((item) => item.classification.needsCuration).length;
+      summary.skippedCount = skippedInvalidNames.length + skippedDuplicates.length;
+      summary.distribution = buildWorkAreaDistribution(summary.imported);
       emitImportResult(summary, { dryRun: true });
       return true;
     }
@@ -5534,9 +5614,11 @@ function importWorkspaceSkills(importPath = null, options = {}) {
     summary.copiedCount = summary.imported.filter((item) => item.copied).length;
     summary.inPlaceCount = summary.imported.filter((item) => !item.copied).length;
     summary.autoClassifiedCount = summary.imported.filter((item) => item.autoClassified).length;
+    summary.fallbackWorkflowCount = summary.imported.filter((item) => item.needsCuration && item.workArea === 'workflow').length;
     summary.needsCurationCount = summary.imported.filter((item) => item.needsCuration).length;
-    summary.skippedCount = skipped.length;
+    summary.skippedCount = skippedInvalidNames.length + skippedDuplicates.length;
     summary.failedCount = failures.length;
+    summary.distribution = buildWorkAreaDistribution(summary.imported);
 
     emitImportResult(summary);
     return true;
@@ -5983,6 +6065,7 @@ ${colors.bold}Usage:${colors.reset}
 ${colors.bold}Commands:${colors.reset}
   ${colors.green}browse${colors.reset}                Browse the library in the terminal
   ${colors.green}swift${colors.reset}                 Install the curated Swift hub
+  ${colors.green}mktg${colors.reset}                  Install the curated mktg marketing pack
   ${colors.green}install <source>${colors.reset}      Install skills from the library, a collection, GitHub, git URL, or a local path
   ${colors.green}add <source>${colors.reset}          Add a bundled pick, upstream repo skill, or house copy to a workspace
   ${colors.green}list${colors.reset}                  List catalog skills
@@ -6014,6 +6097,7 @@ ${colors.bold}Source formats:${colors.reset}
   swift                                          Install the Swift hub (default global targets)
   install pdf                                    From this library
   install --collection swift-agent-skills        Install a curated collection
+  install --collection mktg                      Install the curated mktg marketing pack
   anthropics/skills                              Direct repo install (default global targets)
   ./local-path                                   Direct local repo install (default global targets)
   install anthropics/skills                      All skills from a GitHub repo
@@ -6046,6 +6130,7 @@ ${colors.bold}Categories:${colors.reset}
 ${colors.bold}Examples:${colors.reset}
   npx ai-agent-skills                            Launch the terminal browser
   npx ai-agent-skills swift                      Install the Swift hub to the default global targets
+  npx ai-agent-skills mktg                       Install the mktg marketing pack to the default global targets
   npx ai-agent-skills install frontend-design    Install to ~/.claude/skills/
   npx ai-agent-skills install pdf -p             Install to .agents/skills/
   npx ai-agent-skills install --collection swift-agent-skills -p
@@ -7020,17 +7105,18 @@ async function main() {
       return;
     }
 
-    if (command === SWIFT_SHORTCUT) {
+    if (command === SWIFT_SHORTCUT || command === MKTG_SHORTCUT) {
       const previousContext = getActiveLibraryContext();
       setActiveLibraryContext(getBundledLibraryContext());
       try {
+        const collectionId = command === SWIFT_SHORTCUT ? 'swift-agent-skills' : 'mktg';
         if (listMode) {
-          listSkills(category, tags, 'swift-agent-skills', workArea);
+          listSkills(category, tags, collectionId, workArea);
           return;
         }
 
-        const swiftInstallPaths = resolveInstallPath(parsed, { defaultAgents: UNIVERSAL_DEFAULT_AGENTS });
-        await installCollection('swift-agent-skills', parsed, swiftInstallPaths);
+        const shortcutInstallPaths = resolveInstallPath(parsed, { defaultAgents: UNIVERSAL_DEFAULT_AGENTS });
+        await installCollection(collectionId, parsed, shortcutInstallPaths);
       } finally {
         setActiveLibraryContext(previousContext);
       }

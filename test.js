@@ -420,19 +420,44 @@ test('collections metadata is valid', () => {
 test('catalog exposes curated collections with resolved skills', () => {
   const catalog = buildCatalog();
   const myPicks = catalog.collections.find(collection => collection.id === 'my-picks');
+  const mktg = catalog.collections.find(collection => collection.id === 'mktg');
 
   assert(Array.isArray(catalog.collections) && catalog.collections.length > 0, 'catalog should expose collections');
   assert(myPicks, 'expected my-picks collection to exist');
   assert(myPicks.skills.length > 0, 'collection should resolve skill objects');
   assertContains(myPicks.skills.map(skill => skill.name).join(' '), 'frontend-design');
+  assert(mktg, 'expected mktg collection to exist');
+  assertEqual(mktg.skills.length, 46, 'expected 46 mktg skills in the collection');
 });
 
 test('catalog collections expose install commands for curated packs', () => {
   const catalog = buildCatalog();
   const swiftPack = catalog.collections.find(collection => collection.id === 'swift-agent-skills');
+  const mktgPack = catalog.collections.find(collection => collection.id === 'mktg');
 
   assert(swiftPack, 'expected swift-agent-skills collection to exist');
   assertEqual(swiftPack.installCommand, 'npx ai-agent-skills install --collection swift-agent-skills -p');
+  assert(mktgPack, 'expected mktg collection to exist');
+  assertEqual(mktgPack.installCommand, 'npx ai-agent-skills install --collection mktg -p');
+});
+
+test('mktg manifest-backed skills are cataloged on the marketing shelf', () => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
+  const mktgSkills = data.skills.filter((skill) => skill.source === 'MoizIbnYousaf/mktg');
+
+  assertEqual(mktgSkills.length, 46, 'expected 46 mktg skills');
+  ['cmo', 'brand-voice', 'creative', 'seo-audit', 'page-cro', 'typefully'].forEach((name) => {
+    assert(mktgSkills.some((skill) => skill.name === name), `expected ${name} in mktg catalog entries`);
+  });
+  ['autoresearch', 'mktg-coding-bar', 'mktg-compound'].forEach((name) => {
+    assert(!mktgSkills.some((skill) => skill.name === name), `did not expect manifest-missing skill ${name}`);
+  });
+  mktgSkills.forEach((skill) => {
+    assertEqual(skill.workArea, 'marketing');
+    assertEqual(skill.source, 'MoizIbnYousaf/mktg');
+    assertContains(skill.installSource, `MoizIbnYousaf/mktg/skills/${skill.name}`);
+    assertContains(skill.sourceUrl, `https://github.com/MoizIbnYousaf/mktg/tree/main/skills/${skill.name}`);
+  });
 });
 
 test('work area metadata is valid', () => {
@@ -730,6 +755,61 @@ test('init-library . --import --auto-classify imports flat skills in place', () 
   }
 });
 
+test('init-library . --import skips invalid skill names and still imports valid ones', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'good-one', description: 'Good one', body: 'Good one body.' },
+    { name: 'good-two', description: 'Good two', body: 'Good two body.' },
+    { dirName: 'bad-colon', name: 'ce:brainstorm', description: 'Bad colon name', body: 'Bad colon body.' },
+    { dirName: 'bad-underscore', name: 'generate_command', description: 'Bad underscore name', body: 'Bad underscore body.' },
+  ]);
+
+  try {
+    const result = runCommandResult(['init-library', '.', '--areas', 'workflow,agent-engineering', '--import', '--auto-classify', '--format', 'json'], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `init-library . --import should skip invalid names, not fail: ${result.stdout}${result.stderr}`);
+
+    const parsed = JSON.parse(result.stdout);
+    const data = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+
+    assertEqual(parsed.data.importedCount, 2);
+    assertEqual(parsed.data.skippedInvalidNameCount, 2);
+    assertEqual(parsed.data.failedCount, 0);
+    assert(parsed.data.skippedInvalidNames.some((entry) => entry.name === 'ce:brainstorm'));
+    assert(parsed.data.skippedInvalidNames.some((entry) => entry.name === 'generate_command'));
+    assert(data.skills.some((skill) => skill.name === 'good-one'));
+    assert(data.skills.some((skill) => skill.name === 'good-two'));
+    assert(!data.skills.some((skill) => skill.name === 'ce:brainstorm'));
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('init-library . --import succeeds with all-invalid names and reports zero imported', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { dirName: 'bad-colon', name: 'ce:brainstorm', description: 'Bad colon name', body: 'Bad colon body.' },
+    { dirName: 'bad-underscore', name: 'generate_command', description: 'Bad underscore name', body: 'Bad underscore body.' },
+  ]);
+
+  try {
+    const result = runCommandResult(['init-library', '.', '--areas', 'workflow,agent-engineering', '--import', '--format', 'json'], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `all-invalid import should still initialize workspace: ${result.stdout}${result.stderr}`);
+
+    const parsed = JSON.parse(result.stdout);
+    const data = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+
+    assertEqual(parsed.data.importedCount, 0);
+    assertEqual(parsed.data.skippedInvalidNameCount, 2);
+    assertEqual(data.skills.length, 0);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test('import fails outside a workspace with a bootstrap hint', () => {
   const fixture = createFlatSkillLibraryFixture([
     { name: 'flat-skill', description: 'Flat skill', body: 'Skill body.' },
@@ -773,6 +853,36 @@ test('import copies external skills into the current workspace', () => {
   }
 });
 
+test('import prefers nested skills copy and reports the flat duplicate', () => {
+  const workspace = createWorkspaceFixture('Import Duplicate Workspace');
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'duplicate-import-'));
+
+  try {
+    const flat = path.join(externalRoot, 'duplicate-skill');
+    const nested = path.join(externalRoot, 'skills', 'duplicate-skill');
+    fs.mkdirSync(flat, { recursive: true });
+    fs.mkdirSync(nested, { recursive: true });
+    fs.writeFileSync(path.join(flat, 'SKILL.md'), '---\nname: duplicate-skill\ndescription: Flat duplicate\n---\n\n# duplicate-skill\n\nFlat body\n');
+    fs.writeFileSync(path.join(nested, 'SKILL.md'), '---\nname: duplicate-skill\ndescription: Nested duplicate\n---\n\n# duplicate-skill\n\nNested body\n');
+
+    const result = runCommandResult(['import', externalRoot, '--format', 'json'], {
+      cwd: workspace.workspaceDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `duplicate import should succeed: ${result.stdout}${result.stderr}`);
+
+    const parsed = JSON.parse(result.stdout);
+    const importedMarkdown = fs.readFileSync(path.join(workspace.workspaceDir, 'skills', 'duplicate-skill', 'SKILL.md'), 'utf8');
+    assertEqual(parsed.data.importedCount, 1);
+    assertEqual(parsed.data.skippedDuplicateCount, 1);
+    assert(parsed.data.skippedDuplicates.some((entry) => entry.reason.includes('Preferred nested skills/ copy')));
+    assertContains(importedMarkdown, 'Nested body');
+  } finally {
+    fs.rmSync(externalRoot, { recursive: true, force: true });
+    workspace.cleanup();
+  }
+});
+
 test('import --dry-run reports planned in-place imports without mutating the workspace', () => {
   const fixture = createFlatSkillLibraryFixture([
     { name: 'dry-run-skill', description: 'Dry-run skill', body: 'Dry-run import body.' },
@@ -792,6 +902,70 @@ test('import --dry-run reports planned in-place imports without mutating the wor
     assertEqual(parsed.data.importedCount, 1);
     assertEqual(parsed.data.inPlaceCount, 1);
     assertEqual(before.skills.length, after.skills.length, 'dry-run import should not change skills.json');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('import auto-classify routes custom shelf aliases and improves whyHere/branch defaults', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'my-resume', description: 'Resume helper', body: 'resume personal profile cv' },
+    { name: 'firecrawl', description: 'Web scraping search crawling', body: 'web search scraping api cli' },
+    { name: 'ply-akhi', description: 'Browser profile automation', body: 'chrome browser profile playwright automation' },
+    { name: 'ha-sync-docs', description: 'Halaali docs sync', body: 'halaali deployment docs' },
+  ]);
+
+  try {
+    const result = runCommandResult([
+      'init-library', '.',
+      '--areas', 'halaali,browser,app-store,mobile,workflow,agent-engineering,research,personal',
+      '--import',
+      '--auto-classify',
+      '--format', 'json',
+    ], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `custom shelf import should succeed: ${result.stdout}${result.stderr}`);
+    const parsed = JSON.parse(result.stdout);
+    const data = JSON.parse(fs.readFileSync(path.join(fixture.rootDir, 'skills.json'), 'utf8'));
+    const byName = Object.fromEntries(data.skills.map((skill) => [skill.name, skill]));
+
+    assertEqual(byName['my-resume'].workArea, 'personal');
+    assertEqual(byName['firecrawl'].workArea, 'research');
+    assertEqual(byName['ply-akhi'].workArea, 'browser');
+    assertEqual(byName['ha-sync-docs'].workArea, 'halaali');
+    assertEqual(byName['ply-akhi'].branch, 'Browser / Profile');
+    assertEqual(byName['ha-sync-docs'].branch, 'Halaali / Ops');
+    assertContains(byName['my-resume'].whyHere, 'because it helps with');
+    assertNotContains(byName['my-resume'].whyHere, 'Imported from an existing private skill library');
+    assertEqual(parsed.data.distribution.personal, 1);
+    assertEqual(parsed.data.distribution.research, 1);
+    assertEqual(parsed.data.distribution.browser, 1);
+    assertEqual(parsed.data.distribution.halaali, 1);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('import summary reports workflow fallback explicitly', () => {
+  const fixture = createFlatSkillLibraryFixture([
+    { name: 'general-helper', description: 'General helper', body: 'generic helper body' },
+  ]);
+
+  try {
+    const result = runCommandResult(['init-library', '.', '--areas', 'workflow,agent-engineering', '--import', '--format', 'json'], {
+      cwd: fixture.rootDir,
+      rawFormat: true,
+    });
+    assertEqual(result.status, 0, `fallback import should succeed: ${result.stdout}${result.stderr}`);
+    const parsed = JSON.parse(result.stdout);
+    const imported = parsed.data.imported.find((entry) => entry.name === 'general-helper');
+
+    assertEqual(parsed.data.fallbackWorkflowCount, 1);
+    assertEqual(parsed.data.needsCurationCount, 1);
+    assertEqual(imported.workArea, 'workflow');
+    assertEqual(imported.needsCuration, true);
   } finally {
     fixture.cleanup();
   }
@@ -2220,6 +2394,27 @@ test('swift shortcut supports list mode', () => {
   assertContains(output, 'swiftui-pro');
 });
 
+test('mktg shortcut installs the marketing pack to Claude and Codex by default', () => {
+  const output = run('mktg --dry-run');
+  assertContains(output, 'Would install collection: mktg Marketing Pack [mktg]');
+  assertContains(output, path.join(os.homedir(), '.claude', 'skills'));
+  assertContains(output, path.join(os.homedir(), '.codex', 'skills'));
+});
+
+test('mktg shortcut honors explicit project scope', () => {
+  const output = run('mktg --dry-run -p');
+  assertContains(output, 'Would install collection: mktg Marketing Pack [mktg]');
+  assertContains(output, `Targets: ${path.join(__dirname, '.agents', 'skills')}`);
+  assertNotContains(output, path.join(os.homedir(), '.codex', 'skills'));
+});
+
+test('mktg shortcut supports list mode', () => {
+  const output = run('mktg --list');
+  assertContains(output, 'mktg Marketing Pack');
+  assertContains(output, '46 picks');
+  assertContains(output, 'brand-voice');
+});
+
 test('collection install honors legacy aliases', () => {
   const output = run('install --collection web-product --dry-run');
   assertContains(output, 'now maps to "build-apps"');
@@ -2933,7 +3128,7 @@ test('collection install succeeds for project scope with mixed sources', () => {
     const combined = `${result.stdout}${result.stderr}`;
     assertEqual(result.status, 0, 'collection install should succeed');
     assertContains(combined, 'Collection install finished: 5 skills completed');
-    assertContains(combined, 'Installed 2 skill(s)');
+    assertContains(combined, 'Installed 1 skill(s)');
 
     const installRoot = path.join(tmpDir, '.agents', 'skills');
     ['playwright', 'webapp-testing', 'gh-fix-ci', 'sentry', 'userinterface-wiki'].forEach((skillName) => {
@@ -3093,6 +3288,10 @@ test('help --json emits CLI schema from the runtime command registry', () => {
   assert(add.inputSchema.stdin.properties.whyHere, 'Expected add stdin schema to include whyHere');
   assertEqual(add.inputSchema.stdin.properties.workArea.type, 'string');
   assert(parsed.data.commands.some((command) => command.name === 'import'), 'Expected import command in help schema');
+  const importCommand = parsed.data.commands.find((command) => command.name === 'import');
+  assert(importCommand.outputSchema.properties.skippedInvalidNames, 'Expected import output schema to expose skippedInvalidNames');
+  assert(importCommand.outputSchema.properties.skippedDuplicates, 'Expected import output schema to expose skippedDuplicates');
+  assert(importCommand.outputSchema.properties.distribution, 'Expected import output schema to expose distribution');
 });
 
 test('help <command> --json emits per-command schema', () => {
