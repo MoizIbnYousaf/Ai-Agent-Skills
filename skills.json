@@ -1,7 +1,7 @@
 {
   "version": "4.3.1",
-  "updated": "2026-05-03T00:00:00Z",
-  "total": 115,
+  "updated": "2026-05-05",
+  "total": 117,
   "workAreas": [
     {
       "id": "frontend",
@@ -2443,9 +2443,10 @@
         "ecosystem",
         "market snapshot",
         "ground truth",
-        "what's happening"
+        "what's happening",
+        "refresh landscape"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -2522,9 +2523,9 @@
     {
       "name": "direct-response-copy",
       "description": "Write copy that converts. Use when writing landing pages, emails, sales copy, headlines, CTAs, social posts, cold emails, or any persuasive text. Triggers on 'copy', 'copywriting', 'sales copy', 'landing page copy', 'cold email', 'headlines', 'write me a page', 'make this convert', 'rewrite this copy', or any request involving persuasive writing. Three modes: Generate (write from scratch), Edit (improve existing copy with Seven Sweeps), Cold Email (outbound sequences). If someone has text that needs to sell harder, this is the skill.",
-      "category": "document",
-      "workArea": "marketing",
-      "branch": "Copy Content",
+      "category": "business",
+      "workArea": "marketing-execution",
+      "branch": "Copy & Content",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
@@ -2533,9 +2534,10 @@
         "copywriting",
         "sales copy",
         "landing page copy",
-        "cold email"
+        "cold email",
+        "copy editing"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -2552,9 +2554,9 @@
     {
       "name": "seo-content",
       "description": "Create high-quality, SEO-optimized content that ranks AND reads like a human wrote it. Performs live SERP gap analysis, writes with anti-AI detection techniques, and adds schema markup. Use when someone needs a blog post, article, SEO page, or wants content that drives search traffic. Triggers on 'SEO content', 'blog post', 'article', 'SERP', 'programmatic SEO', 'content at scale', 'write a post about', 'rank for', or 'search-optimized content'. Two modes: single article or programmatic SEO at scale.",
-      "category": "document",
-      "workArea": "marketing",
-      "branch": "Copy Content",
+      "category": "business",
+      "workArea": "marketing-execution",
+      "branch": "Copy & Content",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
@@ -2563,9 +2565,10 @@
         "blog post",
         "article",
         "SERP",
-        "programmatic SEO"
+        "programmatic SEO",
+        "content at scale"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -2582,9 +2585,9 @@
     {
       "name": "lead-magnet",
       "description": "Create high-converting free resources that capture emails and build trust. Produces complete lead magnets (ebooks, checklists, templates, toolkits, quizzes) with landing page copy, thank-you page, and follow-up email sequence. Use when someone needs a list-building asset, wants to grow their email list, needs an opt-in incentive, a content upgrade, a gated download, or top-of-funnel content. Triggers on 'lead magnet', 'ebook', 'checklist', 'template', 'free resource', 'opt-in', 'grow my list', 'email capture', 'content upgrade', 'list building', 'gated content', or 'free download'. Even if someone just says 'I need something to capture emails' or 'how do I get more subscribers', this is the skill. Every lead magnet passes a 4-gate quality test before shipping.",
-      "category": "document",
-      "workArea": "marketing",
-      "branch": "Copy Content",
+      "category": "business",
+      "workArea": "marketing-execution",
+      "branch": "Copy & Content",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
@@ -2593,9 +2596,10 @@
         "ebook",
         "checklist",
         "template",
-        "free resource"
+        "free resource",
+        "opt-in"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -2701,8 +2705,8 @@
     {
       "name": "creative",
       "description": "Generate visual asset briefs, ad copy variants, AI image prompts, video scripts, and storyboards. Full creative production system with 5 specialized modes: product photos, product video, social graphics, talking heads, and ad creative. Make sure to use this skill whenever the user mentions any visual or creative marketing need — ad creative, image prompts, video scripts, thumbnails, banners, social graphics, product photography, storyboards, or marketing visuals of any kind. Even if they just say 'I need images for my campaign' or 'make something visual', this is the skill. Includes platform-specific dimensions, AI anti-slop techniques, and Remotion composition templates.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -2712,7 +2716,8 @@
         "visual",
         "image",
         "graphic",
-        "video"
+        "video",
+        "thumbnail"
       ],
       "featured": false,
       "verified": false,
@@ -3007,9 +3012,10 @@
         "help me think through",
         "what should we market",
         "explore approaches",
-        "I don't know where to start"
+        "I don't know where to start",
+        "what campaign"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3116,8 +3122,8 @@
     {
       "name": "marketing-demo",
       "description": "Record product demos and walkthroughs for marketing assets. Two modes: quick screenshot-stitch demos via ply + ffmpeg, or polished Remotion compositions. Use when the user mentions product demo, demo video, walkthrough video, feature showcase, screen recording, GIF demo, product tour, onboarding video, visual tutorial, feature walkthrough, landing page video, hero video, product video, app preview video, or wants to show their product in action. Even if they just say 'show what it does', 'make a video of the app', 'I need a demo for my landing page', or 'record the app' — this is the skill. If someone has a working product and needs marketing assets that show it off, start here.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3127,7 +3133,8 @@
         "demo video",
         "walkthrough video",
         "feature showcase",
-        "record demo"
+        "record demo",
+        "marketing video"
       ],
       "featured": false,
       "verified": false,
@@ -3146,8 +3153,8 @@
     {
       "name": "paper-marketing",
       "description": "On-brand visual marketing content using Paper MCP and parallel agent teams. Reads the project's brand/ directory to build a design system, then spawns designer agents in parallel — each creating a unique artboard with a different on-brand layout interpretation. Intelligently adapts agent count and approach based on user goals via AskUserQuestion interrogation. Produces Instagram carousels, TikTok slideshows, social posts, story slides, and visual assets. When used with content spec YAMLs from /slideshow-script, each agent gets a unique script AND unique design direction. Make sure to use this skill whenever the user wants visual marketing content designed in Paper — carousels, slideshows, social posts, story slides, or any visual asset. Even if they just say \"design something\" or \"make slides\" or \"create visual content\", this is the skill. Also triggers on \"paper marketing\", \"instagram design\", \"TikTok design\", \"slideshow design\", \"create carousel\", or \"social graphics\".",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3157,7 +3164,8 @@
         "design carousel",
         "create slides",
         "visual content",
-        "instagram design"
+        "instagram design",
+        "social graphics"
       ],
       "featured": false,
       "verified": false,
@@ -3176,8 +3184,8 @@
     {
       "name": "slideshow-script",
       "description": "Generate 5 different narrative scripts for visual slideshows from a single positioning angle. Each script uses a different storytelling framework (AIDA, PAS, BAB, Star-Story-Solution, Stat-Flip) producing genuinely different stories, not layout variations. Make sure to use this skill whenever the user wants slideshow scripts, TikTok content scripts, carousel copy, narrative frameworks for visual content, or says anything about writing scripts for slides or social media storytelling. Even 'write me some TikTok content' or 'I need carousel copy' should trigger this. Outputs structured YAML content specs that chain directly to /paper-marketing for visual design.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3187,7 +3195,8 @@
         "generate scripts",
         "narrative scripts",
         "content scripts",
-        "TikTok scripts"
+        "TikTok scripts",
+        "carousel scripts"
       ],
       "featured": false,
       "verified": false,
@@ -3206,8 +3215,8 @@
     {
       "name": "video-content",
       "description": "Three-tier video pipeline: ffmpeg Quick (5s, instant) → ffmpeg Enhanced with Ken Burns (15s, polished) → Remotion Animated (60-90s, production-grade). Takes static slides from Paper MCP or any PNGs and assembles them into platform-ready video. Make sure to use this skill whenever the user has slides, images, or PNGs and wants to turn them into video — even if they just say 'make a video from these', 'animate my slides', 'I have images and need a TikTok', or 'stitch these together'. Also use when they mention ffmpeg video assembly, Remotion rendering, Ken Burns effects, or any slides-to-video pipeline. Works with any PNG source — Paper exports, Canva, screenshots, anything.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3217,7 +3226,8 @@
         "video from slides",
         "animate slides",
         "render video",
-        "video content"
+        "video content",
+        "assemble video"
       ],
       "featured": false,
       "verified": false,
@@ -3235,9 +3245,9 @@
     },
     {
       "name": "social-campaign",
-      "description": "End-to-end social content campaign pipeline. Takes a marketing goal and produces scheduled, on-brand social posts with visuals across X and LinkedIn via Typefully. Chains: CMO strategy, content writing with voice calibration, AI slop audit, selective Paper MCP visual design, and Typefully scheduling. Each phase has a human gate. Use this skill whenever someone wants to plan and execute a batch of social posts — not just one-off tweets. Triggers include: \"social campaign\", \"schedule posts\", \"pre-launch content\", \"content calendar\", \"social content pipeline\", \"build up content\", \"I need social media content for my launch\", \"help me build social presence\", \"plan a week of posts\", \"batch social content\", \"social media strategy\", or any request involving multiple scheduled posts with optional visuals.",
+      "description": "End-to-end social content campaign pipeline. Takes a marketing goal and produces scheduled, on-brand social posts with visuals across postiz-supported platforms, while keeping Typefully for X/thread specialist flows and fallback coverage. Chains: CMO strategy, content writing with voice calibration, AI slop audit, selective Paper MCP visual design, and routed scheduling via postiz or Typefully. Each phase has a human gate. Use this skill whenever someone wants to plan and execute a batch of social posts — not just one-off tweets. Triggers include: \"social campaign\", \"schedule posts\", \"pre-launch content\", \"content calendar\", \"social content pipeline\", \"build up content\", \"I need social media content for my launch\", \"help me build social presence\", \"plan a week of posts\", \"batch social content\", \"social media strategy\", or any request involving multiple scheduled posts with optional visuals.",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-orchestrator",
       "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3247,9 +3257,10 @@
         "schedule posts",
         "pre-launch content",
         "content calendar",
-        "social content pipeline"
+        "social content pipeline",
+        "build up content"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3266,8 +3277,8 @@
     {
       "name": "tiktok-slideshow",
       "description": "Orchestrator skill that chains /slideshow-script → /paper-marketing → /video-content for end-to-end TikTok slideshow production. Each phase is an independent Lego block — this orchestrator is just one recipe that combines them. Produces 5 publishable TikTok videos from a single positioning angle. Triggers on \"TikTok slideshow\", \"TikTok video\", \"make TikTok\", \"slideshow video\", \"TikTok content\".",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-orchestrator",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3277,7 +3288,8 @@
         "TikTok video",
         "make TikTok",
         "slideshow video",
-        "TikTok content"
+        "TikTok content",
+        "end-to-end video"
       ],
       "featured": false,
       "verified": false,
@@ -3296,8 +3308,8 @@
     {
       "name": "frontend-slides",
       "description": "Create stunning, animation-rich HTML presentations from scratch or by converting PowerPoint files. Zero dependencies — single HTML files with inline CSS/JS. Use when the user wants a presentation, pitch deck, conference talk slides, HTML slideshow, slide deck, investor deck, demo day slides, keynote-style presentation, or says 'make slides', 'presentation', 'pitch deck', 'conference talk', 'convert my PPT', 'HTML slides', 'talk slides', or wants beautiful animated slides without PowerPoint. Also use when someone needs to present something and doesn't have a tool — this replaces Keynote, Google Slides, and PowerPoint with a single HTML file. Includes 12 curated style presets and PPT-to-HTML conversion.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3307,7 +3319,8 @@
         "presentation",
         "pitch deck",
         "HTML slides",
-        "conference talk"
+        "conference talk",
+        "PPT conversion"
       ],
       "featured": false,
       "verified": false,
@@ -3326,8 +3339,8 @@
     {
       "name": "app-store-screenshots",
       "description": "Generate Apple App Store screenshot pages as a Next.js app with html-to-image export at required resolutions. Screenshots are advertisements, not documentation — every screenshot sells one idea. Use when building App Store screenshots, generating exportable marketing screenshots for iOS apps, or creating programmatic screenshot generators. Triggers on 'app store screenshots', 'App Store', 'screenshot generator', 'iOS screenshots', 'marketing screenshots', 'phone mockup', 'ASO screenshots', 'app store assets', 'app listing', 'app store page', or 'app preview images'. Also use when someone is about to submit an app and needs store assets, or when they say 'make my app store page look good'. Includes iPhone and iPad mockup components with pre-measured dimensions.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3337,7 +3350,8 @@
         "App Store",
         "screenshot generator",
         "iOS screenshots",
-        "marketing screenshots"
+        "marketing screenshots",
+        "phone mockup"
       ],
       "featured": false,
       "verified": false,
@@ -3357,17 +3371,17 @@
       "name": "typefully",
       "description": "Create, schedule, and manage social media posts via Typefully. ALWAYS use this skill when asked to draft, schedule, post, or check tweets, posts, threads, or social media content for Twitter/X, LinkedIn, Threads, Bluesky, or Mastodon.",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-distribution",
       "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "TODO(human) — schedule post",
-        "TODO(human) — publish to social",
-        "TODO(human) — typefully"
+        "schedule post",
+        "publish to social",
+        "typefully"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3385,17 +3399,17 @@
       "name": "send-email",
       "description": "Use when sending transactional emails (welcome messages, order confirmations, password resets, receipts), notifications, or bulk emails via Resend API.",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-distribution",
       "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "TODO(human) — send email",
-        "TODO(human) — transactional email",
-        "TODO(human) — resend"
+        "send email",
+        "transactional email",
+        "resend"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3413,14 +3427,14 @@
       "name": "resend-inbound",
       "description": "Use when receiving emails with Resend - setting up inbound domains, processing email.received webhooks, retrieving email content/attachments, or forwarding received emails.",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-execution",
       "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "TODO(human) — inbound email",
-        "TODO(human) — receive email"
+        "inbound email",
+        "receive email"
       ],
       "featured": false,
       "verified": false,
@@ -3440,14 +3454,14 @@
       "name": "agent-email-inbox",
       "description": "Use when setting up a secure email inbox for any AI agent — configuring inbound email via Resend, webhooks, tunneling for local development, and implementing security measures to prevent prompt injection attacks. Also use when someone mentions 'agent email', 'bot inbox', 'receive emails for agent', 'agent webhook', 'email security for AI', 'prompt injection via email', 'inbound email for bot', or wants their AI agent to receive and respond to emails securely.",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-execution",
       "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "TODO(human) — agent inbox",
-        "TODO(human) — email bot"
+        "agent inbox",
+        "email bot"
       ],
       "featured": false,
       "verified": false,
@@ -3467,7 +3481,7 @@
       "name": "startup-launcher",
       "description": "Launch a product across 56 platforms — generates all copy, tracks submissions, and guides launch day operations. Use this skill whenever someone wants to submit to directories, get backlinks, launch on Product Hunt or Hacker News, run an AppSumo campaign, or needs help getting their product in front of users. Also triggers on: 'I just built something and want people to know', 'how do I get users', 'where can I submit my SaaS', 'get backlinks for my product', 'multi-platform launch', 'directory submissions', 'startup launch playbook', 'submit everywhere', 'launch across platforms'. This is the operational launcher — it does the work. For high-level launch strategy and phased planning, see launch-strategy.",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-execution",
       "branch": "Growth",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3477,9 +3491,10 @@
         "submit to directories",
         "launch on Product Hunt",
         "submit to BetaList",
-        "multi-platform launch"
+        "multi-platform launch",
+        "launch campaign"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3496,7 +3511,7 @@
     {
       "name": "visual-style",
       "description": "Build a persistent visual brand identity for image generation. Defines how the brand looks visually — aesthetic, lighting, composition, mood — and writes it to brand/creative-kit.md so /image-gen and other creative skills produce consistent on-brand visuals. Three modes: Extract (from website/URL), Build (interview), Reference (mood board/examples). Use when starting any project that needs images, when the user says \"visual style\", \"brand aesthetic\", \"image style\", \"visual identity\", \"how should our images look\", \"build visual brand\", \"define our look\", or when /image-gen outputs feel generic because no visual style exists yet.",
-      "category": "creative",
+      "category": "business",
       "workArea": "marketing",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
@@ -3507,7 +3522,8 @@
         "brand aesthetic",
         "image style",
         "visual identity",
-        "how should our images look"
+        "how should our images look",
+        "build visual brand"
       ],
       "featured": false,
       "verified": false,
@@ -3526,8 +3542,8 @@
     {
       "name": "image-gen",
       "description": "Generate images using the brand's visual identity and Gemini API. Reads brand/creative-kit.md for visual style, crafts narrative prompts, and produces images via Nano Banana Pro (gemini-3-pro-image-preview). Supports on-brand and freestyle modes. Use when the user needs a blog header, social graphic, product shot, hero image, banner, thumbnail, or any generated image. Also use proactively when building content that would benefit from visuals. Triggers on \"generate image\", \"create image\", \"make me an image\", \"blog header\", \"social graphic\", \"product shot\", \"hero image\", \"banner\", \"thumbnail\", \"I need an image\", \"visual for\", or any request for generated artwork. Even if they just say \"image\" or \"picture for this\" — this is the skill.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3537,9 +3553,10 @@
         "create image",
         "blog header",
         "social graphic",
-        "product shot"
+        "product shot",
+        "need an image"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3555,7 +3572,7 @@
     },
     {
       "name": "voice-extraction",
-      "description": "Reverse-engineer any person's writing voice from their content. Paste in posts, articles, tweets, or essays and this skill launches 10 parallel Sonnet subagents to analyze every dimension of the voice, then synthesizes into a voice file. Use when someone says 'steal this voice,' 'analyze this writing,' 'extract their voice,' 'make me sound like this,' 'study this person's writing,' or pastes in content they want to learn from.",
+      "description": "Reverse-engineer any person's writing voice from their content. Paste in posts, articles, tweets, or essays and this skill launches 10 parallel Sonnet subagents to analyze every dimension of the voice, then synthesizes into a voice file. Use when someone says 'match this voice,' 'analyze this writing,' 'extract their voice,' 'make me sound like this,' 'study this person's writing,' or pastes in content they want to learn from.",
       "category": "business",
       "workArea": "marketing",
       "branch": "Foundation",
@@ -3567,7 +3584,8 @@
         "analyze this writing",
         "extract their voice",
         "make me sound like",
-        "study this writing"
+        "study this writing",
+        "voice extraction"
       ],
       "featured": false,
       "verified": false,
@@ -3586,8 +3604,8 @@
     {
       "name": "brand-kit-playground",
       "description": "Generate an interactive HTML brand playground that shows your brand rendered live — palette, typography, logo, voice — with a social card and OG image preview that updates as you tweak tokens. Opens in browser. The visual approval step for the /cmo flow: /visual-style writes the brand, this skill shows it. Use when the user says \"show me my brand\", \"brand playground\", \"preview my brand\", \"what does our brand look like\", \"visual preview\", \"brand kit\", \"see my colors\", \"how does my brand look\", or after /visual-style completes and the user needs to approve the visual identity before moving to content generation. Also use when someone says \"I want to see it\" during any brand-building conversation.",
-      "category": "creative",
-      "workArea": "marketing",
+      "category": "business",
+      "workArea": "marketing-execution",
       "branch": "Creative",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
@@ -3597,9 +3615,10 @@
         "show me my brand",
         "preview my brand",
         "what does our brand look like",
-        "visual preview"
+        "visual preview",
+        "brand kit"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3623,12 +3642,14 @@
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "setup",
-        "onboarding",
-        "first run",
-        "marketing wizard"
+        "set up marketing",
+        "start marketing",
+        "marketing wizard",
+        "first time using marketing-cli",
+        "I just installed marketing-cli",
+        "onboard me"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3646,21 +3667,20 @@
       "name": "postiz",
       "description": "Schedule social posts to any of 30+ providers via a running postiz instance (hosted at api.postiz.com or self-hosted). Use this skill whenever someone wants to post, schedule, or publish a draft to LinkedIn, Reddit, Bluesky, Mastodon, Threads, Instagram, TikTok, YouTube, Pinterest, Discord, Slack, or any non-Twitter social channel. ALWAYS chain content-atomizer first for platform-specific copy — this skill is a distribution layer only, it does not rewrite copy. For Twitter/X threads, use typefully instead (better thread UX). Triggers: \"post to linkedin\", \"post to reddit\", \"post to bluesky\", \"post to mastodon\", \"post to threads\", \"schedule via postiz\".",
       "category": "business",
-      "workArea": "marketing",
+      "workArea": "marketing-distribution",
       "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "social",
-        "scheduling",
-        "linkedin",
-        "reddit",
-        "bluesky",
-        "mastodon",
-        "threads"
+        "post to linkedin",
+        "post to reddit",
+        "post to bluesky",
+        "post to mastodon",
+        "post to threads",
+        "schedule via postiz"
       ],
-      "featured": false,
+      "featured": true,
       "verified": false,
       "origin": "curated",
       "trust": "reviewed",
@@ -3679,16 +3699,17 @@
       "description": "Read tweets, threads, bookmarks, articles, and user timelines on X (formerly Twitter) using an authenticated GraphQL flow. Use this skill whenever the user mentions a tweet URL, a Twitter thread, an X bookmark, a Twitter article, reading their X bookmarks, pulling a thread, or grabbing X content — even if they don't explicitly say 'use mktg-x'. Requires MKTG_X_AUTH_TOKEN and MKTG_X_CT0 env vars. Do NOT firecrawl x.com URLs — Twitter serves a degraded logged-out page and firecrawl will return the login wall. mktg-x is the only path for auth-walled X content.",
       "category": "business",
       "workArea": "marketing",
-      "branch": "Knowledge",
+      "branch": "Distribution",
       "author": "MoizIbnYousaf",
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "twitter",
-        "x",
-        "thread reader",
-        "bookmarks",
-        "graphql"
+        "read this tweet",
+        "read this thread",
+        "grab this X bookmark",
+        "fetch this Twitter article",
+        "read my X bookmarks",
+        "pull this thread"
       ],
       "featured": false,
       "verified": false,
@@ -3714,11 +3735,12 @@
       "source": "MoizIbnYousaf/marketing-cli",
       "license": "MIT",
       "tags": [
-        "web scraping",
-        "search",
-        "crawl",
-        "browser automation",
-        "firecrawl"
+        "firecrawl",
+        "scrape website",
+        "fetch page",
+        "extract from url",
+        "crawl site",
+        "get content from"
       ],
       "featured": false,
       "verified": false,
@@ -3745,9 +3767,11 @@
       "license": "MIT",
       "tags": [
         "summarize",
+        "TL;DR",
         "tldr",
+        "summary",
         "digest",
-        "condense"
+        "gist"
       ],
       "featured": false,
       "verified": false,
@@ -3758,6 +3782,68 @@
       "whyHere": "Keeps summarize available from the upstream marketing-cli playbook without bundling a local copy into this library.",
       "vendored": false,
       "installSource": "MoizIbnYousaf/marketing-cli/skills/summarize",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": []
+    },
+    {
+      "name": "remotion-best-practices",
+      "description": "Programmatic React video best practices for Remotion. Use this skill whenever the user is writing, debugging, or rendering Remotion code — compositions, useCurrentFrame animations, interpolate, spring, Sequence timing, <Img>/<Video>/<Audio> from @remotion/media, staticFile, calculateMetadata, the Studio preview, `npx remotion render`, captions, subtitles, voiceover, audio visualization, ffmpeg, transitions, light leaks, transparent video, Lottie, 3D scenes, Mapbox flyovers. Triggers especially on HtmlInCanvas / \"html in canvas\" requests, CRT terminal effects, glitch effects, video shaders, WebGL video, and any request to scaffold a new programmatic React video. Do NOT trigger for finished MP4 ad assembly from existing slides (that is `/video-content`) or for the inspiration-to-MP4 reference-video pipeline (that is `/cmo-video`).",
+      "category": "business",
+      "workArea": "marketing",
+      "branch": "Creative",
+      "author": "MoizIbnYousaf",
+      "source": "MoizIbnYousaf/marketing-cli",
+      "license": "MIT",
+      "tags": [
+        "remotion",
+        "remotion code",
+        "remotion composition",
+        "useCurrentFrame",
+        "interpolate",
+        "spring"
+      ],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "reviewed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/marketing-cli/tree/main/skills/remotion-best-practices",
+      "whyHere": "Keeps remotion-best-practices available from the upstream marketing-cli playbook without bundling a local copy into this library.",
+      "vendored": false,
+      "installSource": "MoizIbnYousaf/marketing-cli/skills/remotion-best-practices",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": []
+    },
+    {
+      "name": "cmo-remotion",
+      "description": "Brand-grounded Remotion video pipeline. Take a brief, ground it in `brand/` (voice, audience, positioning, creative-kit), write a beat sheet, scaffold a fresh Remotion project, generate any required assets, compose with frame-driven animations, and bake a final MP4. Use this skill whenever the user wants to build a NEW Remotion video from scratch — product films, motion graphics, code-driven shaders, CRT/glitch effects, HTML-in-canvas demos, React video. Triggers on requests like \"make a remotion video\", CRT/glitch/scanline effects, html-in-canvas demos, video shaders, WebGL video, and frame-driven React video. This is the mktg-native sibling of the personal `/cmo-video` skill: `/cmo-video` recreates the *style* of an existing reference video; `/cmo-remotion` builds something new from a brief. Always load `remotion-best-practices` before stage 5 (compose).",
+      "category": "business",
+      "workArea": "marketing-orchestrator",
+      "branch": "Creative",
+      "author": "MoizIbnYousaf",
+      "source": "MoizIbnYousaf/marketing-cli",
+      "license": "MIT",
+      "tags": [
+        "cmo-remotion",
+        "make a remotion video",
+        "build a remotion video",
+        "remotion composition",
+        "glitch video",
+        "programmatic video"
+      ],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "reviewed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/MoizIbnYousaf/marketing-cli/tree/main/skills/cmo-remotion",
+      "whyHere": "Keeps cmo-remotion available from the upstream marketing-cli playbook without bundling a local copy into this library.",
+      "vendored": false,
+      "installSource": "MoizIbnYousaf/marketing-cli/skills/cmo-remotion",
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
