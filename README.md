@@ -13,10 +13,10 @@
   <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills"><img alt="GitHub stars" src="https://img.shields.io/github/stars/MoizIbnYousaf/Ai-Agent-Skills?style=for-the-badge&label=stars&labelColor=313244&color=89b4fa&logo=github&logoColor=cdd6f4" /></a>
   <a href="https://www.npmjs.com/package/ai-agent-skills"><img alt="npm version" src="https://img.shields.io/npm/v/ai-agent-skills?style=for-the-badge&label=version&labelColor=313244&color=b4befe&logo=npm&logoColor=cdd6f4" /></a>
   <a href="https://www.npmjs.com/package/ai-agent-skills"><img alt="npm total downloads" src="https://img.shields.io/npm/dt/ai-agent-skills?style=for-the-badge&label=downloads&labelColor=313244&color=f5e0dc&logo=npm&logoColor=cdd6f4" /></a>
-  <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills#shelves"><img alt="Library structure" src="https://img.shields.io/badge/library-115%20skills%20%C2%B7%206%20shelves-cba6f7?style=for-the-badge&labelColor=313244&logo=bookstack&logoColor=cdd6f4" /></a>
+  <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills#shelves"><img alt="Library structure" src="https://img.shields.io/badge/library-117%20skills%20%C2%B7%206%20shelves-cba6f7?style=for-the-badge&labelColor=313244&logo=bookstack&logoColor=cdd6f4" /></a>
 </p>
 
-<p align="center"><sub>17 house copies · 98 cataloged upstream</sub></p>
+<p align="center"><sub>17 house copies · 100 cataloged upstream</sub></p>
 <!-- GENERATED:library-stats:end -->
 
 <p align="center"><em>Picked, shelved, and maintained by hand.</em></p>
@@ -238,7 +238,7 @@ The shelves are the main structure.
 | Mobile | 24 | Swift, SwiftUI, iOS, and Apple-platform development, with room for future React Native branches. |
 | Workflow | 11 | Files, docs, planning, release work, and research-to-output flows. |
 | Agent Engineering | 14 | MCP, skill-building, prompting discipline, and LLM application work. |
-| Marketing | 51 | Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work. |
+| Marketing | 53 | Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work. |
 <!-- GENERATED:shelf-table:end -->
 
 The full map lives in [WORK_AREAS.md](./WORK_AREAS.md).
@@ -306,7 +306,7 @@ Current upstream mix:
 <!-- GENERATED:source-table:start -->
 | Source repo | Skills |
 | --- | --- |
-| `MoizIbnYousaf/marketing-cli` | 51 |
+| `MoizIbnYousaf/marketing-cli` | 53 |
 | `anthropics/skills` | 11 |
 | `MoizIbnYousaf/Ai-Agent-Skills` | 11 |
 | `openai/skills` | 9 |

@@ -75,16 +75,16 @@ House copies stay flat under `skills/<name>/`. The catalog holds the real struct
 
 ## Marketing
 
-51 skills. Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work.
+53 skills. Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
 | Conversion | `page-cro`, `conversion-flow-cro` | MoizIbnYousaf |
-| Copy Content | `direct-response-copy`, `seo-content`, `lead-magnet` | MoizIbnYousaf |
-| Creative | `creative`, `marketing-demo`, `paper-marketing`, `slideshow-script`, `video-content`, `tiktok-slideshow`, `frontend-slides`, `app-store-screenshots`, `visual-style`, `image-gen`, `brand-kit-playground` | MoizIbnYousaf |
-| Distribution | `content-atomizer`, `email-sequences`, `newsletter`, `social-campaign`, `typefully`, `send-email`, `resend-inbound`, `agent-email-inbox`, `postiz` | MoizIbnYousaf |
+| Copy & Content | `direct-response-copy`, `seo-content`, `lead-magnet` | MoizIbnYousaf |
+| Creative | `creative`, `marketing-demo`, `paper-marketing`, `slideshow-script`, `video-content`, `tiktok-slideshow`, `frontend-slides`, `app-store-screenshots`, `visual-style`, `image-gen`, `brand-kit-playground`, `remotion-best-practices`, `cmo-remotion` | MoizIbnYousaf |
+| Distribution | `content-atomizer`, `email-sequences`, `newsletter`, `social-campaign`, `typefully`, `send-email`, `resend-inbound`, `agent-email-inbox`, `postiz`, `mktg-x` | MoizIbnYousaf |
 | Foundation | `cmo`, `brand-voice`, `positioning-angles`, `audience-research`, `competitive-intel`, `landscape-scan`, `brainstorm`, `create-skill`, `deepen-plan`, `document-review`, `voice-extraction`, `mktg-setup` | MoizIbnYousaf |
 | Growth | `churn-prevention`, `referral-program`, `free-tool-strategy`, `startup-launcher` | MoizIbnYousaf |
-| Knowledge | `marketing-psychology`, `mktg-x`, `firecrawl`, `summarize` | MoizIbnYousaf |
+| Knowledge | `marketing-psychology`, `firecrawl`, `summarize` | MoizIbnYousaf |
 | SEO | `seo-audit`, `ai-seo`, `competitor-alternatives` | MoizIbnYousaf |
 | Strategy | `keyword-research`, `launch-strategy`, `pricing-strategy` | MoizIbnYousaf |
