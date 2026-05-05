@@ -12,7 +12,7 @@ House copies stay flat under `skills/<name>/`. The catalog holds the real struct
 | --- | --- | --- |
 | Components | `shadcn` | shadcn-ui |
 | Design Engineering | `figma`, `emil-design-eng` | openai, emilkowalski |
-| Implementation | `frontend-design`, `frontend-skill` | anthropics, openai |
+| Implementation | `frontend-design`, `figma-implement-design` | anthropics, openai |
 | Quality | `webapp-testing`, `playwright`, `userinterface-wiki` | anthropics, openai, raphaelsalaja |
 | Visual Systems | `canvas-design`, `brand-guidelines` | anthropics |
 

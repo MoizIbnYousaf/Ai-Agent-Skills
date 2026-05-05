@@ -251,7 +251,7 @@ Collections are smaller sets. Useful, but secondary to the shelves.
 | Collection | Why it exists | Start here |
 | --- | --- | --- |
 | `my-picks` | A short starter stack. These are the skills I reach for first. | `frontend-design`, `mcp-builder`, `pdf` |
-| `build-apps` | Frontend, UI, and design work for shipping polished apps. | `frontend-design`, `frontend-skill`, `shadcn` |
+| `build-apps` | Frontend, UI, and design work for shipping polished apps. | `frontend-design`, `figma-implement-design`, `shadcn` |
 | `swift-agent-skills` | The main Swift and Apple-platform set in this library. Install it all at once or pick from it. | `swiftui-pro`, `swiftui-ui-patterns`, `swiftui-design-principles` |
 | `build-systems` | Backend, architecture, MCP, and security work. | `mcp-builder`, `backend-development`, `database-design` |
 | `test-and-debug` | QA, debugging, CI cleanup, and observability. | `playwright`, `webapp-testing`, `gh-fix-ci` |

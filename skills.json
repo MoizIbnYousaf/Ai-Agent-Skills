@@ -54,7 +54,7 @@
       "description": "Frontend, UI, and design work for shipping polished apps.",
       "skills": [
         "frontend-design",
-        "frontend-skill",
+        "figma-implement-design",
         "shadcn",
         "emil-design-eng",
         "figma"
@@ -873,8 +873,8 @@
       "path": ""
     },
     {
-      "name": "frontend-skill",
-      "description": "Use when the task asks for a visually strong landing page, website, app, prototype, demo, or game UI. This skill enforces restrained composition, image-led hierarchy, cohesive content structure, and tasteful motion while avoiding generic cards, weak branding, and UI clutter.",
+      "name": "figma-implement-design",
+      "description": "Translates Figma designs into production-ready application code with 1:1 visual fidelity. Use when implementing UI code from Figma files, when the user mentions \"implement design\", \"generate code from Figma\", \"implement component\", provides Figma URLs, or asks to build components matching Figma specs.",
       "category": "development",
       "workArea": "frontend",
       "branch": "Implementation",
@@ -882,16 +882,20 @@
       "source": "openai/skills",
       "license": "MIT",
       "vendored": false,
-      "installSource": "openai/skills/skills/.curated/frontend-skill",
-      "tags": [],
+      "installSource": "openai/skills/skills/.curated/figma-implement-design",
+      "tags": [
+        "frontend",
+        "figma",
+        "implementation"
+      ],
       "featured": false,
       "verified": false,
       "origin": "curated",
       "trust": "listed",
       "syncMode": "live",
-      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/frontend-skill",
-      "whyHere": "Brings a different frontend taste than Anthropic's. The shelf is better with both.",
-      "addedDate": "2026-03-21",
+      "sourceUrl": "https://github.com/openai/skills/tree/main/skills/.curated/figma-implement-design",
+      "whyHere": "OpenAI's Figma-driven frontend implementation flow. Pairs with frontend-design — different taste, same shelf, designer-handoff path covered.",
+      "addedDate": "2026-05-05",
       "tier": "upstream",
       "distribution": "live",
       "notes": "",

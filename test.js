@@ -353,10 +353,10 @@ test('skills.json provenance metadata is valid', () => {
 test('frontend implementation shelf groups the overlapping frontend picks together', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const anthropicFrontend = data.skills.find(skill => skill.name === 'frontend-design');
-  const openaiFrontend = data.skills.find(skill => skill.name === 'frontend-skill');
+  const openaiFrontend = data.skills.find(skill => skill.name === 'figma-implement-design');
 
   assert(anthropicFrontend, 'Expected frontend-design to exist');
-  assert(openaiFrontend, 'Expected frontend-skill to exist');
+  assert(openaiFrontend, 'Expected figma-implement-design to exist');
   assertEqual(anthropicFrontend.branch, 'Implementation');
   assertEqual(openaiFrontend.branch, 'Implementation');
 });
@@ -2179,7 +2179,7 @@ test('info command works', () => {
 test('info command shows neighboring recommendations', () => {
   const output = run('info frontend-design');
   assertContains(output, 'Neighboring Shelf Picks:');
-  assertContains(output, 'frontend-skill');
+  assertContains(output, 'figma-implement-design');
   assertContains(output, 'anthropics/skills/skills/frontend-design');
 });
 
@@ -3083,17 +3083,17 @@ test('source-repo install writes .skill-meta.json', () => {
 test('cataloged upstream nested install succeeds for project agent', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'catalog-nested-'));
   try {
-    const output = execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), 'install', 'frontend-skill', '--agent', 'project'], {
+    const output = execFileSync(process.execPath, [path.join(__dirname, 'cli.js'), 'install', 'figma-implement-design', '--agent', 'project'], {
       encoding: 'utf8',
       cwd: tmpDir,
     });
     assertContains(output, 'Installed 1 skill');
-    const installDir = path.join(tmpDir, '.skills', 'frontend-skill');
-    assert(fs.existsSync(path.join(installDir, 'SKILL.md')), 'Expected frontend-skill to install into the project agent path');
+    const installDir = path.join(tmpDir, '.skills', 'figma-implement-design');
+    assert(fs.existsSync(path.join(installDir, 'SKILL.md')), 'Expected figma-implement-design to install into the project agent path');
     const meta = JSON.parse(fs.readFileSync(path.join(installDir, '.skill-meta.json'), 'utf8'));
     assertEqual(meta.sourceType, 'github');
-    assertEqual(meta.subpath, 'skills/.curated/frontend-skill');
-    assertContains(meta.installSource, 'openai/skills/skills/.curated/frontend-skill');
+    assertEqual(meta.subpath, 'skills/.curated/figma-implement-design');
+    assertContains(meta.installSource, 'openai/skills/skills/.curated/figma-implement-design');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -3118,9 +3118,9 @@ test('cataloged upstream update succeeds immediately after install', () => {
 });
 
 test('cataloged upstream dry-run reports sparse checkout path', () => {
-  const output = run('install frontend-skill --dry-run');
+  const output = run('install figma-implement-design --dry-run');
   assertContains(output, 'Clone mode: sparse checkout');
-  assertContains(output, 'openai/skills/skills/.curated/frontend-skill');
+  assertContains(output, 'openai/skills/skills/.curated/figma-implement-design');
 });
 
 test('collection install succeeds for project scope with mixed sources', () => {
