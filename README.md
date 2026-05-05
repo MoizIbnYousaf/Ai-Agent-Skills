@@ -46,7 +46,7 @@ Use `ai-agent-skills` when you want a smaller library with shelves, provenance, 
 
 ## What's New in 4.3.1
 
-- Marketing pack synced to `marketing-cli@0.5.4` — 51 skills total, with `mktg-setup`, `postiz`, `mktg-x`, `firecrawl`, and `summarize` newly added to the `mktg` collection
+- Marketing pack synced to `marketing-cli@0.5.4` — 53 skills total, including the latest `cmo-remotion` and `remotion-best-practices` mirrors
 - Renamed the upstream marketing pack source from `MoizIbnYousaf/mktg` to `MoizIbnYousaf/marketing-cli` across catalog metadata, install sources, and source URLs
 - Bundled library now ships 115 cataloged skills (17 house copies, 98 cataloged upstream)
 - Same private-library bootstrap, bulk import, and managed-workspace flow shipped in `4.3.0`

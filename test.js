@@ -427,7 +427,7 @@ test('catalog exposes curated collections with resolved skills', () => {
   assert(myPicks.skills.length > 0, 'collection should resolve skill objects');
   assertContains(myPicks.skills.map(skill => skill.name).join(' '), 'frontend-design');
   assert(mktg, 'expected mktg collection to exist');
-  assertEqual(mktg.skills.length, 51, 'expected 51 mktg skills in the collection');
+  assertEqual(mktg.skills.length, 53, 'expected 53 mktg skills in the collection');
 });
 
 test('catalog collections expose install commands for curated packs', () => {
@@ -445,7 +445,7 @@ test('mktg manifest-backed skills are cataloged on the marketing shelf', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const mktgSkills = data.skills.filter((skill) => skill.source === 'MoizIbnYousaf/marketing-cli');
 
-  assertEqual(mktgSkills.length, 51, 'expected 51 mktg skills');
+  assertEqual(mktgSkills.length, 53, 'expected 53 mktg skills');
   ['cmo', 'brand-voice', 'creative', 'seo-audit', 'page-cro', 'typefully'].forEach((name) => {
     assert(mktgSkills.some((skill) => skill.name === name), `expected ${name} in mktg catalog entries`);
   });
@@ -2412,7 +2412,7 @@ test('mktg shortcut honors explicit project scope', () => {
 test('mktg shortcut supports list mode', () => {
   const output = run('mktg --list');
   assertContains(output, 'mktg Marketing Pack');
-  assertContains(output, '51 picks');
+  assertContains(output, '53 picks');
   assertContains(output, 'brand-voice');
 });
 
