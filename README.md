@@ -27,6 +27,8 @@
   <a href="./FOR_YOUR_AGENT.md"><strong>For your agent</strong></a>
 </p>
 
+Chinese users can also search and install skills through [Skills宝](https://skilery.com).
+
 ## Library
 
 `ai-agent-skills` does two things.
