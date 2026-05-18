@@ -1,7 +1,7 @@
 {
   "version": "4.3.2",
-  "updated": "2026-05-05",
-  "total": 120,
+  "updated": "2026-05-18",
+  "total": 121,
   "workAreas": [
     {
       "id": "frontend",
@@ -351,6 +351,38 @@
       "lastVerified": "2026-03-13",
       "vendored": false,
       "installSource": "anthropics/skills/skills/mcp-builder",
+      "tier": "upstream",
+      "distribution": "live",
+      "notes": "",
+      "labels": [],
+      "path": ""
+    },
+    {
+      "name": "bilig-workpaper",
+      "description": "Use Bilig WorkPaper when an agent needs spreadsheet-style formulas through Node.js services, files, terminal commands, or MCP tools instead of driving Excel or browser spreadsheet UIs.",
+      "category": "development",
+      "workArea": "agent-engineering",
+      "branch": "MCP",
+      "author": "proompteng",
+      "source": "proompteng/bilig",
+      "license": "MIT",
+      "tags": [
+        "spreadsheet",
+        "formulas",
+        "workpaper",
+        "mcp",
+        "typescript",
+        "node"
+      ],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/proompteng/bilig/tree/main/skills/bilig-workpaper",
+      "whyHere": "Adds a concrete WorkPaper runtime skill for agents that need spreadsheet-style formulas without driving Excel or browser spreadsheet UIs.",
+      "vendored": false,
+      "installSource": "proompteng/bilig/skills/bilig-workpaper",
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
