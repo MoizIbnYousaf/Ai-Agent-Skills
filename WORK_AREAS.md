@@ -75,7 +75,7 @@ House copies stay flat under `skills/<name>/`. The catalog holds the real struct
 
 ## Marketing
 
-56 skills. Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work.
+61 skills. Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
@@ -86,5 +86,6 @@ House copies stay flat under `skills/<name>/`. The catalog holds the real struct
 | Foundation | `cmo`, `brand-voice`, `positioning-angles`, `audience-research`, `competitive-intel`, `landscape-scan`, `brainstorm`, `create-skill`, `deepen-plan`, `document-review`, `voice-extraction`, `mktg-setup` | MoizIbnYousaf |
 | Growth | `churn-prevention`, `referral-program`, `free-tool-strategy`, `startup-launcher` | MoizIbnYousaf |
 | Knowledge | `marketing-psychology`, `firecrawl`, `summarize` | MoizIbnYousaf |
-| SEO | `seo-audit`, `ai-seo`, `competitor-alternatives` | MoizIbnYousaf |
+| Paid Ads | `notfair-google-ads-audit`, `notfair-google-ads`, `notfair-meta-ads` | nowork-studio |
+| SEO | `seo-audit`, `ai-seo`, `competitor-alternatives`, `notfair-seo-analysis`, `notfair-keyword-research` | MoizIbnYousaf, nowork-studio |
 | Strategy | `keyword-research`, `launch-strategy`, `pricing-strategy` | MoizIbnYousaf |
