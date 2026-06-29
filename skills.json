@@ -1,7 +1,7 @@
 {
   "version": "4.3.2",
-  "updated": "2026-05-05",
-  "total": 120,
+  "updated": "2026-06-29T00:00:00Z",
+  "total": 121,
   "workAreas": [
     {
       "id": "frontend",
@@ -3943,6 +3943,38 @@
       "distribution": "live",
       "notes": "",
       "labels": []
+    },
+    {
+      "name": "x-twitter-scraper",
+      "description": "Use when the user needs X (Twitter) data through Xquik: REST API integration, MCP setup, SDK setup, tweet search, user lookup, timeline reads, follower export, media download, monitoring, webhooks, bulk extraction, giveaway draws, or confirmation-gated publishing workflows. Read-only by default, API-key only, no X login material, and every write, private read, monitor, webhook, or metered bulk job requires explicit approval.",
+      "category": "development",
+      "workArea": "agent-engineering",
+      "branch": "Provider Docs",
+      "author": "Xquik-dev",
+      "source": "Xquik-dev/x-twitter-scraper",
+      "license": "MIT",
+      "tier": "upstream",
+      "distribution": "live",
+      "vendored": false,
+      "installSource": "https://github.com/Xquik-dev/x-twitter-scraper/tree/master/skills/x-twitter-scraper",
+      "tags": [
+        "x",
+        "social-media",
+        "api",
+        "mcp"
+      ],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/Xquik-dev/x-twitter-scraper/tree/master/skills/x-twitter-scraper",
+      "whyHere": "Adds a source-backed X data and automation skill for REST API, MCP, monitoring, webhook, and approved publishing workflows.",
+      "lastVerified": "",
+      "notes": "",
+      "labels": [],
+      "addedDate": "2026-06-29",
+      "lastCurated": "2026-06-29T00:00:00Z"
     }
   ]
 }
