@@ -60,7 +60,7 @@ House copies stay flat under `skills/<name>/`. The catalog holds the real struct
 
 ## Agent Engineering
 
-14 skills. MCP, skill-building, prompting discipline, and LLM application work.
+15 skills. MCP, skill-building, prompting discipline, and LLM application work.
 
 | Branch | Skills | Source |
 | --- | --- | --- |
@@ -72,6 +72,7 @@ House copies stay flat under `skills/<name>/`. The catalog holds the real struct
 | Provider Docs | `openai-docs` | openai |
 | Shared Libraries | `install-from-remote-library`, `curate-a-team-library`, `build-workspace-docs`, `audit-library-health`, `migrate-skills-between-libraries` | MoizIbnYousaf |
 | Skill Authoring | `skill-creator` | anthropics |
+| Trust & Delegation | `agent-guild-trust` | AgentTanuki |
 
 ## Marketing
 

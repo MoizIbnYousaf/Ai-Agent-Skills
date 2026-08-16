@@ -13,10 +13,10 @@
   <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills"><img alt="GitHub stars" src="https://img.shields.io/github/stars/MoizIbnYousaf/Ai-Agent-Skills?style=for-the-badge&label=stars&labelColor=313244&color=89b4fa&logo=github&logoColor=cdd6f4" /></a>
   <a href="https://www.npmjs.com/package/ai-agent-skills"><img alt="npm version" src="https://img.shields.io/npm/v/ai-agent-skills?style=for-the-badge&label=version&labelColor=313244&color=b4befe&logo=npm&logoColor=cdd6f4" /></a>
   <a href="https://www.npmjs.com/package/ai-agent-skills"><img alt="npm total downloads" src="https://img.shields.io/npm/dt/ai-agent-skills?style=for-the-badge&label=downloads&labelColor=313244&color=f5e0dc&logo=npm&logoColor=cdd6f4" /></a>
-  <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills#shelves"><img alt="Library structure" src="https://img.shields.io/badge/library-120%20skills%20%C2%B7%206%20shelves-cba6f7?style=for-the-badge&labelColor=313244&logo=bookstack&logoColor=cdd6f4" /></a>
+  <a href="https://github.com/MoizIbnYousaf/Ai-Agent-Skills#shelves"><img alt="Library structure" src="https://img.shields.io/badge/library-121%20skills%20%C2%B7%206%20shelves-cba6f7?style=for-the-badge&labelColor=313244&logo=bookstack&logoColor=cdd6f4" /></a>
 </p>
 
-<p align="center"><sub>17 house copies · 103 cataloged upstream</sub></p>
+<p align="center"><sub>17 house copies · 104 cataloged upstream</sub></p>
 <!-- GENERATED:library-stats:end -->
 
 <p align="center"><em>Picked, shelved, and maintained by hand.</em></p>
@@ -237,7 +237,7 @@ The shelves are the main structure.
 | Backend | 5 | Systems, data, security, and runtime operations. |
 | Mobile | 24 | Swift, SwiftUI, iOS, and Apple-platform development, with room for future React Native branches. |
 | Workflow | 11 | Files, docs, planning, release work, and research-to-output flows. |
-| Agent Engineering | 14 | MCP, skill-building, prompting discipline, and LLM application work. |
+| Agent Engineering | 15 | MCP, skill-building, prompting discipline, and LLM application work. |
 | Marketing | 56 | Brand, strategy, copy, distribution, creative, SEO, conversion, and growth work. |
 <!-- GENERATED:shelf-table:end -->
 
@@ -314,6 +314,7 @@ Current upstream mix:
 | `wshobson/agents` | 4 |
 | `rgmez/apple-accessibility-skills` | 3 |
 | `ComposioHQ/awesome-claude-skills` | 2 |
+| `AgentTanuki/agent-guild` | 1 |
 | `andrewgleave/skills` | 1 |
 | `arjitj2/swiftui-design-principles` | 1 |
 | `AvdLee/Core-Data-Agent-Skill` | 1 |
