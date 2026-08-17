@@ -1,7 +1,7 @@
 {
   "version": "4.3.2",
-  "updated": "2026-08-17",
-  "total": 140,
+  "updated": "2026-08-17T00:00:00Z",
+  "total": 141,
   "workAreas": [
     {
       "id": "frontend",
@@ -222,7 +222,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "pdf",
@@ -250,7 +251,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "xlsx",
@@ -275,7 +277,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "docx",
@@ -300,7 +303,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "pptx",
@@ -325,7 +329,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "mcp-builder",
@@ -355,7 +360,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "skill-creator",
@@ -380,7 +386,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "doc-coauthoring",
@@ -405,7 +412,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "canvas-design",
@@ -430,7 +438,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "webapp-testing",
@@ -460,7 +469,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "brand-guidelines",
@@ -485,7 +495,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "backend-development",
@@ -514,7 +525,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/backend-development"
+      "path": "skills/backend-development",
+      "requires": []
     },
     {
       "name": "database-design",
@@ -538,7 +550,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/database-design"
+      "path": "skills/database-design",
+      "requires": []
     },
     {
       "name": "llm-application-dev",
@@ -567,7 +580,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/llm-application-dev"
+      "path": "skills/llm-application-dev",
+      "requires": []
     },
     {
       "name": "code-documentation",
@@ -591,7 +605,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/code-documentation"
+      "path": "skills/code-documentation",
+      "requires": []
     },
     {
       "name": "ask-questions-if-underspecified",
@@ -622,7 +637,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/ask-questions-if-underspecified"
+      "path": "skills/ask-questions-if-underspecified",
+      "requires": []
     },
     {
       "name": "best-practices",
@@ -653,7 +669,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/best-practices"
+      "path": "skills/best-practices",
+      "requires": []
     },
     {
       "name": "changelog-generator",
@@ -677,7 +694,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/changelog-generator"
+      "path": "skills/changelog-generator",
+      "requires": []
     },
     {
       "name": "content-research-writer",
@@ -701,7 +719,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/content-research-writer"
+      "path": "skills/content-research-writer",
+      "requires": []
     },
     {
       "name": "openai-docs",
@@ -730,7 +749,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "gh-fix-ci",
@@ -759,7 +779,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "figma",
@@ -788,7 +809,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "sentry",
@@ -817,7 +839,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "playwright",
@@ -846,7 +869,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "linear",
@@ -872,7 +896,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "figma-implement-design",
@@ -902,7 +927,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "shadcn",
@@ -928,7 +954,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "emil-design-eng",
@@ -954,7 +981,8 @@
       "distribution": "live",
       "notes": "",
       "labels": [],
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "security-best-practices",
@@ -980,7 +1008,8 @@
       "notes": "",
       "labels": [],
       "addedDate": "2026-03-21",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "notion-spec-to-implementation",
@@ -1006,7 +1035,8 @@
       "notes": "",
       "labels": [],
       "addedDate": "2026-03-21",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "userinterface-wiki",
@@ -1034,7 +1064,8 @@
       "labels": [],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftui-pro",
@@ -1073,7 +1104,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftui-ui-patterns",
@@ -1112,7 +1144,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftui-design-principles",
@@ -1151,7 +1184,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftui-view-refactor",
@@ -1190,7 +1224,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftdata-pro",
@@ -1229,7 +1264,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftdata-expert-skill",
@@ -1268,7 +1304,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-concurrency-pro",
@@ -1307,7 +1344,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-concurrency-expert",
@@ -1346,7 +1384,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-concurrency",
@@ -1385,7 +1424,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-testing-pro",
@@ -1424,7 +1464,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-testing",
@@ -1463,7 +1504,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-testing-expert",
@@ -1502,7 +1544,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-api-design-guidelines-skill",
@@ -1542,7 +1585,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "ios-accessibility",
@@ -1581,7 +1625,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-accessibility-skill",
@@ -1620,7 +1665,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "appkit-accessibility-auditor",
@@ -1659,7 +1705,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftui-accessibility-auditor",
@@ -1698,7 +1745,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "uikit-accessibility-auditor",
@@ -1737,7 +1785,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-architecture-skill",
@@ -1776,7 +1825,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "core-data-expert",
@@ -1815,7 +1865,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swiftui-performance-audit",
@@ -1855,7 +1906,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "swift-security-expert",
@@ -1894,7 +1946,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "ios-simulator-skill",
@@ -1933,7 +1986,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "writing-for-interfaces",
@@ -1973,7 +2027,8 @@
       ],
       "addedDate": "2026-03-25",
       "lastCurated": "2026-03-25T00:00:00Z",
-      "path": ""
+      "path": "",
+      "requires": []
     },
     {
       "name": "install-from-remote-library",
@@ -2004,7 +2059,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/install-from-remote-library"
+      "path": "skills/install-from-remote-library",
+      "requires": []
     },
     {
       "name": "curate-a-team-library",
@@ -2035,7 +2091,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/curate-a-team-library"
+      "path": "skills/curate-a-team-library",
+      "requires": []
     },
     {
       "name": "share-a-library",
@@ -2066,7 +2123,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/share-a-library"
+      "path": "skills/share-a-library",
+      "requires": []
     },
     {
       "name": "browse-and-evaluate",
@@ -2097,7 +2155,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/browse-and-evaluate"
+      "path": "skills/browse-and-evaluate",
+      "requires": []
     },
     {
       "name": "update-installed-skills",
@@ -2128,7 +2187,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/update-installed-skills"
+      "path": "skills/update-installed-skills",
+      "requires": []
     },
     {
       "name": "build-workspace-docs",
@@ -2159,7 +2219,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/build-workspace-docs"
+      "path": "skills/build-workspace-docs",
+      "requires": []
     },
     {
       "name": "review-a-skill",
@@ -2190,7 +2251,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/review-a-skill"
+      "path": "skills/review-a-skill",
+      "requires": []
     },
     {
       "name": "audit-library-health",
@@ -2221,7 +2283,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/audit-library-health"
+      "path": "skills/audit-library-health",
+      "requires": []
     },
     {
       "name": "migrate-skills-between-libraries",
@@ -2252,7 +2315,8 @@
       "installSource": "",
       "notes": "",
       "labels": [],
-      "path": "skills/migrate-skills-between-libraries"
+      "path": "skills/migrate-skills-between-libraries",
+      "requires": []
     },
     {
       "name": "cmo",
@@ -2282,7 +2346,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "brand-voice",
@@ -2311,7 +2377,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "positioning-angles",
@@ -2340,7 +2408,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "audience-research",
@@ -2370,7 +2440,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "competitive-intel",
@@ -2399,7 +2471,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "keyword-research",
@@ -2429,7 +2503,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "landscape-scan",
@@ -2460,7 +2536,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "launch-strategy",
@@ -2490,7 +2568,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "pricing-strategy",
@@ -2520,7 +2600,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "direct-response-copy",
@@ -2551,7 +2633,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "seo-content",
@@ -2582,7 +2666,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "lead-magnet",
@@ -2613,7 +2699,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "content-atomizer",
@@ -2643,7 +2731,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "email-sequences",
@@ -2673,7 +2763,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "newsletter",
@@ -2702,7 +2794,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "creative",
@@ -2733,7 +2827,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "seo-audit",
@@ -2763,7 +2859,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "ai-seo",
@@ -2792,7 +2890,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "competitor-alternatives",
@@ -2822,7 +2922,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "page-cro",
@@ -2852,7 +2954,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "conversion-flow-cro",
@@ -2882,7 +2986,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "churn-prevention",
@@ -2912,7 +3018,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "referral-program",
@@ -2941,7 +3049,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "free-tool-strategy",
@@ -2969,7 +3079,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "marketing-psychology",
@@ -2999,7 +3111,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "brainstorm",
@@ -3030,7 +3144,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "create-skill",
@@ -3060,7 +3176,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "deepen-plan",
@@ -3090,7 +3208,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "document-review",
@@ -3120,7 +3240,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "marketing-demo",
@@ -3151,7 +3273,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "paper-marketing",
@@ -3182,7 +3306,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "slideshow-script",
@@ -3213,7 +3339,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "video-content",
@@ -3244,7 +3372,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "social-campaign",
@@ -3275,7 +3405,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "tiktok-slideshow",
@@ -3306,7 +3438,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "frontend-slides",
@@ -3337,7 +3471,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "app-store-screenshots",
@@ -3368,7 +3504,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "typefully",
@@ -3396,7 +3534,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "send-email",
@@ -3424,7 +3564,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "resend-inbound",
@@ -3451,7 +3593,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "agent-email-inbox",
@@ -3478,7 +3622,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "startup-launcher",
@@ -3509,7 +3655,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "visual-style",
@@ -3540,7 +3688,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "image-gen",
@@ -3571,7 +3721,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "voice-extraction",
@@ -3602,7 +3754,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "brand-kit-playground",
@@ -3633,7 +3787,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "mktg-setup",
@@ -3664,7 +3820,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "postiz",
@@ -3695,7 +3853,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "mktg-x",
@@ -3726,7 +3886,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "firecrawl",
@@ -3757,7 +3919,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "summarize",
@@ -3788,7 +3952,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "remotion-best-practices",
@@ -3819,7 +3985,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "cmo-remotion",
@@ -3850,7 +4018,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "higgsfield-generate",
@@ -3881,7 +4051,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "higgsfield-soul-id",
@@ -3912,7 +4084,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "higgsfield-product-photoshoot",
@@ -3943,7 +4117,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "axi",
@@ -3974,7 +4150,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "off-page-seo",
@@ -4005,7 +4183,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "seo-machine",
@@ -4036,7 +4216,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "exa-search",
@@ -4067,7 +4249,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "exa-contents",
@@ -4098,7 +4282,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "build-with-exa",
@@ -4129,7 +4315,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "company-research",
@@ -4160,7 +4348,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "lead-generation",
@@ -4191,7 +4381,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo",
@@ -4222,7 +4414,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-project-setup",
@@ -4252,7 +4446,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-coach",
@@ -4282,7 +4478,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-keyword-research",
@@ -4312,7 +4510,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-keyword-clustering",
@@ -4342,7 +4542,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-competitive-landscape",
@@ -4372,7 +4574,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-competitor-analysis",
@@ -4402,7 +4606,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "openseo-link-prospecting",
@@ -4432,7 +4638,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "manim-composer",
@@ -4462,7 +4670,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "manimce-best-practices",
@@ -4492,7 +4702,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "manimgl-best-practices",
@@ -4521,7 +4733,9 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
     },
     {
       "name": "text-to-speech",
@@ -4552,7 +4766,38 @@
       "tier": "upstream",
       "distribution": "live",
       "notes": "",
-      "labels": []
+      "labels": [],
+      "requires": [],
+      "path": ""
+    },
+    {
+      "name": "x-twitter-scraper",
+      "description": "Use Xquik for X/Twitter REST, MCP, SDKs, search, filtered exports, monitoring & approved publishing. Not affiliated with X Corp. Trigger for X API alternatives, pricing comparisons, tweet search, user lookup, timelines, follower exports, media, webhooks, bulk extraction, giveaways, or MCP setup. Read-only by default. Require explicit approval for writes, private reads, monitors, webhooks & metered bulk jobs.",
+      "category": "development",
+      "workArea": "agent-engineering",
+      "branch": "Provider Docs",
+      "author": "Xquik <support@xquik.com>",
+      "source": "Xquik-dev/x-twitter-scraper",
+      "license": "MIT",
+      "tier": "upstream",
+      "distribution": "live",
+      "vendored": false,
+      "installSource": "Xquik-dev/x-twitter-scraper/skills/x-twitter-scraper",
+      "requires": [],
+      "tags": [],
+      "featured": false,
+      "verified": false,
+      "origin": "curated",
+      "trust": "listed",
+      "syncMode": "live",
+      "sourceUrl": "https://github.com/Xquik-dev/x-twitter-scraper/tree/master/skills/x-twitter-scraper",
+      "whyHere": "A source-backed X/Twitter data workflow for agents that need REST, MCP, SDK, export, monitoring, and approval-gated publishing guidance.",
+      "lastVerified": "",
+      "notes": "",
+      "labels": [],
+      "addedDate": "2026-08-17",
+      "lastCurated": "2026-08-17T00:00:00Z",
+      "path": ""
     }
   ]
 }

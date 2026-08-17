@@ -13,6 +13,7 @@ const { loadCatalogData, validateCatalogData } = require('./lib/catalog-data.cjs
 const { buildUpstreamCatalogEntry, addUpstreamSkillFromDiscovery } = require('./lib/catalog-mutations.cjs');
 const { generatedDocsAreInSync, renderGeneratedDocs } = require('./lib/render-docs.cjs');
 const { createLibraryContext } = require('./lib/library-context.cjs');
+const { prepareSource } = require('./lib/source.cjs');
 const { buildCatalog, getGitHubInstallSpec, getSkillsInstallSpec } = require('./tui/catalog.cjs');
 
 const colors = {
@@ -445,8 +446,18 @@ test('mktg manifest-backed skills are cataloged on the marketing shelf', () => {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'skills.json'), 'utf8'));
   const mktgSkills = data.skills.filter((skill) => skill.source === 'MoizIbnYousaf/marketing-cli');
 
-  assertEqual(mktgSkills.length, 53, 'expected 53 mktg skills');
-  ['cmo', 'brand-voice', 'creative', 'seo-audit', 'page-cro', 'typefully'].forEach((name) => {
+  assertEqual(mktgSkills.length, 76, 'expected 76 mktg skills');
+  [
+    'cmo',
+    'brand-voice',
+    'creative',
+    'seo-audit',
+    'page-cro',
+    'typefully',
+    'higgsfield-generate',
+    'higgsfield-product-photoshoot',
+    'higgsfield-soul-id',
+  ].forEach((name) => {
     assert(mktgSkills.some((skill) => skill.name === name), `expected ${name} in mktg catalog entries`);
   });
   ['autoresearch', 'mktg-coding-bar', 'mktg-compound'].forEach((name) => {
@@ -3736,6 +3747,52 @@ test('upstream catalog entries preserve explicit GitHub refs in installSource an
 
   assertEqual(entry.installSource, 'https://github.com/openai/skills/tree/dev/skills/tmp-upstream-ref-skill');
   assertEqual(entry.sourceUrl, 'https://github.com/openai/skills/tree/dev/skills/tmp-upstream-ref-skill');
+});
+
+test('upstream catalog source URLs use the resolved default branch', () => {
+  const data = loadCatalogData();
+  const entry = buildUpstreamCatalogEntry({
+    source: 'example/skills',
+    parsed: {
+      type: 'github',
+      owner: 'example',
+      repo: 'skills',
+      url: 'https://github.com/example/skills',
+      resolvedRef: 'master',
+    },
+    discoveredSkill: {
+      name: 'tmp-upstream-default-ref-skill',
+      description: 'Use when testing resolved GitHub default branches.',
+      relativeDir: 'skills/tmp-upstream-default-ref-skill',
+      frontmatter: { author: 'Example', license: 'MIT' },
+    },
+    fields: {
+      workArea: 'frontend',
+      branch: 'Testing',
+      whyHere: 'This verifies source links for repositories whose default branch is not main.',
+      trust: 'reviewed',
+      tags: 'test,upstream',
+      labels: 'editorial',
+    },
+    existingCatalog: data,
+  });
+
+  assertEqual(entry.installSource, 'example/skills/skills/tmp-upstream-default-ref-skill');
+  assertEqual(entry.sourceUrl, 'https://github.com/example/skills/tree/master/skills/tmp-upstream-default-ref-skill');
+});
+
+test('prepared sources report their checked-out default branch', () => {
+  const repoDir = createLocalSkillRepo('tmp-default-ref-skill');
+  let prepared = null;
+
+  try {
+    execFileSync('git', ['-C', repoDir, 'branch', '-M', 'legacy-default']);
+    prepared = prepareSource(`file://${repoDir}`);
+    assertEqual(prepared.parsed.resolvedRef, 'legacy-default');
+  } finally {
+    if (prepared) prepared.cleanup();
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
 });
 
 test('upstream catalog addition can append collection membership', () => {

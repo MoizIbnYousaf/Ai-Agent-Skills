@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.3.2] - 2026-05-05
+
+### Added
+- Added `cmo-remotion` and `remotion-best-practices` to the marketing catalog and `mktg` collection.
+- Added `figma-implement-design` to the frontend implementation shelf.
+
+### Changed
+- Expanded the `mktg` collection from 51 to 53 skills.
+- Refreshed marketing-cli metadata and generated catalog documentation.
+
+### Removed
+- Removed the retired `frontend-skill` entry.
+
 ## [4.3.1] - 2026-05-03
 
 ### Added

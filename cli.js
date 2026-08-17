@@ -26,6 +26,7 @@ const {
   applyCurateChanges,
   buildReviewQueue,
   buildHouseCatalogEntry,
+  buildSourceUrl,
   buildUpstreamCatalogEntry,
   commitCatalogData,
   curateSkill,
@@ -4710,20 +4711,6 @@ function getCatalogSkillSourceRef(skill, { sourceContext = getActiveLibraryConte
   return skill.installSource || skill.source || '';
 }
 
-function buildSourceUrl(parsed, relativeDir = null) {
-  if (!parsed.url) return '';
-  const cleanRelativeDir = relativeDir && relativeDir !== '.' ? relativeDir.replace(/\\/g, '/') : '';
-
-  if (parsed.type === 'github') {
-    const ref = parsed.ref || 'main';
-    return cleanRelativeDir
-      ? `${parsed.url}/tree/${ref}/${cleanRelativeDir}`
-      : `${parsed.url}/tree/${ref}`;
-  }
-
-  return sanitizeGitUrl(parsed.url);
-}
-
 function maybeRenameRootSkill(discovered, parsed, rootDir, repoRoot) {
   if (!Array.isArray(discovered) || discovered.length !== 1) return discovered;
   if (!discovered[0].isRoot) return discovered;
@@ -4801,6 +4788,7 @@ async function catalogSkills(source, options = {}) {
       parsed,
       sparseSubpath: parsed.subpath || null,
     });
+    const resolvedParsed = prepared.parsed;
 
     const discovered = maybeRenameRootSkill(
       discoverSkills(prepared.rootDir, prepared.repoRoot),
@@ -4867,7 +4855,7 @@ async function catalogSkills(source, options = {}) {
     if (options.dryRun) {
       const entry = buildUpstreamCatalogEntry({
         source,
-        parsed,
+        parsed: resolvedParsed,
         discoveredSkill: target,
         fields,
         existingCatalog: data,
@@ -4894,7 +4882,7 @@ async function catalogSkills(source, options = {}) {
 
     const nextData = addUpstreamSkillFromDiscovery({
       source,
-      parsed,
+      parsed: resolvedParsed,
       discoveredSkill: target,
       fields,
     }, context);
@@ -4940,10 +4928,12 @@ async function vendorSkill(source, options = {}) {
       info(`Preparing ${source}...`);
     }
 
+    const requestedParsed = options.ref ? { ...parsed, ref: options.ref } : parsed;
     prepared = prepareSourceLib(source, {
-      parsed: options.ref ? { ...parsed, ref: options.ref } : parsed,
+      parsed: requestedParsed,
       sparseSubpath: parsed.type === 'github' ? parsed.subpath || null : null,
     });
+    const resolvedParsed = prepared.parsed;
 
     const discovered = discoverSkills(prepared.rootDir, prepared.repoRoot);
     if (discovered.length === 0) {
@@ -4971,13 +4961,15 @@ async function vendorSkill(source, options = {}) {
 
     validateSkillName(target.name);
 
-    const sourceLabel = parsed.type === 'github'
-      ? buildRepoId(parsed)
-      : parsed.type === 'git'
-        ? sanitizeGitUrl(parsed.url)
-        : expandPath(parsed.url);
+    const sourceLabel = resolvedParsed.type === 'github'
+      ? buildRepoId(resolvedParsed)
+      : resolvedParsed.type === 'git'
+        ? sanitizeGitUrl(resolvedParsed.url)
+        : expandPath(resolvedParsed.url);
     const relPath = target.relativeDir && target.relativeDir !== '.' ? target.relativeDir : null;
-    const sourceUrl = parsed.type === 'github' ? buildSourceUrl(parsed, relPath) : '';
+    const sourceUrl = resolvedParsed.type === 'github'
+      ? buildSourceUrl(resolvedParsed, relPath)
+      : '';
 
     const rawEntry = await promptForEditorialFields({
       name: target.name,
@@ -4985,7 +4977,7 @@ async function vendorSkill(source, options = {}) {
       category: options.category || 'development',
       workArea: options.area || '',
       branch: options.branch || '',
-      author: target.frontmatter.author || parsed.owner || 'unknown',
+      author: target.frontmatter.author || resolvedParsed.owner || 'unknown',
       source: sourceLabel,
       license: target.frontmatter.license || 'MIT',
       path: `skills/${target.name}`,
