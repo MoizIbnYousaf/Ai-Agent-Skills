@@ -86,7 +86,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function chat(prompt: string): Promise<string> {
   const response = await anthropic.messages.create({
-    model: 'claude-3-opus-20240229',
+    model: 'claude-opus-4-8',
     max_tokens: 1024,
     messages: [{ role: 'user', content: prompt }],
   });
